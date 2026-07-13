@@ -15,7 +15,6 @@ if (AIRTABLE_TOKEN && BASE_ID) {
 
 let loadedRecords = [];
 
-// UI Elemente
 const orderList = document.getElementById('order-list');
 const loading = document.getElementById('loading');
 const modal = document.getElementById('modal-overlay');
@@ -25,12 +24,10 @@ const formNewOrder = document.getElementById('form-new-order');
 const searchInput = document.getElementById('search-input');
 const searchClearBtn = document.getElementById('search-clear-btn');
 
-// --- Setup Event Listener ---
 document.addEventListener('DOMContentLoaded', () => {
 
     if (btnNewOrder) {
         btnNewOrder.addEventListener('click', () => {
-            // Modal aufräumen & erste leere Lieferanten-Zeile erstellen
             document.getElementById('supplier-container').innerHTML = '';
             addSupplierRow();
             calculateTotalFremdkosten();
@@ -56,7 +53,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Live-Suche (beinhaltet jetzt auch Lieferanten-Namen!)
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase().trim();
@@ -80,7 +76,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Modal Speichern-Logik
     if (formNewOrder) {
         formNewOrder.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -88,13 +83,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const name = document.getElementById('input-name').value;
             const betrag = parseFloat(document.getElementById('input-betrag').value || 0);
 
-            // Lieferanten einsammeln
             const suppliers = [];
             const rows = document.querySelectorAll('.supplier-row');
             rows.forEach(row => {
                 const suppName = row.querySelector('.supplier-name').value.trim();
                 const suppAmount = parseFloat(row.querySelector('.supplier-amount').value) || 0;
-
                 if (suppName !== '' || suppAmount > 0) {
                     suppliers.push({ name: suppName || "Unbekannt", amount: suppAmount });
                 }
@@ -126,7 +119,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Weitere Lieferanten hinzufügen Button
     const btnAddSupplier = document.getElementById('btn-add-supplier');
     if (btnAddSupplier) {
         btnAddSupplier.addEventListener('click', () => addSupplierRow());
@@ -135,7 +127,6 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchOrders();
 });
 
-// --- API: Aufträge laden ---
 async function fetchOrders() {
     if (!AIRTABLE_TOKEN || !BASE_ID) {
         showSetupRequired();
@@ -150,7 +141,7 @@ async function fetchOrders() {
         const data = await response.json();
 
         loadedRecords = data.records || [];
-        updateSupplierDatalist(); // Baut die Vorschlagsliste für Lieferanten auf
+        updateSupplierDatalist();
         renderOrders(loadedRecords);
     } catch (error) {
         orderList.innerHTML = `<p style="color:#e74c3c; padding: 20px;">Verbindungsfehler zu Airtable. Schlüssel korrekt?</p>`;
@@ -159,15 +150,12 @@ async function fetchOrders() {
     }
 }
 
-// --- Autocomplete-Liste aufbauen ---
 function updateSupplierDatalist() {
     const datalist = document.getElementById('supplier-list');
     if (!datalist) return;
     datalist.innerHTML = '';
 
     const uniqueSuppliers = new Set();
-
-    // Alle bisherigen Lieferanten-Namen aus den JSON-Daten extrahieren
     loadedRecords.forEach(record => {
         if (record.fields.Fremdkosten_Details) {
             try {
@@ -186,7 +174,6 @@ function updateSupplierDatalist() {
     });
 }
 
-// --- Lieferanten Modal-Logik ---
 function addSupplierRow() {
     const container = document.getElementById('supplier-container');
     const row = document.createElement('div');
@@ -200,15 +187,11 @@ function addSupplierRow() {
         </button>
     `;
 
-    // Löschen
     row.querySelector('.btn-remove-supplier').addEventListener('click', () => {
         row.remove();
         calculateTotalFremdkosten();
     });
-
-    // Neu berechnen bei Geldeingabe
     row.querySelector('.supplier-amount').addEventListener('input', calculateTotalFremdkosten);
-
     container.appendChild(row);
 }
 
@@ -221,7 +204,6 @@ function calculateTotalFremdkosten() {
     return total;
 }
 
-// --- UI: Setup-Aufforderung ---
 function showSetupRequired() {
     loading.classList.add('hidden');
     orderList.innerHTML = `
@@ -241,8 +223,53 @@ window.triggerSetup = function() {
     }
 }
 
-// --- UI: Aufträge zeichnen ---
+// --- NEU: Summary berechnen und anzeigen ---
+function updateSummary(records) {
+    let sumZuVerrechnen = 0;
+    let sumAnGroup = 0;
+    let sumFremdkosten = 0;
+    let sumAutomotiveGesamt = 0;
+
+    records.forEach(record => {
+        const fields = record.fields;
+        const status = fields.Status || "Zu verrechnen";
+        const betrag = parseFloat(fields.Betrag_Automotive) || 0;
+        const fremd = parseFloat(fields.Fremdkosten) || 0;
+
+        sumAutomotiveGesamt += betrag;
+        sumFremdkosten += fremd;
+
+        if (status === "Zu verrechnen") sumZuVerrechnen += betrag;
+        if (status === "An Group verrechnet") sumAnGroup += betrag;
+    });
+
+    const summaryContainer = document.getElementById('dashboard-summary');
+    if(!summaryContainer) return;
+
+    summaryContainer.innerHTML = `
+        <div class="summary-card green">
+            <span class="summary-label">MNAU Umsatz Gesamt</span>
+            <span class="summary-value">€ ${sumAutomotiveGesamt.toFixed(2)}</span>
+        </div>
+        <div class="summary-card red">
+            <span class="summary-label">Zu verrechnen</span>
+            <span class="summary-value">€ ${sumZuVerrechnen.toFixed(2)}</span>
+        </div>
+        <div class="summary-card yellow">
+            <span class="summary-label">Wartet auf Zahlung Group</span>
+            <span class="summary-value">€ ${sumAnGroup.toFixed(2)}</span>
+        </div>
+        <div class="summary-card orange">
+            <span class="summary-label">Fremdkosten Gesamt</span>
+            <span class="summary-value">€ ${sumFremdkosten.toFixed(2)}</span>
+        </div>
+    `;
+}
+
 function renderOrders(records) {
+    // Ruft vor dem Zeichnen der Aufträge das Summary-Update auf!
+    updateSummary(records);
+
     orderList.innerHTML = '';
 
     if(!records || records.length === 0) {
@@ -257,7 +284,6 @@ function renderOrders(records) {
         const betrag = fields.Betrag_Automotive ? fields.Betrag_Automotive.toFixed(2) : "0.00";
         const fremdkosten = fields.Fremdkosten ? fields.Fremdkosten.toFixed(2) : "0.00";
 
-        // Breakdown HTML generieren
         let breakdownHTML = '';
         if (fields.Fremdkosten_Details) {
             try {
@@ -327,7 +353,6 @@ function renderOrders(records) {
     });
 }
 
-// --- API Funktionen ---
 window.updateStatus = async function(recordId, newStatus) {
     try {
         await fetch(`${API_URL}/${recordId}`, { method: 'PATCH', headers: HEADERS, body: JSON.stringify({ fields: { "Status": newStatus } }) });

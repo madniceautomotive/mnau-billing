@@ -9,7 +9,6 @@
 <body>
 <div id="database-view">
 
-    <!-- Header im originalen SSD-Scanner-Style -->
     <header class="database-header">
         <div class="header-main-row">
             <h1>MNAU <span>Billing</span></h1>
@@ -23,7 +22,6 @@
             </div>
         </div>
 
-        <!-- Suchleiste -->
         <div class="header-controls-row">
             <div class="search-group">
                 <input type="text" id="search-input" class="search-input" placeholder="Nach Auftrag, Betrag oder Lieferant suchen...">
@@ -34,9 +32,13 @@
         </div>
     </header>
 
-    <!-- Hauptinhalt -->
     <main class="manager-content">
         <div id="loading" class="spinner hidden"></div>
+
+        <!-- NEU: Das Dashboard-Summary für die Summen -->
+        <div id="dashboard-summary" class="dashboard-summary"></div>
+
+        <div class="section-divider mnau-divider">AUFTRAGS_LOG</div>
         <div id="order-list"></div>
     </main>
 
@@ -53,18 +55,14 @@
             <label>Betrag Automotive (Netto EUR)</label>
             <input type="number" step="0.01" id="input-betrag" class="search-input" required placeholder="0.00">
 
-            <!-- DYNAMISCHER LIEFERANTEN-BEREICH -->
             <label>Fremdkosten & Lieferanten (EUR)</label>
-            <div id="supplier-container" class="supplier-container">
-                <!-- Hier generiert JS die Zeilen -->
-            </div>
+            <div id="supplier-container" class="supplier-container"></div>
 
             <div class="supplier-actions">
                 <button type="button" id="btn-add-supplier" class="btn-secondary btn-small">+ Weiteren Lieferanten</button>
                 <div class="supplier-total">Summe: <br>€ <span id="display-total-fremdkosten">0.00</span></div>
             </div>
 
-            <!-- Die unsichtbare Liste für das Autocomplete -->
             <datalist id="supplier-list"></datalist>
 
             <div class="modal-actions">
