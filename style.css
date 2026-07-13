@@ -1,0 +1,84 @@
+body, html {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background-color: #0a111c; color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 20px; background: rgba(10, 17, 28, 0.94);
+    border-bottom: 2px solid #00ffcc; box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
+}
+
+header h1 { margin: 0; font-size: 1.5rem; color: #fff; letter-spacing: 1px; }
+header h1 span { color: #00ffcc; }
+
+main { padding: 20px; }
+
+.btn-primary {
+    background: #00ffcc; color: #0a111c; border: none;
+    padding: 10px 16px; border-radius: 8px; font-weight: bold;
+    cursor: pointer; transition: all 0.2s;
+}
+.btn-primary:hover { background: #00cca3; box-shadow: 0 0 15px rgba(0,255,204,0.5); }
+
+.btn-secondary {
+    background: transparent; color: #718096; border: 1px solid #718096;
+    padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer;
+}
+
+.order-grid { display: grid; gap: 15px; grid-template-columns: 1fr; }
+
+/* Die Auftrags-Karte */
+.order-card {
+    background: rgba(255, 255, 255, 0.03); border: 1px solid #2d3748;
+    border-radius: 12px; padding: 16px; position: relative;
+}
+.order-card.status-zu-verrechnen { border-left: 4px solid #ff3333; }
+.order-card.status-verrechnet { border-left: 4px solid #f6e05e; }
+.order-card.status-bezahlt { border-left: 4px solid #00ffcc; opacity: 0.6; }
+
+.order-card h3 { margin: 0 0 8px 0; font-size: 1.2rem; color: #e2e8f0; }
+.order-card p { margin: 4px 0; font-size: 0.9rem; color: #a0aec0; }
+.order-card .amount { font-size: 1.1rem; color: #00ffcc; font-weight: bold; margin-top: 10px; }
+.order-card .fremdkosten { font-size: 0.8rem; color: #fc8181; }
+
+.status-badge {
+    position: absolute; top: 16px; right: 16px; font-size: 0.75rem;
+    padding: 4px 8px; border-radius: 12px; font-weight: bold;
+}
+.bg-red { background: rgba(255,51,51,0.2); color: #fc8181; }
+.bg-yellow { background: rgba(246,224,94,0.2); color: #faf089; }
+.bg-green { background: rgba(0,255,204,0.2); color: #00ffcc; }
+
+.btn-status-change {
+    margin-top: 12px; width: 100%; background: #2d3748; color: #fff;
+    border: none; padding: 8px; border-radius: 6px; cursor: pointer;
+}
+
+/* Modal Styling */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+}
+.hidden { display: none !important; }
+.modal-card {
+    background: #0a111c; border: 1px solid #00ffcc; border-radius: 16px;
+    padding: 24px; width: 90%; max-width: 400px;
+}
+.modal-card h2 { margin-top: 0; color: #00ffcc; }
+form label { display: block; margin-top: 12px; font-size: 0.85rem; color: #a0aec0; }
+form input {
+    width: 100%; padding: 10px; margin-top: 4px; background: #1a202c;
+    border: 1px solid #2d3748; color: #fff; border-radius: 6px; box-sizing: border-box;
+}
+form input:focus { outline: none; border-color: #00ffcc; }
+.modal-actions { display: flex; justify-content: space-between; margin-top: 24px; }
+
+.spinner {
+    width: 40px; height: 40px; border: 4px solid rgba(0,255,204,0.1);
+    border-top-color: #00ffcc; border-radius: 50%;
+    animation: spin 1s linear infinite; margin: 40px auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
