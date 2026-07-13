@@ -7,42 +7,51 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>
-    <h1>MNAU_<span>BILLING_TERMINAL_v1.0</span></h1>
-    <button id="btn-new-order" class="btn-primary">+ NEUER AUFTRAG</button>
-</header>
+<div id="database-view">
 
-<main>
-    <!-- Die Tabellen-Struktur wie im SSD-Scanner -->
-    <div class="hud-table">
-        <div class="table-header">
-            <div class="col-main">AUFTRAGS_NAME</div>
-            <div class="col-financials">FINANCIAL_SPECS</div>
-            <div class="col-status">STATUS</div>
-            <div class="col-action">SYSTEM_ACTION</div>
+    <!-- Header im exakten SSD-Scanner-Style -->
+    <header class="database-header">
+        <div class="header-main-row">
+            <h1>MNAU <span>Billing</span></h1>
+            <button id="btn-new-order" class="btn-primary">+ Neuer Auftrag</button>
         </div>
+
+        <!-- Suchleiste & Controls -->
+        <div class="header-controls-row">
+            <div class="search-group">
+                <input type="text" id="search-input" class="search-input" placeholder="Nach Auftrag oder Betrag suchen...">
+                <button id="search-clear-btn" class="search-clear-btn">
+                    <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hauptinhalt für die Rechnungszeilen -->
+    <main class="manager-content">
         <div id="loading" class="spinner"></div>
         <div id="order-list"></div>
-    </div>
-</main>
+    </main>
 
-<!-- Modal für neuen Auftrag (Scharfe Kanten) -->
+</div>
+
+<!-- Modal für neuen Auftrag -->
 <div id="modal-overlay" class="modal-overlay hidden">
     <div class="modal-card">
-        <h2>NEW_RECORD_ENTRY</h2>
+        <h2>Neuen Auftrag erfassen</h2>
         <form id="form-new-order">
-            <label>Projekt / Kunde</label>
-            <input type="text" id="input-name" required placeholder="z.B. PORSCHE_GW_SHOOTING">
+            <label>Auftragsname / Projekt</label>
+            <input type="text" id="input-name" class="search-input" required placeholder="z.B. Porsche GW Shooting">
 
             <label>Betrag Automotive (Netto EUR)</label>
-            <input type="number" step="0.01" id="input-betrag" required placeholder="0.00">
+            <input type="number" step="0.01" id="input-betrag" class="search-input" required placeholder="0.00">
 
-            <label>Fremdkosten Lieferanten (EUR)</label>
-            <input type="number" step="0.01" id="input-fremdkosten" placeholder="0.00">
+            <label>Fremdkosten (enthalten in EUR)</label>
+            <input type="number" step="0.01" id="input-fremdkosten" class="search-input" placeholder="0.00">
 
             <div class="modal-actions">
-                <button type="button" id="btn-cancel" class="btn-secondary">CANCEL</button>
-                <button type="submit" class="btn-primary">WRITE_DATA</button>
+                <button type="button" id="btn-cancel" class="btn-secondary">Abbrechen</button>
+                <button type="submit" class="btn-primary">Speichern</button>
             </div>
         </form>
     </div>

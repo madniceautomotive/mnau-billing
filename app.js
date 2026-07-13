@@ -15,7 +15,7 @@ if (!AIRTABLE_TOKEN || !BASE_ID) {
         BASE_ID = baseIdInput.trim();
         alert("Einrichtung erfolgreich! Die App lädt jetzt.");
     } else {
-        alert("Fehlende Anmeldedaten. Die App kann ohne diese Keys nicht geladen werden. Bitte lade die Seite neu.");
+        alert("Fehlende Anmeldedaten. Bitte lade die Seite neu, um es erneut zu versuchen.");
     }
 }
 
@@ -25,6 +25,9 @@ const HEADERS = {
     "Content-Type": "application/json"
 };
 
+// Globale Variable, um geladene Datensätze für die Live-Suche zwischenzuspeichern
+let loadedRecords = [];
+
 // UI Elemente
 const orderList = document.getElementById('order-list');
 const loading = document.getElementById('loading');
@@ -32,6 +35,8 @@ const modal = document.getElementById('modal-overlay');
 const btnNewOrder = document.getElementById('btn-new-order');
 const btnCancel = document.getElementById('btn-cancel');
 const formNewOrder = document.getElementById('form-new-order');
+const searchInput = document.getElementById('search-input');
+const searchClearBtn = document.getElementById('search-clear-btn');
 
 // App Start
 document.addEventListener('DOMContentLoaded', fetchOrders);
@@ -45,10 +50,12 @@ async function fetchOrders() {
     try {
         const response = await fetch(`${API_URL}?sort[0][field]=Created%20Time&sort[0][direction]=desc`, { headers: HEADERS });
         const data = await response.json();
-        renderOrders(data.records);
+
+        loadedRecords = data.records || [];
+        renderOrders(loadedRecords);
     } catch (error) {
         console.error("Fehler beim Laden:", error);
-        orderList.innerHTML = `<p style="color:#fc8181">Verbindungsfehler zu Airtable. Schlüssel korrekt?</p>`;
+        orderList.innerHTML = `<p style="color:#e74c3c; padding: 20px;">Verbindungsfehler zu Airtable. Schlüssel korrekt?</p>`;
     } finally {
         loading.classList.add('hidden');
     }
@@ -56,8 +63,10 @@ async function fetchOrders() {
 
 // --- UI: Aufträge zeichnen ---
 function renderOrders(records) {
+    orderList.innerHTML = '';
+
     if(!records || records.length === 0) {
-        orderList.innerHTML = '<p>Keine Aufträge vorhanden.</p>';
+        orderList.innerHTML = '<p style="color:#a0aec0; padding: 20px;">Keine passenden Aufträge gefunden.</p>';
         return;
     }
 
@@ -68,36 +77,50 @@ function renderOrders(records) {
         const betrag = fields.Betrag_Automotive ? fields.Betrag_Automotive.toFixed(2) : "0.00";
         const fremdkosten = fields.Fremdkosten ? fields.Fremdkosten.toFixed(2) : "0.00";
 
-        let cardClass = "status-zu-verrechnen";
-        let badgeClass = "bg-red";
+        // Status CSS-Klassen bestimmen
+        let cardStatusClass = "status-zu-verrechnen";
+        let badgeClass = "badge-zu-verrechnen";
         let nextStatus = "An Group verrechnet";
-        let btnText = "Markieren als: An Group verrechnet";
+        let btnText = "An Group verrechnet";
 
         if(status === "An Group verrechnet") {
-            cardClass = "status-verrechnet";
-            badgeClass = "bg-yellow";
+            cardStatusClass = "status-an-group-verrechnet";
+            badgeClass = "badge-verrechnet";
             nextStatus = "Bezahlt";
-            btnText = "Markieren als: Bezahlt durch Group";
+            btnText = "Bezahlt";
         } else if(status === "Bezahlt") {
-            cardClass = "status-bezahlt";
-            badgeClass = "bg-green";
+            cardStatusClass = "status-bezahlt";
+            badgeClass = "badge-bezahlt";
         }
 
         const card = document.createElement('div');
-        card.className = `order-card ${cardClass}`;
+        card.className = `billing-row ${cardStatusClass}`;
 
         let html = `
-            <span class="status-badge ${badgeClass}">${status}</span>
-            <h3>${fields.Auftrag || "Unbenannt"}</h3>
-            <p>Erstellt am: ${new Date(record.createdTime).toLocaleDateString('de-DE')}</p>
-            <div class="amount">Automotive-Anteil: € ${betrag}</div>
-            <div class="fremdkosten">Davon Fremdkosten: € ${fremdkosten}</div>
+            <div class="billing-info-block">
+                <div class="billing-row-title">
+                    ${fields.Auftrag || "Unbenannt"}
+                </div>
+                <div class="billing-row-meta">
+                    Erstellt: ${new Date(record.createdTime).toLocaleDateString('de-DE')}
+                </div>
+            </div>
+            
+            <div class="billing-financials">
+                <div class="amount-main">€ ${betrag}</div>
+                <div class="amount-fremdkosten">Fremdkosten: € ${fremdkosten}</div>
+            </div>
+            
+            <div class="action-group">
+                <span class="alloc-row-badge ${badgeClass}">${status}</span>
         `;
 
+        // Zeige den Action-Button nur, wenn der Status noch nicht "Bezahlt" ist
         if(status !== "Bezahlt") {
-            html += `<button class="btn-status-change" onclick="updateStatus('${id}', '${nextStatus}')">${btnText}</button>`;
+            html += `<button class="btn-primary" onclick="updateStatus('${id}', '${nextStatus}')">➔ ${btnText}</button>`;
         }
 
+        html += `</div>`;
         card.innerHTML = html;
         orderList.appendChild(card);
     });
@@ -113,11 +136,38 @@ window.updateStatus = async function(recordId, newStatus) {
                 fields: { "Status": newStatus }
             })
         });
-        fetchOrders();
+        fetchOrders(); // Neu laden
     } catch (error) {
-        alert("Fehler beim Update des Status.");
+        alert("Fehler beim Status-Update.");
     }
 }
+
+// --- Live-Suche Logik ---
+searchInput.addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase().trim();
+
+    if (query.length > 0) {
+        searchClearBtn.style.display = 'flex';
+    } else {
+        searchClearBtn.style.display = 'none';
+    }
+
+    const filtered = loadedRecords.filter(record => {
+        const orderName = (record.fields.Auftrag || "").toLowerCase();
+        const betragText = (record.fields.Betrag_Automotive || "").toString();
+        return orderName.includes(query) || betragText.includes(query);
+    });
+
+    renderOrders(filtered);
+});
+
+// Suchfeld leeren
+searchClearBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    searchClearBtn.style.display = 'none';
+    renderOrders(loadedRecords);
+    searchInput.focus();
+});
 
 // --- Modal Steuerung ---
 btnNewOrder.addEventListener('click', () => modal.classList.remove('hidden'));
@@ -156,6 +206,6 @@ formNewOrder.addEventListener('submit', async (e) => {
         formNewOrder.reset();
         fetchOrders();
     } catch (error) {
-        alert("Fehler beim Speichern.");
+        alert("Fehler beim Erstellen des Auftrags.");
     }
 });
