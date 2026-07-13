@@ -14,7 +14,6 @@
         <div class="header-main-row">
             <h1>MNAU <span>Billing</span></h1>
             <div style="display: flex; gap: 10px; align-items: center;">
-                <!-- Der neue Schlüssel-Reset-Button -->
                 <button id="btn-reset-keys" class="sort-icon-btn" title="Zugangsdaten zurücksetzen">
                     <svg viewBox="0 0 24 24">
                         <path d="M12.65 10A5.99 5.99 0 0 0 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6a5.99 5.99 0 0 0 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
@@ -27,7 +26,7 @@
         <!-- Suchleiste -->
         <div class="header-controls-row">
             <div class="search-group">
-                <input type="text" id="search-input" class="search-input" placeholder="Nach Auftrag oder Betrag suchen...">
+                <input type="text" id="search-input" class="search-input" placeholder="Nach Auftrag, Betrag oder Lieferant suchen...">
                 <button id="search-clear-btn" class="search-clear-btn">
                     <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
                 </button>
@@ -37,7 +36,6 @@
 
     <!-- Hauptinhalt -->
     <main class="manager-content">
-        <!-- Ladekreis startet jetzt sicher als "hidden" -->
         <div id="loading" class="spinner hidden"></div>
         <div id="order-list"></div>
     </main>
@@ -55,8 +53,19 @@
             <label>Betrag Automotive (Netto EUR)</label>
             <input type="number" step="0.01" id="input-betrag" class="search-input" required placeholder="0.00">
 
-            <label>Fremdkosten (enthalten in EUR)</label>
-            <input type="number" step="0.01" id="input-fremdkosten" class="search-input" placeholder="0.00">
+            <!-- DYNAMISCHER LIEFERANTEN-BEREICH -->
+            <label>Fremdkosten & Lieferanten (EUR)</label>
+            <div id="supplier-container" class="supplier-container">
+                <!-- Hier generiert JS die Zeilen -->
+            </div>
+
+            <div class="supplier-actions">
+                <button type="button" id="btn-add-supplier" class="btn-secondary btn-small">+ Weiteren Lieferanten</button>
+                <div class="supplier-total">Summe: <br>€ <span id="display-total-fremdkosten">0.00</span></div>
+            </div>
+
+            <!-- Die unsichtbare Liste für das Autocomplete -->
+            <datalist id="supplier-list"></datalist>
 
             <div class="modal-actions">
                 <button type="button" id="btn-cancel" class="btn-secondary">Abbrechen</button>

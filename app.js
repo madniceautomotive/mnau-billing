@@ -1,9 +1,7 @@
-// Wir laden die Keys sicher aus dem Speicher des Browsers
 let AIRTABLE_TOKEN = localStorage.getItem('MNAU_AIRTABLE_TOKEN');
 let BASE_ID = localStorage.getItem('MNAU_BASE_ID');
 const TABLE_NAME = "Auftraege";
 
-// API Endpunkte nur generieren, wenn Daten vorhanden sind
 let API_URL = "";
 let HEADERS = {};
 
@@ -15,7 +13,6 @@ if (AIRTABLE_TOKEN && BASE_ID) {
     };
 }
 
-// Globale Variable für die Live-Suche
 let loadedRecords = [];
 
 // UI Elemente
@@ -28,11 +25,18 @@ const formNewOrder = document.getElementById('form-new-order');
 const searchInput = document.getElementById('search-input');
 const searchClearBtn = document.getElementById('search-clear-btn');
 
-// App-Start nach DOM-Bereitschaft
+// --- Setup Event Listener ---
 document.addEventListener('DOMContentLoaded', () => {
 
-    // Setup-Events binden
-    if (btnNewOrder) btnNewOrder.addEventListener('click', () => modal.classList.remove('hidden'));
+    if (btnNewOrder) {
+        btnNewOrder.addEventListener('click', () => {
+            // Modal aufräumen & erste leere Lieferanten-Zeile erstellen
+            document.getElementById('supplier-container').innerHTML = '';
+            addSupplierRow();
+            calculateTotalFremdkosten();
+            modal.classList.remove('hidden');
+        });
+    }
 
     if (btnCancel) {
         btnCancel.addEventListener('click', () => {
@@ -41,11 +45,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Event-Listener für den neuen Schlüssel-Reset-Button (🔑) im Header
     const btnResetKeys = document.getElementById('btn-reset-keys');
     if (btnResetKeys) {
         btnResetKeys.addEventListener('click', () => {
-            if (confirm("Möchtest du die Airtable-Schlüssel wirklich zurücksetzen und neu eingeben?")) {
+            if (confirm("Möchtest du die Airtable-Schlüssel zurücksetzen?")) {
                 localStorage.removeItem('MNAU_AIRTABLE_TOKEN');
                 localStorage.removeItem('MNAU_BASE_ID');
                 location.reload();
@@ -53,23 +56,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Live-Suche Listener
+    // Live-Suche (beinhaltet jetzt auch Lieferanten-Namen!)
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase().trim();
-
-            if (query.length > 0) {
-                searchClearBtn.style.display = 'flex';
-            } else {
-                searchClearBtn.style.display = 'none';
-            }
+            searchClearBtn.style.display = query.length > 0 ? 'flex' : 'none';
 
             const filtered = loadedRecords.filter(record => {
                 const orderName = (record.fields.Auftrag || "").toLowerCase();
-                const betragText = (record.fields.Betrag_Automotive || "").toString();
-                return orderName.includes(query) || betragText.includes(query);
+                const detailsStr = (record.fields.Fremdkosten_Details || "").toLowerCase();
+                return orderName.includes(query) || detailsStr.includes(query);
             });
-
             renderOrders(filtered);
         });
     }
@@ -83,33 +80,43 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Formular-Absendung
+    // Modal Speichern-Logik
     if (formNewOrder) {
         formNewOrder.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const name = document.getElementById('input-name').value;
             const betrag = parseFloat(document.getElementById('input-betrag').value || 0);
-            const fremdkosten = parseFloat(document.getElementById('input-fremdkosten').value || 0);
+
+            // Lieferanten einsammeln
+            const suppliers = [];
+            const rows = document.querySelectorAll('.supplier-row');
+            rows.forEach(row => {
+                const suppName = row.querySelector('.supplier-name').value.trim();
+                const suppAmount = parseFloat(row.querySelector('.supplier-amount').value) || 0;
+
+                if (suppName !== '' || suppAmount > 0) {
+                    suppliers.push({ name: suppName || "Unbekannt", amount: suppAmount });
+                }
+            });
+
+            const totalFremdkosten = calculateTotalFremdkosten();
+            const suppliersJSON = JSON.stringify(suppliers);
 
             const payload = {
                 records: [{
                     fields: {
                         "Auftrag": name,
                         "Betrag_Automotive": betrag,
-                        "Fremdkosten": fremdkosten,
+                        "Fremdkosten": totalFremdkosten,
+                        "Fremdkosten_Details": suppliersJSON,
                         "Status": "Zu verrechnen"
                     }
                 }]
             };
 
             try {
-                await fetch(API_URL, {
-                    method: 'POST',
-                    headers: HEADERS,
-                    body: JSON.stringify(payload)
-                });
-
+                await fetch(API_URL, { method: 'POST', headers: HEADERS, body: JSON.stringify(payload) });
                 modal.classList.add('hidden');
                 formNewOrder.reset();
                 fetchOrders();
@@ -119,13 +126,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Ladevorgang starten
+    // Weitere Lieferanten hinzufügen Button
+    const btnAddSupplier = document.getElementById('btn-add-supplier');
+    if (btnAddSupplier) {
+        btnAddSupplier.addEventListener('click', () => addSupplierRow());
+    }
+
     fetchOrders();
 });
 
-// --- API: Aufträge abrufen ---
+// --- API: Aufträge laden ---
 async function fetchOrders() {
-    // Falls Keys fehlen: Ladekreis sofort verstecken und Konfigurations-Aufforderung im Interface anzeigen
     if (!AIRTABLE_TOKEN || !BASE_ID) {
         showSetupRequired();
         return;
@@ -139,40 +150,94 @@ async function fetchOrders() {
         const data = await response.json();
 
         loadedRecords = data.records || [];
+        updateSupplierDatalist(); // Baut die Vorschlagsliste für Lieferanten auf
         renderOrders(loadedRecords);
     } catch (error) {
-        console.error("Fehler beim Laden:", error);
         orderList.innerHTML = `<p style="color:#e74c3c; padding: 20px;">Verbindungsfehler zu Airtable. Schlüssel korrekt?</p>`;
     } finally {
         loading.classList.add('hidden');
     }
 }
 
-// --- UI: Setup-Aufforderung zeichnen ---
+// --- Autocomplete-Liste aufbauen ---
+function updateSupplierDatalist() {
+    const datalist = document.getElementById('supplier-list');
+    if (!datalist) return;
+    datalist.innerHTML = '';
+
+    const uniqueSuppliers = new Set();
+
+    // Alle bisherigen Lieferanten-Namen aus den JSON-Daten extrahieren
+    loadedRecords.forEach(record => {
+        if (record.fields.Fremdkosten_Details) {
+            try {
+                const details = JSON.parse(record.fields.Fremdkosten_Details);
+                details.forEach(d => {
+                    if (d.name && d.name.trim() !== '') uniqueSuppliers.add(d.name.trim());
+                });
+            } catch (e) {}
+        }
+    });
+
+    uniqueSuppliers.forEach(supplier => {
+        const option = document.createElement('option');
+        option.value = supplier;
+        datalist.appendChild(option);
+    });
+}
+
+// --- Lieferanten Modal-Logik ---
+function addSupplierRow() {
+    const container = document.getElementById('supplier-container');
+    const row = document.createElement('div');
+    row.className = 'supplier-row';
+
+    row.innerHTML = `
+        <input type="text" class="search-input supplier-name" list="supplier-list" placeholder="Lieferant (neu oder wählen)...">
+        <input type="number" step="0.01" class="search-input supplier-amount" placeholder="0.00">
+        <button type="button" class="btn-remove-supplier" title="Entfernen">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+    `;
+
+    // Löschen
+    row.querySelector('.btn-remove-supplier').addEventListener('click', () => {
+        row.remove();
+        calculateTotalFremdkosten();
+    });
+
+    // Neu berechnen bei Geldeingabe
+    row.querySelector('.supplier-amount').addEventListener('input', calculateTotalFremdkosten);
+
+    container.appendChild(row);
+}
+
+function calculateTotalFremdkosten() {
+    let total = 0;
+    document.querySelectorAll('.supplier-amount').forEach(input => {
+        total += parseFloat(input.value) || 0;
+    });
+    document.getElementById('display-total-fremdkosten').textContent = total.toFixed(2);
+    return total;
+}
+
+// --- UI: Setup-Aufforderung ---
 function showSetupRequired() {
     loading.classList.add('hidden');
     orderList.innerHTML = `
         <div style="padding: 60px 20px; text-align: center; color: #a0aec0;">
-            <h3 style="color: white; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">CONFIGURATION_REQUIRED</h3>
-            <p style="font-size: 0.9rem; margin-bottom: 24px; max-width: 340px; margin-left: auto; margin-right: auto; line-height: 1.5;">
-                Es wurden keine gültigen Airtable-Zugangsdaten auf diesem Gerät gefunden.
-            </p>
+            <h3 style="color: white; margin-bottom: 12px; text-transform: uppercase;">Konfiguration fehlt</h3>
             <button class="btn-primary" style="margin: 0 auto;" onclick="triggerSetup()">➔ Setup starten</button>
         </div>
     `;
 }
-
-// --- Interaktive Einrichtung ---
 window.triggerSetup = function() {
-    const tokenInput = prompt("Einrichtung: Bitte gib deinen Airtable Token (pat...) ein:");
-    const baseIdInput = prompt("Einrichtung: Bitte gib deine Airtable Base-ID (app...) ein:");
-
+    const tokenInput = prompt("Einrichtung: Airtable Token (pat...):");
+    const baseIdInput = prompt("Einrichtung: Airtable Base-ID (app...):");
     if (tokenInput && baseIdInput) {
         localStorage.setItem('MNAU_AIRTABLE_TOKEN', tokenInput.trim());
         localStorage.setItem('MNAU_BASE_ID', baseIdInput.trim());
         location.reload();
-    } else {
-        alert("Einrichtung abgebrochen.");
     }
 }
 
@@ -191,6 +256,26 @@ function renderOrders(records) {
         const status = fields.Status || "Zu verrechnen";
         const betrag = fields.Betrag_Automotive ? fields.Betrag_Automotive.toFixed(2) : "0.00";
         const fremdkosten = fields.Fremdkosten ? fields.Fremdkosten.toFixed(2) : "0.00";
+
+        // Breakdown HTML generieren
+        let breakdownHTML = '';
+        if (fields.Fremdkosten_Details) {
+            try {
+                const details = JSON.parse(fields.Fremdkosten_Details);
+                if (details.length > 0) {
+                    breakdownHTML = `<div class="breakdown-container">`;
+                    details.forEach(d => {
+                        breakdownHTML += `
+                            <div class="breakdown-row">
+                                <span>↳ ${d.name}</span>
+                                <span>€ ${d.amount.toFixed(2)}</span>
+                            </div>
+                        `;
+                    });
+                    breakdownHTML += `</div>`;
+                }
+            } catch(e) {}
+        }
 
         let cardStatusClass = "status-zu-verrechnen";
         let badgeClass = "badge-zu-verrechnen";
@@ -212,17 +297,14 @@ function renderOrders(records) {
 
         let html = `
             <div class="billing-info-block">
-                <div class="billing-row-title">
-                    ${fields.Auftrag || "Unbenannt"}
-                </div>
-                <div class="billing-row-meta">
-                    Erstellt: ${new Date(record.createdTime).toLocaleDateString('de-DE')}
-                </div>
+                <div class="billing-row-title">${fields.Auftrag || "Unbenannt"}</div>
+                <div class="billing-row-meta">Erstellt: ${new Date(record.createdTime).toLocaleDateString('de-DE')}</div>
             </div>
             
             <div class="billing-financials">
                 <div class="amount-main">€ ${betrag}</div>
-                <div class="amount-fremdkosten">Fremdkosten: € ${fremdkosten}</div>
+                <div class="amount-fremdkosten">Gesamt Fremdkosten: € ${fremdkosten}</div>
+                ${breakdownHTML}
             </div>
             
             <div class="action-group">
@@ -233,12 +315,9 @@ function renderOrders(records) {
             html += `<button class="btn-primary" onclick="updateStatus('${id}', '${nextStatus}')">➔ ${btnText}</button>`;
         }
 
-        // Der originale SSD-Scanner Lösch-Button am rechten Rand
         html += `
                 <button class="delete-btn" onclick="deleteOrder('${id}')" title="Auftrag löschen">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                 </button>
             </div>
         `;
@@ -248,38 +327,18 @@ function renderOrders(records) {
     });
 }
 
-// --- API: Status updaten ---
+// --- API Funktionen ---
 window.updateStatus = async function(recordId, newStatus) {
     try {
-        await fetch(`${API_URL}/${recordId}`, {
-            method: 'PATCH',
-            headers: HEADERS,
-            body: JSON.stringify({
-                fields: { "Status": newStatus }
-            })
-        });
+        await fetch(`${API_URL}/${recordId}`, { method: 'PATCH', headers: HEADERS, body: JSON.stringify({ fields: { "Status": newStatus } }) });
         fetchOrders();
-    } catch (error) {
-        alert("Fehler beim Status-Update.");
-    }
+    } catch (error) { alert("Fehler beim Status-Update."); }
 }
 
-// --- API: Eintrag löschen ---
 window.deleteOrder = async function(recordId) {
-    if (!confirm("Möchtest du diesen Auftrag wirklich dauerhaft löschen?")) return;
-
+    if (!confirm("Auftrag wirklich dauerhaft löschen?")) return;
     try {
-        const response = await fetch(`${API_URL}/${recordId}`, {
-            method: 'DELETE',
-            headers: HEADERS
-        });
-
-        if (response.ok) {
-            fetchOrders(); // Liste neu laden
-        } else {
-            alert("Fehler beim Löschen des Auftrags in Airtable.");
-        }
-    } catch (error) {
-        alert("Verbindungsfehler beim Löschen.");
-    }
+        const response = await fetch(`${API_URL}/${recordId}`, { method: 'DELETE', headers: HEADERS });
+        if (response.ok) fetchOrders();
+    } catch (error) { alert("Verbindungsfehler beim Löschen."); }
 }
