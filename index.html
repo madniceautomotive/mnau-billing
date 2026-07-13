@@ -9,14 +9,22 @@
 <body>
 <div id="database-view">
 
-    <!-- Header im exakten SSD-Scanner-Style -->
+    <!-- Header im originalen SSD-Scanner-Style -->
     <header class="database-header">
         <div class="header-main-row">
             <h1>MNAU <span>Billing</span></h1>
-            <button id="btn-new-order" class="btn-primary">+ Neuer Auftrag</button>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <!-- Der neue Schlüssel-Reset-Button -->
+                <button id="btn-reset-keys" class="sort-icon-btn" title="Zugangsdaten zurücksetzen">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12.65 10A5.99 5.99 0 0 0 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6a5.99 5.99 0 0 0 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
+                    </svg>
+                </button>
+                <button id="btn-new-order" class="btn-primary">+ Neuer Auftrag</button>
+            </div>
         </div>
 
-        <!-- Suchleiste & Controls -->
+        <!-- Suchleiste -->
         <div class="header-controls-row">
             <div class="search-group">
                 <input type="text" id="search-input" class="search-input" placeholder="Nach Auftrag oder Betrag suchen...">
@@ -27,9 +35,10 @@
         </div>
     </header>
 
-    <!-- Hauptinhalt für die Rechnungszeilen -->
+    <!-- Hauptinhalt -->
     <main class="manager-content">
-        <div id="loading" class="spinner"></div>
+        <!-- Ladekreis startet jetzt sicher als "hidden" -->
+        <div id="loading" class="spinner hidden"></div>
         <div id="order-list"></div>
     </main>
 

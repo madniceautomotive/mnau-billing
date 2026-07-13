@@ -3,29 +3,19 @@ let AIRTABLE_TOKEN = localStorage.getItem('MNAU_AIRTABLE_TOKEN');
 let BASE_ID = localStorage.getItem('MNAU_BASE_ID');
 const TABLE_NAME = "Auftraege";
 
-// Falls die Schlüssel im Browser noch fehlen, fragen wir sie einmalig ab
-if (!AIRTABLE_TOKEN || !BASE_ID) {
-    const tokenInput = prompt("Einrichtung: Bitte gib deinen Airtable Token (pat...) ein:");
-    const baseIdInput = prompt("Einrichtung: Bitte gib deine Airtable Base-ID (app...) ein:");
+// API Endpunkte nur generieren, wenn Daten vorhanden sind
+let API_URL = "";
+let HEADERS = {};
 
-    if (tokenInput && baseIdInput) {
-        localStorage.setItem('MNAU_AIRTABLE_TOKEN', tokenInput.trim());
-        localStorage.setItem('MNAU_BASE_ID', baseIdInput.trim());
-        AIRTABLE_TOKEN = tokenInput.trim();
-        BASE_ID = baseIdInput.trim();
-        alert("Einrichtung erfolgreich! Die App lädt jetzt.");
-    } else {
-        alert("Fehlende Anmeldedaten. Bitte lade die Seite neu, um es erneut zu versuchen.");
-    }
+if (AIRTABLE_TOKEN && BASE_ID) {
+    API_URL = `https://api.airtable.com/v0/${BASE_ID}/${TABLE_NAME}`;
+    HEADERS = {
+        "Authorization": `Bearer ${AIRTABLE_TOKEN}`,
+        "Content-Type": "application/json"
+    };
 }
 
-const API_URL = `https://api.airtable.com/v0/${BASE_ID}/${TABLE_NAME}`;
-const HEADERS = {
-    "Authorization": `Bearer ${AIRTABLE_TOKEN}`,
-    "Content-Type": "application/json"
-};
-
-// Globale Variable, um geladene Datensätze für die Live-Suche zwischenzuspeichern
+// Globale Variable für die Live-Suche
 let loadedRecords = [];
 
 // UI Elemente
@@ -38,12 +28,109 @@ const formNewOrder = document.getElementById('form-new-order');
 const searchInput = document.getElementById('search-input');
 const searchClearBtn = document.getElementById('search-clear-btn');
 
-// App Start
-document.addEventListener('DOMContentLoaded', fetchOrders);
+// App-Start nach DOM-Bereitschaft
+document.addEventListener('DOMContentLoaded', () => {
+
+    // Setup-Events binden
+    if (btnNewOrder) btnNewOrder.addEventListener('click', () => modal.classList.remove('hidden'));
+
+    if (btnCancel) {
+        btnCancel.addEventListener('click', () => {
+            modal.classList.add('hidden');
+            formNewOrder.reset();
+        });
+    }
+
+    // Event-Listener für den neuen Schlüssel-Reset-Button (🔑) im Header
+    const btnResetKeys = document.getElementById('btn-reset-keys');
+    if (btnResetKeys) {
+        btnResetKeys.addEventListener('click', () => {
+            if (confirm("Möchtest du die Airtable-Schlüssel wirklich zurücksetzen und neu eingeben?")) {
+                localStorage.removeItem('MNAU_AIRTABLE_TOKEN');
+                localStorage.removeItem('MNAU_BASE_ID');
+                location.reload();
+            }
+        });
+    }
+
+    // Live-Suche Listener
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+
+            if (query.length > 0) {
+                searchClearBtn.style.display = 'flex';
+            } else {
+                searchClearBtn.style.display = 'none';
+            }
+
+            const filtered = loadedRecords.filter(record => {
+                const orderName = (record.fields.Auftrag || "").toLowerCase();
+                const betragText = (record.fields.Betrag_Automotive || "").toString();
+                return orderName.includes(query) || betragText.includes(query);
+            });
+
+            renderOrders(filtered);
+        });
+    }
+
+    if (searchClearBtn) {
+        searchClearBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            searchClearBtn.style.display = 'none';
+            renderOrders(loadedRecords);
+            searchInput.focus();
+        });
+    }
+
+    // Formular-Absendung
+    if (formNewOrder) {
+        formNewOrder.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('input-name').value;
+            const betrag = parseFloat(document.getElementById('input-betrag').value || 0);
+            const fremdkosten = parseFloat(document.getElementById('input-fremdkosten').value || 0);
+
+            const payload = {
+                records: [{
+                    fields: {
+                        "Auftrag": name,
+                        "Betrag_Automotive": betrag,
+                        "Fremdkosten": fremdkosten,
+                        "Status": "Zu verrechnen"
+                    }
+                }]
+            };
+
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    headers: HEADERS,
+                    body: JSON.stringify(payload)
+                });
+
+                modal.classList.add('hidden');
+                formNewOrder.reset();
+                fetchOrders();
+            } catch (error) {
+                alert("Fehler beim Erstellen des Auftrags.");
+            }
+        });
+    }
+
+    // Ladevorgang starten
+    fetchOrders();
+});
 
 // --- API: Aufträge abrufen ---
 async function fetchOrders() {
-    if (!AIRTABLE_TOKEN || !BASE_ID) return;
+    // Falls Keys fehlen: Ladekreis sofort verstecken und Konfigurations-Aufforderung im Interface anzeigen
+    if (!AIRTABLE_TOKEN || !BASE_ID) {
+        showSetupRequired();
+        return;
+    }
+
     loading.classList.remove('hidden');
     orderList.innerHTML = '';
 
@@ -61,12 +148,40 @@ async function fetchOrders() {
     }
 }
 
+// --- UI: Setup-Aufforderung zeichnen ---
+function showSetupRequired() {
+    loading.classList.add('hidden');
+    orderList.innerHTML = `
+        <div style="padding: 60px 20px; text-align: center; color: #a0aec0;">
+            <h3 style="color: white; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">CONFIGURATION_REQUIRED</h3>
+            <p style="font-size: 0.9rem; margin-bottom: 24px; max-width: 340px; margin-left: auto; margin-right: auto; line-height: 1.5;">
+                Es wurden keine gültigen Airtable-Zugangsdaten auf diesem Gerät gefunden.
+            </p>
+            <button class="btn-primary" style="margin: 0 auto;" onclick="triggerSetup()">➔ Setup starten</button>
+        </div>
+    `;
+}
+
+// --- Interaktive Einrichtung ---
+window.triggerSetup = function() {
+    const tokenInput = prompt("Einrichtung: Bitte gib deinen Airtable Token (pat...) ein:");
+    const baseIdInput = prompt("Einrichtung: Bitte gib deine Airtable Base-ID (app...) ein:");
+
+    if (tokenInput && baseIdInput) {
+        localStorage.setItem('MNAU_AIRTABLE_TOKEN', tokenInput.trim());
+        localStorage.setItem('MNAU_BASE_ID', baseIdInput.trim());
+        location.reload();
+    } else {
+        alert("Einrichtung abgebrochen.");
+    }
+}
+
 // --- UI: Aufträge zeichnen ---
 function renderOrders(records) {
     orderList.innerHTML = '';
 
     if(!records || records.length === 0) {
-        orderList.innerHTML = '<p style="color:#a0aec0; padding: 20px;">Keine passenden Aufträge gefunden.</p>';
+        orderList.innerHTML = '<p style="color:#a0aec0; padding: 20px;">Keine passenden Aufträge vorhanden.</p>';
         return;
     }
 
@@ -77,11 +192,10 @@ function renderOrders(records) {
         const betrag = fields.Betrag_Automotive ? fields.Betrag_Automotive.toFixed(2) : "0.00";
         const fremdkosten = fields.Fremdkosten ? fields.Fremdkosten.toFixed(2) : "0.00";
 
-        // Status CSS-Klassen bestimmen
         let cardStatusClass = "status-zu-verrechnen";
         let badgeClass = "badge-zu-verrechnen";
         let nextStatus = "An Group verrechnet";
-        let btnText = "An Group verrechnet";
+        let btnText = "Verrechnet";
 
         if(status === "An Group verrechnet") {
             cardStatusClass = "status-an-group-verrechnet";
@@ -115,12 +229,20 @@ function renderOrders(records) {
                 <span class="alloc-row-badge ${badgeClass}">${status}</span>
         `;
 
-        // Zeige den Action-Button nur, wenn der Status noch nicht "Bezahlt" ist
         if(status !== "Bezahlt") {
             html += `<button class="btn-primary" onclick="updateStatus('${id}', '${nextStatus}')">➔ ${btnText}</button>`;
         }
 
-        html += `</div>`;
+        // Der originale SSD-Scanner Lösch-Button am rechten Rand
+        html += `
+                <button class="delete-btn" onclick="deleteOrder('${id}')" title="Auftrag löschen">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                    </svg>
+                </button>
+            </div>
+        `;
+
         card.innerHTML = html;
         orderList.appendChild(card);
     });
@@ -136,76 +258,28 @@ window.updateStatus = async function(recordId, newStatus) {
                 fields: { "Status": newStatus }
             })
         });
-        fetchOrders(); // Neu laden
+        fetchOrders();
     } catch (error) {
         alert("Fehler beim Status-Update.");
     }
 }
 
-// --- Live-Suche Logik ---
-searchInput.addEventListener('input', (e) => {
-    const query = e.target.value.toLowerCase().trim();
-
-    if (query.length > 0) {
-        searchClearBtn.style.display = 'flex';
-    } else {
-        searchClearBtn.style.display = 'none';
-    }
-
-    const filtered = loadedRecords.filter(record => {
-        const orderName = (record.fields.Auftrag || "").toLowerCase();
-        const betragText = (record.fields.Betrag_Automotive || "").toString();
-        return orderName.includes(query) || betragText.includes(query);
-    });
-
-    renderOrders(filtered);
-});
-
-// Suchfeld leeren
-searchClearBtn.addEventListener('click', () => {
-    searchInput.value = '';
-    searchClearBtn.style.display = 'none';
-    renderOrders(loadedRecords);
-    searchInput.focus();
-});
-
-// --- Modal Steuerung ---
-btnNewOrder.addEventListener('click', () => modal.classList.remove('hidden'));
-btnCancel.addEventListener('click', () => {
-    modal.classList.add('hidden');
-    formNewOrder.reset();
-});
-
-// --- API: Neuen Auftrag anlegen ---
-formNewOrder.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const name = document.getElementById('input-name').value;
-    const betrag = parseFloat(document.getElementById('input-betrag').value || 0);
-    const fremdkosten = parseFloat(document.getElementById('input-fremdkosten').value || 0);
-
-    const payload = {
-        records: [{
-            fields: {
-                "Auftrag": name,
-                "Betrag_Automotive": betrag,
-                "Fremdkosten": fremdkosten,
-                "Status": "Zu verrechnen"
-            }
-        }]
-    };
+// --- API: Eintrag löschen ---
+window.deleteOrder = async function(recordId) {
+    if (!confirm("Möchtest du diesen Auftrag wirklich dauerhaft löschen?")) return;
 
     try {
-        await fetch(API_URL, {
-            method: 'POST',
-            headers: HEADERS,
-            body: JSON.stringify(payload)
+        const response = await fetch(`${API_URL}/${recordId}`, {
+            method: 'DELETE',
+            headers: HEADERS
         });
 
-        modal.classList.add('hidden');
-        formNewOrder.reset();
-        fetchOrders();
+        if (response.ok) {
+            fetchOrders(); // Liste neu laden
+        } else {
+            alert("Fehler beim Löschen des Auftrags in Airtable.");
+        }
     } catch (error) {
-        alert("Fehler beim Erstellen des Auftrags.");
+        alert("Verbindungsfehler beim Löschen.");
     }
-});
+}
