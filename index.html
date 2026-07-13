@@ -3,37 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MNAU Billing Dashboard</title>
+    <title>MNAU Billing Terminal</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header>
-    <h1>MNAU <span>BILLING</span></h1>
-    <button id="btn-new-order" class="btn-primary">+ Neuer Auftrag</button>
+    <h1>MNAU_<span>BILLING_TERMINAL_v1.0</span></h1>
+    <button id="btn-new-order" class="btn-primary">+ NEUER AUFTRAG</button>
 </header>
 
-<main id="app-content">
-    <div id="loading" class="spinner"></div>
-    <div id="order-list" class="order-grid"></div>
+<main>
+    <!-- Die Tabellen-Struktur wie im SSD-Scanner -->
+    <div class="hud-table">
+        <div class="table-header">
+            <div class="col-main">AUFTRAGS_NAME</div>
+            <div class="col-financials">FINANCIAL_SPECS</div>
+            <div class="col-status">STATUS</div>
+            <div class="col-action">SYSTEM_ACTION</div>
+        </div>
+        <div id="loading" class="spinner"></div>
+        <div id="order-list"></div>
+    </div>
 </main>
 
-<!-- Modal für neuen Auftrag -->
+<!-- Modal für neuen Auftrag (Scharfe Kanten) -->
 <div id="modal-overlay" class="modal-overlay hidden">
     <div class="modal-card">
-        <h2>Neuen Auftrag erfassen</h2>
+        <h2>NEW_RECORD_ENTRY</h2>
         <form id="form-new-order">
-            <label>Auftragsname / Projekt</label>
-            <input type="text" id="input-name" required placeholder="z.B. Porsche GW Shooting">
+            <label>Projekt / Kunde</label>
+            <input type="text" id="input-name" required placeholder="z.B. PORSCHE_GW_SHOOTING">
 
-            <label>Betrag Automotive (Netto)</label>
+            <label>Betrag Automotive (Netto EUR)</label>
             <input type="number" step="0.01" id="input-betrag" required placeholder="0.00">
 
-            <label>Fremdkosten (enthalten)</label>
+            <label>Fremdkosten Lieferanten (EUR)</label>
             <input type="number" step="0.01" id="input-fremdkosten" placeholder="0.00">
 
             <div class="modal-actions">
-                <button type="button" id="btn-cancel" class="btn-secondary">Abbrechen</button>
-                <button type="submit" class="btn-primary">Speichern</button>
+                <button type="button" id="btn-cancel" class="btn-secondary">CANCEL</button>
+                <button type="submit" class="btn-primary">WRITE_DATA</button>
             </div>
         </form>
     </div>

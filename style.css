@@ -1,142 +1,191 @@
 /* =========================================
-   MNAU SSD-HUD ORIGINAL BRANDING
-   Tiefschwarz, Messerscharf, Signalgrün
+   MNAU HUD TABELLEN-DESIGN (ORIGINAL)
    ========================================= */
 :root {
-    --mnau-green: #00FF66;        /* Das originale, giftige MNAU-Grün */
+    --mnau-green: #00FF66;        /* Signalgrün */
     --mnau-green-dim: #00CC52;
-    --dark-bg: #0A0A0A;           /* Tiefschwarz (Cockpit-Schwarz) */
-    --card-bg: #141414;           /* Flache, dunkelgraue Panels */
-    --border-color: #222222;      /* Scharfkantige, dezente Trennlinien */
+    --dark-bg: #000000;           /* Tiefschwarz */
+    --row-bg: #0A0A0A;            /* Zeilenhintergrund */
+    --row-alt: #111111;           /* Alternierender Hintergrund */
+    --border-color: #1F1F1F;      /* Feine Trennlinien */
     --text-main: #FFFFFF;
-    --text-muted: #888888;
-
-    /* Der originale Diagnostic-Font */
+    --text-muted: #666666;
     --hud-font: 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace;
 }
 
 body, html {
     margin: 0; padding: 0; width: 100%; height: 100%;
     background-color: var(--dark-bg); color: var(--text-main);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: var(--hud-font);
     -webkit-font-smoothing: antialiased;
 }
 
 header {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 16px 20px; background: var(--dark-bg);
+    padding: 14px 20px; background: var(--dark-bg);
     border-bottom: 1px solid var(--border-color);
 }
 
 header h1 {
-    margin: 0; font-size: 1.3rem; font-weight: 800;
-    letter-spacing: 2px; font-family: var(--hud-font);
+    margin: 0; font-size: 1.1rem; font-weight: bold;
+    letter-spacing: 1px;
 }
 header h1 span { color: var(--mnau-green); }
 
 main { padding: 20px; }
 
-/* Buttons: Knallhart, flach, kantig (border-radius: 3px) */
+/* Knallharte, kantige Buttons */
 .btn-primary {
     background: var(--mnau-green); color: #000000; border: none;
-    padding: 8px 14px; border-radius: 3px; font-weight: bold;
-    font-family: var(--hud-font); font-size: 0.85rem;
-    cursor: pointer; transition: background 0.1s ease;
-    text-transform: uppercase;
+    padding: 8px 14px; border-radius: 0px; font-weight: bold;
+    font-family: var(--hud-font); font-size: 0.75rem;
+    cursor: pointer; letter-spacing: 0.5px;
 }
 .btn-primary:hover { background: var(--mnau-green-dim); }
 
 .btn-secondary {
     background: transparent; color: var(--text-muted); border: 1px solid var(--border-color);
-    padding: 8px 14px; border-radius: 3px; font-weight: bold;
-    font-family: var(--hud-font); font-size: 0.85rem;
+    padding: 8px 14px; border-radius: 0px; font-weight: bold;
+    font-family: var(--hud-font); font-size: 0.75rem;
     cursor: pointer;
 }
 .btn-secondary:hover { color: #fff; border-color: #444; }
 
-.order-grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
-
-/* Die originalen SSD-HUD Panels: scharfe Ecken, dezenter Rahmen */
-.order-card {
-    background: var(--card-bg); border: 1px solid var(--border-color);
-    border-radius: 4px; padding: 16px; position: relative;
+/* Die System-Tabelle */
+.hud-table {
+    border: 1px solid var(--border-color);
+    background: var(--dark-bg);
 }
 
-/* Status-Indikatoren am linken Rand (sehr dünn und minimalistisch) */
-.order-card.status-zu-verrechnen { border-left: 3px solid #FF3B30; }
-.order-card.status-verrechnet { border-left: 3px solid #FFCC00; }
-.order-card.status-bezahlt { border-left: 3px solid var(--mnau-green); opacity: 0.5; }
-
-.order-card h3 {
-    margin: 0 0 10px 0; font-size: 1.1rem; font-weight: 600;
-    color: var(--text-main); letter-spacing: 0.5px;
-}
-.order-card p {
-    margin: 3px 0; font-size: 0.8rem; color: var(--text-muted);
-    font-family: var(--hud-font);
-}
-
-/* Werte & Beträge im typischen Monospace HUD-Style */
-.order-card .amount {
-    font-family: var(--hud-font); font-size: 1.1rem;
-    color: var(--mnau-green); font-weight: bold; margin-top: 12px;
-}
-.order-card .fremdkosten {
-    font-family: var(--hud-font); font-size: 0.8rem;
-    color: #FF453A; margin-top: 2px;
-}
-
-/* Status Badges */
-.status-badge {
-    position: absolute; top: 16px; right: 16px; font-size: 0.7rem;
-    padding: 3px 6px; border-radius: 2px; font-weight: bold;
-    font-family: var(--hud-font); text-transform: uppercase;
+.table-header {
+    display: grid;
+    grid-template-columns: 2fr 2fr 1fr 1.5fr;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 0.75rem;
     letter-spacing: 1px;
+    background: #050505;
 }
-.bg-red { background: rgba(255, 59, 48, 0.1); color: #FF453A; border: 1px solid rgba(255, 59, 48, 0.2); }
-.bg-yellow { background: rgba(255, 204, 0, 0.1); color: #FFCC00; border: 1px solid rgba(255, 204, 0, 0.2); }
-.bg-green { background: rgba(0, 255, 102, 0.1); color: var(--mnau-green); border: 1px solid rgba(0, 255, 102, 0.2); }
 
+/* Tabellenzeilen wie beim SSD Scanner */
+.order-row {
+    display: grid;
+    grid-template-columns: 2fr 2fr 1fr 1.5fr;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--row-bg);
+    transition: background 0.1s;
+}
+
+/* Jede zweite Zeile leicht abgesetzt */
+.order-row:nth-child(even) {
+    background: var(--row-alt);
+}
+
+/* Der giftgrüne Hover-Effekt */
+.order-row:hover {
+    background: #0A1A0F;
+    border-bottom: 1px solid var(--mnau-green);
+}
+
+.col-main {
+    font-weight: bold;
+    font-size: 0.9rem;
+    color: var(--text-main);
+}
+.col-main p {
+    margin: 3px 0 0 0;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.col-financials {
+    font-size: 0.85rem;
+    color: var(--mnau-green);
+}
+.col-financials span {
+    display: block;
+    font-size: 0.7rem;
+    color: #FF453A; /* Fremdkosten in Signalrot */
+    margin-top: 2px;
+}
+
+/* Badges im HUD Look */
+.status-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    width: fit-content;
+}
+.bg-red { background: rgba(255, 59, 48, 0.15); color: #FF453A; border: 1px solid rgba(255, 59, 48, 0.3); }
+.bg-yellow { background: rgba(255, 204, 0, 0.15); color: #FFCC00; border: 1px solid rgba(255, 204, 0, 0.3); }
+.bg-green { background: rgba(0, 255, 102, 0.15); color: var(--mnau-green); border: 1px solid rgba(0, 255, 102, 0.3); }
+
+/* Flache Tabellen-Buttons für Statusänderung */
 .btn-status-change {
-    margin-top: 14px; width: 100%; background: #1C1C1E; color: var(--text-main);
-    border: 1px solid var(--border-color); padding: 8px; border-radius: 3px;
-    font-family: var(--hud-font); font-size: 0.8rem; cursor: pointer; transition: 0.1s;
-    text-transform: uppercase;
+    background: #141414;
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    padding: 6px 10px;
+    font-family: var(--hud-font);
+    font-size: 0.7rem;
+    cursor: pointer;
+    width: 100%;
+    text-align: center;
 }
-.btn-status-change:hover { background: #2C2C2E; border-color: #444; }
+.btn-status-change:hover {
+    background: var(--mnau-green);
+    color: #000000;
+    border-color: var(--mnau-green);
+}
 
-/* Modal (Popup) Styling */
+/* Responsive Anpassung für Handys */
+@media (max-width: 768px) {
+    .table-header { display: none; }
+    .order-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 16px;
+    }
+    .btn-status-change { margin-top: 5px; }
+}
+
+/* Modal Popup (Scharfe Kanten!) */
 .modal-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.85); display: flex; align-items: center; justify-content: center;
+    background: rgba(0, 0, 0, 0.9); display: flex; align-items: center; justify-content: center;
     z-index: 100;
 }
 .hidden { display: none !important; }
 
 .modal-card {
-    background: #111111; border: 1px solid var(--mnau-green); border-radius: 4px;
+    background: #080808; border: 1px solid var(--mnau-green); border-radius: 0px;
     padding: 24px; width: 90%; max-width: 400px;
 }
 .modal-card h2 {
-    margin-top: 0; color: var(--mnau-green); font-family: var(--hud-font);
-    font-size: 1.1rem; letter-spacing: 1px; text-transform: uppercase;
+    margin-top: 0; color: var(--mnau-green); font-size: 0.95rem;
+    letter-spacing: 1px;
 }
 
 form label {
-    display: block; margin-top: 14px; font-size: 0.75rem;
-    color: var(--text-muted); text-transform: uppercase; font-family: var(--hud-font);
+    display: block; margin-top: 14px; font-size: 0.7rem;
+    color: var(--text-muted); text-transform: uppercase;
 }
 form input {
-    width: 100%; padding: 10px; margin-top: 4px; background: var(--dark-bg);
-    border: 1px solid var(--border-color); color: var(--text-main); border-radius: 3px;
-    box-sizing: border-box; font-family: var(--hud-font);
+    width: 100%; padding: 8px; margin-top: 4px; background: var(--dark-bg);
+    border: 1px solid var(--border-color); color: var(--text-main); border-radius: 0px;
+    box-sizing: border-box; font-family: var(--hud-font); font-size: 0.85rem;
 }
 form input:focus { outline: none; border-color: var(--mnau-green); }
 .modal-actions { display: flex; justify-content: space-between; margin-top: 24px; }
 
-/* Lade-Animation */
+/* Lade-Spinner */
 .spinner {
-    width: 30px; height: 30px; border: 2px solid rgba(0, 255, 102, 0.1);
+    width: 24px; height: 24px; border: 2px solid rgba(0, 255, 102, 0.1);
     border-top-color: var(--mnau-green); border-radius: 50%;
     animation: spin 0.8s linear infinite; margin: 40px auto;
 }
