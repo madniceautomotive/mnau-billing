@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MNAU Billing Terminal</title>
-    <link rel="stylesheet" href="style.css">
+    <!-- CSS-Module -->
+    <link rel="stylesheet" href="style-core.css">
+    <link rel="stylesheet" href="style-billing.css">
 </head>
 <body>
 <div id="database-view">
@@ -13,6 +15,13 @@
         <div class="header-main-row">
             <h1>MNAU <span>Billing</span></h1>
             <div style="display: flex; gap: 10px; align-items: center;">
+                <!-- Lieferanten verwalten (🔑-Icon-Stil) -->
+                <button id="btn-manage-suppliers" class="sort-icon-btn" title="Lieferanten-Datenbank verwalten">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                    </svg>
+                </button>
+                <!-- Key Reset -->
                 <button id="btn-reset-keys" class="sort-icon-btn" title="Zugangsdaten zurücksetzen">
                     <svg viewBox="0 0 24 24">
                         <path d="M12.65 10A5.99 5.99 0 0 0 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6a5.99 5.99 0 0 0 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
@@ -35,21 +44,21 @@
     <main class="manager-content">
         <div id="loading" class="spinner hidden"></div>
 
-        <!-- 1. Haupt-Dashboard oben halten -->
+        <!-- 1. Haupt-Dashboard -->
         <div id="dashboard-summary" class="dashboard-summary"></div>
 
-        <!-- 2. JETZT HIER: Das Auftrags-Log direkt im Fokus -->
+        <!-- 2. Auftrags-Log (Nach oben priorisiert) -->
         <div class="section-divider mnau-divider">AUFTRAGS_LOG</div>
         <div id="order-list"></div>
 
-        <!-- 3. JETZT HIER: Die offenen Lieferantenkosten als Abschluss unten -->
+        <!-- 3. Offene Lieferantenkosten -->
         <div class="section-divider red-divider">OFFENE_LIEFERANTEN_POSTEN</div>
         <div id="supplier-summary-details" class="supplier-summary-details"></div>
     </main>
 
 </div>
 
-<!-- Modal für neuen Auftrag -->
+<!-- Modal: Neuer Auftrag -->
 <div id="modal-overlay" class="modal-overlay hidden">
     <div class="modal-card">
         <h2>Neuen Auftrag erfassen</h2>
@@ -78,6 +87,21 @@
     </div>
 </div>
 
+<!-- Modal: Lieferanten-Datenbank Verwalten -->
+<div id="modal-suppliers-overlay" class="modal-overlay hidden">
+    <div class="modal-card">
+        <h2>Lieferanten-Datenbank</h2>
+        <div id="suppliers-manager-list" class="suppliers-manager-list"></div>
+        <div class="modal-actions" style="margin-top: 16px;">
+            <button type="button" id="btn-close-suppliers" class="btn-secondary" style="width: 100%;">Schließen</button>
+        </div>
+    </div>
+</div>
+
+<!-- JS-Module (Laden nacheinander) -->
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script src="ui.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -1,0 +1,111 @@
+/* ==================================================== */
+/* style-billing.css: DASHBOARD, CARDS & INTERFACE      */
+/* ==================================================== */
+.manager-content { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 90px; }
+
+/* Die schicken summary Karten */
+.dashboard-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.summary-card {
+    background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px;
+    padding: 16px; display: flex; flex-direction: column; gap: 8px; transition: transform 0.2s, background-color 0.2s;
+}
+.summary-card:hover { transform: translateY(-2px); background: rgba(255, 255, 255, 0.04); }
+.summary-card.red { border-bottom: 3px solid #e74c3c; }
+.summary-card.yellow { border-bottom: 3px solid #f6e05e; }
+.summary-card.orange { border-bottom: 3px solid #ff7b00; }
+.summary-card.green { border-bottom: 3px solid #00ff73; }
+.summary-label { font-size: 0.65rem; color: #a0aec0; text-transform: uppercase; font-weight: 700; }
+.summary-value { font-size: 1.3rem; font-weight: 800; color: white; text-shadow: 0 0 10px rgba(255,255,255,0.1); }
+
+/* Billing Reihen */
+.billing-row {
+    background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 16px; margin-bottom: 14px;
+    display: flex; justify-content: space-between; align-items: center; gap: 16px; border-left: 4px solid #00663a;
+    transition: border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s; max-height: 250px; overflow: hidden;
+}
+.billing-row.status-zu-verrechnen { border-left-color: #e74c3c; }
+.billing-row.status-an-group-verrechnet { border-left-color: #f6e05e; }
+.billing-row.status-bezahlt { border-left-color: #00ff73; opacity: 0.65; }
+
+.billing-info-block { flex: 1; min-width: 0; }
+.billing-row-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 5px; color: white; }
+.billing-row-meta { font-size: 0.88rem; color: #a0aec0; }
+.billing-financials { text-align: right; }
+.amount-main { font-size: 1.2rem; font-weight: 800; color: #00ff73; }
+.amount-fremdkosten { font-size: 0.82rem; color: #e74c3c; margin-top: 2px; font-weight: 500; }
+
+.action-group { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.alloc-row-badge { color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; text-transform: uppercase; font-weight: 800; text-align: center; }
+.badge-zu-verrechnen { background: #e74c3c; }
+.badge-verrechnet { background: #b79400; }
+.badge-bezahlt { background: #00663a; color: #00ff73; }
+
+/* KORREKTUR: Das neue, hochauflösende MNAU Status-Auswahlelement (Dropdown) */
+.status-select {
+    background-color: #1c1c1c; color: white; border: 1px solid rgba(0, 102, 58, 0.5);
+    padding: 8px 30px 8px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+    cursor: pointer; -webkit-appearance: none; -moz-appearance: none; appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat; background-position: right 10px center; background-size: 16px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.status-select:focus { border-color: #00ff73; box-shadow: 0 0 10px rgba(0, 255, 115, 0.15); outline: none; }
+
+/* Section Dividers */
+.section-divider { display: flex; align-items: center; margin: 30px 0 16px 0; font-size: 0.72rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: #00ff73; }
+.section-divider::before { content: '// '; margin-right: 6px; }
+.section-divider::after { content: ''; flex: 1; height: 1px; margin-left: 14px; background: linear-gradient(to right, rgba(0, 255, 115, 0.5), transparent); }
+.section-divider.red-divider { color: #e74c3c; }
+.section-divider.red-divider::after { background: linear-gradient(to right, rgba(231, 76, 60, 0.5), transparent); }
+
+/* KORREKTUR: Das wunderschöne 'System Secure' No-Debts Panel */
+.no-debts-panel {
+    grid-column: 1 / -1; background: rgba(0, 255, 115, 0.02); border: 1px dashed rgba(0, 255, 115, 0.2);
+    border-radius: 12px; padding: 24px; display: flex; align-items: center; gap: 16px; justify-content: center;
+    animation: rowSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.no-debts-panel svg {
+    width: 32px; height: 32px; fill: #00ff73; background: rgba(0, 255, 115, 0.08);
+    padding: 6px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 15px rgba(0, 255, 115, 0.15);
+}
+.no-debts-text h3 { margin: 0 0 4px 0; font-size: 0.85rem; color: #00ff73; font-weight: 800; letter-spacing: 1px; }
+.no-debts-text p { margin: 0; font-size: 0.78rem; color: #a0aec0; line-height: 1.4; }
+
+/* Offene Lieferanten Posten Panel */
+.supplier-summary-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.supplier-stat-card { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-left: 3px solid #e74c3c; border-radius: 8px; padding: 14px; transition: transform 0.2s; }
+.supplier-stat-card:hover { transform: translateY(-2px); background: rgba(255, 255, 255, 0.04); }
+.supplier-stat-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255, 255, 255, 0.08); padding-bottom: 6px; margin-bottom: 8px; }
+.supplier-stat-name { font-weight: 800; font-size: 0.8rem; color: white; text-transform: uppercase; }
+.supplier-stat-total { color: #e74c3c; font-weight: 800; font-size: 1rem; }
+.supplier-stat-item { display: flex; justify-content: space-between; font-size: 0.72rem; color: #a0aec0; margin-bottom: 4px; }
+
+/* Modals */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 200; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: opacity 0.25s, visibility 0.25s; }
+.modal-overlay:not(.hidden) { opacity: 1; visibility: visible; }
+.modal-card { background: #141414; border: 1px solid rgba(0, 102, 58, 0.4); border-radius: 16px; padding: 24px; width: 92%; max-width: 440px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); box-sizing: border-box; }
+.modal-card h2 { margin-top: 0; font-size: 1.4rem; font-weight: 800; color: white; text-transform: uppercase; margin-bottom: 20px; }
+form label { display: block; margin-top: 14px; font-size: 0.8rem; color: #a0aec0; font-weight: 600; text-transform: uppercase; }
+
+/* Lieferanten Input & iOS fix */
+.supplier-container { max-height: 160px; overflow-y: auto; margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+.supplier-row { display: flex; gap: 8px; align-items: center; }
+.supplier-row .supplier-name {
+    flex: 2; min-width: 0; -webkit-appearance: none !important; -moz-appearance: none !important; appearance: none !important;
+    padding: 11px 36px 11px 12px !important; background-color: #1c1c1c !important;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important; background-position: right 10px center !important; background-size: 16px !important;
+}
+.supplier-row .supplier-amount { flex: 1; min-width: 0; padding: 11px 12px !important; }
+.supplier-name::-webkit-calendar-picker-indicator { opacity: 0 !important; width: 28px; height: 100%; cursor: pointer; }
+
+/* Lieferanten-Verwaltungs-Manager */
+.suppliers-manager-list { max-height: 250px; overflow-y: auto; padding-right: 4px; margin-top: 12px; }
+.supplier-manager-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; margin-bottom: 8px; }
+.supplier-manager-name { font-size: 0.85rem; font-weight: 600; color: white; }
+
+@media (max-width: 768px) {
+    .billing-row { flex-direction: column; align-items: stretch; gap: 14px; }
+    .billing-financials { text-align: left; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 10px; }
+    .action-group { justify-content: space-between; width: 100%; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 12px; }
+}
