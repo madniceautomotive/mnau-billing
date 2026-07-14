@@ -305,3 +305,74 @@ form input {
     content: ''; flex: 1; height: 1px; margin-left: 14px;
     background: linear-gradient(to right, rgba(0, 255, 115, 0.5), transparent);
 }
+
+/* ==================================================== */
+/* 8. DETAIL SUPPPLIER BREAKDOWN PANEL                 */
+/* ==================================================== */
+.supplier-summary-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+/* Lieferanten-HUD-Karte */
+.supplier-stat-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-left: 3px solid #e74c3c; /* Rote Signal-Kante für offene Posten */
+    border-radius: 8px;
+    padding: 14px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.supplier-stat-card:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.supplier-stat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+}
+.supplier-stat-name {
+    font-weight: 800;
+    font-size: 0.8rem;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.supplier-stat-total {
+    color: #e74c3c;
+    font-weight: 800;
+    font-size: 1rem;
+}
+
+/* Die einzelnen Herkunfts-Projekte */
+.supplier-stat-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: #a0aec0;
+    margin-bottom: 4px;
+}
+.supplier-stat-item span:first-child {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 170px;
+}
+.supplier-stat-item span:last-child {
+    color: #ef4444;
+}
+
+/* Roter Cyberpunk Trenner */
+.section-divider.red-divider {
+    color: #e74c3c;
+}
+.section-divider.red-divider::after {
+    background: linear-gradient(to right, rgba(231, 76, 60, 0.5), transparent);
+}

@@ -223,7 +223,6 @@ window.triggerSetup = function() {
     }
 }
 
-// --- NEU: Summary berechnen und anzeigen ---
 function updateSummary(records) {
     let sumZuVerrechnen = 0;
     let sumAnGroup = 0;
@@ -266,9 +265,79 @@ function updateSummary(records) {
     `;
 }
 
+// --- NEU: Detaillierte Aggregation der offenen Lieferanten-Forderungen ---
+function updateSupplierBreakdown(records) {
+    const supplierContainer = document.getElementById('supplier-summary-details');
+    if (!supplierContainer) return;
+
+    const openSuppliers = {};
+
+    records.forEach(record => {
+        const fields = record.fields;
+        const status = fields.Status || "Zu verrechnen";
+        const orderName = fields.Auftrag || "Unbenanntes Projekt";
+
+        // Wir tracken nur Lieferanten von Aufträgen, die noch NICHT bezahlt sind!
+        if (status !== "Bezahlt" && fields.Fremdkosten_Details) {
+            try {
+                const details = JSON.parse(fields.Fremdkosten_Details);
+                details.forEach(d => {
+                    const name = (d.name || "Unbekannt").trim();
+                    const amount = parseFloat(d.amount) || 0;
+
+                    if (amount > 0) {
+                        if (!openSuppliers[name]) {
+                            openSuppliers[name] = { total: 0, items: [] };
+                        }
+                        openSuppliers[name].total += amount;
+                        openSuppliers[name].items.push({ order: orderName, amount: amount });
+                    }
+                });
+            } catch (e) {
+                console.error("Fehler beim Parsen der Fremdkosten-Details:", e);
+            }
+        }
+    });
+
+    const supplierNames = Object.keys(openSuppliers);
+
+    if (supplierNames.length === 0) {
+        supplierContainer.innerHTML = `
+            <div style="grid-column: 1/-1; padding: 16px; color: #666; font-size: 0.8rem; text-align: center; border: 1px dashed rgba(255,255,255,0.05); border-radius: 8px; letter-spacing: 0.5px;">
+                NO_ACTIVE_SUPPLIER_DEBTS
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+    supplierNames.forEach(name => {
+        const data = openSuppliers[name];
+        html += `
+            <div class="supplier-stat-card">
+                <div class="supplier-stat-header">
+                    <span class="supplier-stat-name">${name}</span>
+                    <span class="supplier-stat-total">€ ${data.total.toFixed(2)}</span>
+                </div>
+        `;
+        data.items.forEach(item => {
+            html += `
+                <div class="supplier-stat-item">
+                    <span>↳ ${item.order}</span>
+                    <span>€ ${item.amount.toFixed(2)}</span>
+                </div>
+            `;
+        });
+        html += `</div>`;
+    });
+
+    supplierContainer.innerHTML = html;
+}
+
 function renderOrders(records) {
-    // Ruft vor dem Zeichnen der Aufträge das Summary-Update auf!
+    // Beide Statistiken live berechnen
     updateSummary(records);
+    updateSupplierBreakdown(records);
 
     orderList.innerHTML = '';
 
