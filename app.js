@@ -4,36 +4,36 @@
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // Setup-Events binden
-    if (DOM.btnNewOrder) {
-        DOM.btnNewOrder.addEventListener('click', () => {
+    // Setup-Events binden via window.DOM Bridge
+    if (window.DOM.btnNewOrder) {
+        window.DOM.btnNewOrder.addEventListener('click', () => {
             document.getElementById('supplier-container').innerHTML = '';
-            UI.addSupplierRow();
-            UI.calculateTotalFremdkosten();
-            DOM.modal.classList.remove('hidden');
+            window.UI.addSupplierRow();
+            window.UI.calculateTotalFremdkosten();
+            window.DOM.modal.classList.remove('hidden');
         });
     }
 
-    if (DOM.btnCancel) {
-        DOM.btnCancel.addEventListener('click', () => {
-            DOM.modal.classList.add('hidden');
-            DOM.formNewOrder.reset();
+    if (window.DOM.btnCancel) {
+        window.DOM.btnCancel.addEventListener('click', () => {
+            window.DOM.modal.classList.add('hidden');
+            window.DOM.formNewOrder.reset();
         });
     }
 
     // Modal Lieferanten-Verwaltung anbinden
-    if (DOM.btnManageSuppliers) {
-        DOM.btnManageSuppliers.addEventListener('click', () => {
-            UI.renderSuppliersManager();
-            DOM.modalSuppliers.classList.remove('hidden');
+    if (window.DOM.btnManageSuppliers) {
+        window.DOM.btnManageSuppliers.addEventListener('click', () => {
+            window.UI.renderSuppliersManager();
+            window.DOM.modalSuppliers.classList.remove('hidden');
         });
     }
-    if (DOM.btnCloseSuppliers) {
-        DOM.btnCloseSuppliers.addEventListener('click', () => DOM.modalSuppliers.classList.add('hidden'));
+    if (window.DOM.btnCloseSuppliers) {
+        window.DOM.btnCloseSuppliers.addEventListener('click', () => window.DOM.modalSuppliers.classList.add('hidden'));
     }
 
-    if (DOM.formNewOrder) {
-        DOM.formNewOrder.addEventListener('submit', async (e) => {
+    if (window.DOM.formNewOrder) {
+        window.DOM.formNewOrder.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const name = document.getElementById('input-name').value;
@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 2. Lieferanten in Airtable abspeichern
             if (newSuppliersToSave.length > 0) {
                 try {
-                    const resData = await API.saveSuppliers(newSuppliersToSave);
+                    const resData = await window.API.saveSuppliers(newSuppliersToSave);
                     if (resData && resData.records) {
                         resData.records.forEach(r => {
                             window.globalSuppliers.push({ id: r.id, name: r.fields.Name });
@@ -73,10 +73,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            const totalFremdkosten = UI.calculateTotalFremdkosten();
+            const totalFremdkosten = window.UI.calculateTotalFremdkosten();
             const suppliersJSON = JSON.stringify(suppliers);
 
-            // REPARIERT: Tippfehler von totalFremskosten auf totalFremdkosten korrigiert!
+            // REPARIERT: Tippfehler totalFremskosten restlos eliminiert
             const payload = {
                 records: [{
                     fields: {
@@ -90,9 +90,9 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             try {
-                await API.saveOrder(payload);
-                DOM.modal.classList.add('hidden');
-                DOM.formNewOrder.reset();
+                await window.API.saveOrder(payload);
+                window.DOM.modal.classList.add('hidden');
+                window.DOM.formNewOrder.reset();
                 fetchOrders();
             } catch (error) {
                 alert("Fehler beim Erstellen des Auftrags.");
@@ -101,29 +101,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const btnAddSupplier = document.getElementById('btn-add-supplier');
-    if (btnAddSupplier) btnAddSupplier.addEventListener('click', () => UI.addSupplierRow());
+    if (btnAddSupplier) btnAddSupplier.addEventListener('click', () => window.UI.addSupplierRow());
 
     // Live-Suche
-    if (DOM.searchInput) {
-        DOM.searchInput.addEventListener('input', (e) => {
+    if (window.DOM.searchInput) {
+        window.DOM.searchInput.addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase().trim();
-            DOM.searchClearBtn.style.display = query.length > 0 ? 'flex' : 'none';
+            window.DOM.searchClearBtn.style.display = query.length > 0 ? 'flex' : 'none';
 
             const filtered = window.loadedRecords.filter(record => {
                 const orderName = (record.fields.Auftrag || "").toLowerCase();
                 const detailsStr = (record.fields.Fremdkosten_Details || "").toLowerCase();
                 return orderName.includes(query) || detailsStr.includes(query);
             });
-            UI.renderOrders(filtered);
+            window.UI.renderOrders(filtered);
         });
     }
 
-    if (DOM.searchClearBtn) {
-        DOM.searchClearBtn.addEventListener('click', () => {
-            DOM.searchInput.value = '';
-            DOM.searchClearBtn.style.display = 'none';
-            UI.renderOrders(window.loadedRecords);
-            DOM.searchInput.focus();
+    if (window.DOM.searchClearBtn) {
+        window.DOM.searchClearBtn.addEventListener('click', () => {
+            window.DOM.searchInput.value = '';
+            window.DOM.searchClearBtn.style.display = 'none';
+            window.UI.renderOrders(window.loadedRecords);
+            window.DOM.searchInput.focus();
         });
     }
 
@@ -143,21 +143,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function fetchOrders() {
     if (!window.AIRTABLE_TOKEN || !window.BASE_ID) {
-        UI.showSetupRequired();
+        window.UI.showSetupRequired();
         return;
     }
 
     if (window.loadedRecords.length === 0) {
-        DOM.loading.classList.remove('hidden');
-        DOM.orderList.innerHTML = '';
+        window.DOM.loading.classList.remove('hidden');
+        window.DOM.orderList.innerHTML = '';
     }
 
     try {
-        const dataOrders = await API.fetchOrders();
+        const dataOrders = await window.API.fetchOrders();
         window.loadedRecords = dataOrders.records || [];
 
         try {
-            const dataSuppliers = await API.fetchSuppliers();
+            const dataSuppliers = await window.API.fetchSuppliers();
             if (dataSuppliers.records) {
                 window.globalSuppliers = dataSuppliers.records.map(r => ({ id: r.id, name: r.fields.Name })).filter(s => s.name);
             }
@@ -165,12 +165,11 @@ async function fetchOrders() {
             console.warn("Lieferanten-Tabelle konnte nicht geladen werden.");
         }
 
-        UI.updateSupplierDatalist();
-        UI.renderOrders(window.loadedRecords);
+        window.UI.updateSupplierDatalist();
+        window.UI.renderOrders(window.loadedRecords);
     } catch (error) {
-        // DIAGNOSTIK-UPGRADE: Zeigt uns ab jetzt unbarmherzig die echte Fehlerursache direkt im HUD an!
         console.error("Kritischer Terminal-Fehler:", error);
-        DOM.orderList.innerHTML = `
+        window.DOM.orderList.innerHTML = `
             <div style="padding: 24px; background: rgba(231, 76, 60, 0.03); border: 1px dashed rgba(231, 76, 60, 0.3); border-radius: 12px;">
                 <h3 style="color: #e74c3c; margin: 0 0 8px 0; font-size: 1rem; font-weight: 800; letter-spacing: 0.5px;">SYSTEM_CRASH // DIAGNOSTIC_ALERT</h3>
                 <p style="color: #a0aec0; font-size: 0.82rem; margin: 0 0 16px 0; line-height: 1.4;">Der Abruf wurde blockiert. Das kann an fehlerhaften Keys liegen, oder an einem unhandled JavaScript-Fehler im Renderer:</p>
@@ -178,7 +177,7 @@ async function fetchOrders() {
             </div>
         `;
     } finally {
-        DOM.loading.classList.add('hidden');
+        window.DOM.loading.classList.add('hidden');
     }
 }
 
@@ -186,14 +185,14 @@ window.changeOrderStatus = async function(recordId, newStatus) {
     const record = window.loadedRecords.find(r => r.id === recordId);
     if (record) {
         record.fields.Status = newStatus;
-        UI.renderOrders(window.loadedRecords);
+        window.UI.renderOrders(window.loadedRecords);
     }
 
     try {
-        await API.updateOrderStatus(recordId, newStatus);
-        const data = await API.fetchOrders();
+        await window.API.updateOrderStatus(recordId, newStatus);
+        const data = await window.API.fetchOrders();
         window.loadedRecords = data.records || [];
-        UI.renderOrders(window.loadedRecords);
+        window.UI.renderOrders(window.loadedRecords);
     } catch (error) {
         alert("Fehler beim Status-Update.");
         fetchOrders();
@@ -209,7 +208,7 @@ window.toggleSupplierPaid = async function(orderId, supplierIndex) {
         details[supplierIndex].paid = !details[supplierIndex].paid;
 
         record.fields.Fremdkosten_Details = JSON.stringify(details);
-        UI.renderOrders(window.loadedRecords);
+        window.UI.renderOrders(window.loadedRecords);
 
         await fetch(`${window.API_URL_ORDERS}/${orderId}`, {
             method: 'PATCH',
@@ -249,7 +248,7 @@ window.bulkPaySupplier = async function(supplierName) {
         }
     });
 
-    UI.renderOrders(window.loadedRecords);
+    window.UI.renderOrders(window.loadedRecords);
 
     try {
         const queue = updates.map(up => {
@@ -268,14 +267,14 @@ window.bulkPaySupplier = async function(supplierName) {
 };
 
 window.deleteSupplier = async function(supplierId, supplierName) {
-    if (!confirm(`Möchtest du "${supplierName}" dauerhaft aus der Lieferanten-Datenbank löschen?`)) return;
+    if (!confirm(`Möchtest du "${supplierName}" dauerhaft aus der Lieferanten-Datenbank lüschen?`)) return;
 
     try {
-        await API.deleteSupplierFromAirtable(supplierId);
+        await window.API.deleteSupplierFromAirtable(supplierId);
         window.globalSuppliers = window.globalSuppliers.filter(s => s.id !== supplierId);
-        UI.renderSuppliersManager();
-        UI.updateSupplierDatalist();
-        UI.renderOrders(window.loadedRecords);
+        window.UI.renderSuppliersManager();
+        window.UI.updateSupplierDatalist();
+        window.UI.renderOrders(window.loadedRecords);
     } catch (error) {
         alert("Lieferant konnte nicht gelöscht werden.");
     }
@@ -284,13 +283,13 @@ window.deleteSupplier = async function(supplierId, supplierName) {
 window.deleteOrder = async function(recordId) {
     if (!confirm("Auftrag wirklich dauerhaft löschen?")) return;
 
-    const row = DOM.orderList.querySelector(`.billing-row[data-id="${recordId}"]`);
+    const row = window.DOM.orderList.querySelector(`.billing-row[data-id="${recordId}"]`);
     if (row) row.classList.add('row-exit-active');
 
     try {
-        await API.deleteOrder(recordId);
+        await window.API.deleteOrder(recordId);
         window.loadedRecords = window.loadedRecords.filter(r => r.id !== recordId);
-        UI.renderOrders(window.loadedRecords);
+        window.UI.renderOrders(window.loadedRecords);
     } catch (error) {
         alert("Fehler beim Löschen.");
         fetchOrders();
