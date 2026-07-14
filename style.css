@@ -27,8 +27,6 @@ body, html {
     background: linear-gradient(135deg, #ffffff 40%, #a0aec0 100%);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
-
-/* KORREKTUR: "Billing" Schriftzug im gewohnten dunklen MNAU-Grün */
 .database-header h1 span {
     color: #00663a;
     -webkit-text-fill-color: initial;
@@ -61,7 +59,6 @@ body, html {
 .search-clear-btn svg { width: 13px; height: 13px; fill: #718096; transition: fill 0.15s; }
 .search-clear-btn:hover svg { fill: #e74c3c; }
 
-/* Der originale SSD-Scanner Control-Button (für den Key-Reset) */
 .sort-icon-btn {
     background: #1c1c1c; border: 1px solid rgba(0, 102, 58, 0.5); color: #a0aec0;
     width: 43px; height: 43px; border-radius: 10px; cursor: pointer;
@@ -96,7 +93,7 @@ body, html {
 .btn-secondary:active { transform: scale(0.95); }
 
 /* ==================================================== */
-/* 4. BILLING ROWS                                      */
+/* 4. BILLING ROWS (Mit weichen Transitions)            */
 /* ==================================================== */
 .manager-content { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 90px; }
 
@@ -105,7 +102,16 @@ body, html {
     padding: 16px; margin-bottom: 14px;
     display: flex; justify-content: space-between; align-items: center; gap: 16px;
     border-left: 4px solid #00663a;
-    transition: border-color 0.3s, box-shadow 0.3s;
+
+    /* Weiche Farbübergänge & Transformations-Limits für Animationen */
+    transition: border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.3s ease,
+    opacity 0.3s ease,
+    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    max-height: 250px;
+    opacity: 1;
+    transform: scale(1);
+    overflow: hidden;
 }
 
 .billing-row.status-zu-verrechnen { border-left-color: #e74c3c; }
@@ -156,22 +162,62 @@ body, html {
 .delete-btn:active { transform: scale(0.92); }
 
 /* ==================================================== */
-/* 5. LIEFERANTEN-SYSTEM & BREAKDOWN                    */
+/* FLÜSSIGE EIN- & AUSBLEND-ANIMATIONEN (NEW)          */
 /* ==================================================== */
 
-/* Modal Container für Lieferanten */
+/* Sanftes Hineingleiten bei neuen Einträgen */
+@keyframes rowSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-16px) scale(0.97);
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        margin-bottom: 0;
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        max-height: 250px;
+    }
+}
+.row-enter-active {
+    animation: rowSlideIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Weiches Herausschrumpfen bei Deletion */
+@keyframes rowSlideOut {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        max-height: 250px;
+    }
+    to {
+        opacity: 0;
+        transform: translateY(16px) scale(0.95);
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        margin-bottom: 0;
+        border-left-width: 0;
+    }
+}
+.row-exit-active {
+    animation: rowSlideOut 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    pointer-events: none;
+}
+
+/* ==================================================== */
+/* 5. LIEFERANTEN-SYSTEM & BREAKDOWN                    */
+/* ==================================================== */
 .supplier-container {
     max-height: 160px; overflow-y: auto; margin-top: 8px;
     display: flex; flex-direction: column; gap: 8px;
     padding-right: 5px;
 }
-
-/* Einzelne Lieferanten-Zeile im Eingabe-Modal */
 .supplier-row {
     display: flex; gap: 8px; align-items: center;
 }
-
-/* KORREKTUR: Deaktiviert native iOS-Eingriffe & färbt den Pfeil sauber in Rein-Weiß (%23ffffff) */
 .supplier-row .supplier-name {
     flex: 2; min-width: 0;
     -webkit-appearance: none !important;
@@ -188,8 +234,6 @@ body, html {
     flex: 1; min-width: 0;
     padding: 11px 12px !important;
 }
-
-/* Blendet den standardmäßigen, schwarzen Browser-Pfeil (iOS/Chrome) endgültig aus */
 .supplier-name::-webkit-calendar-picker-indicator {
     opacity: 0 !important;
     -webkit-appearance: none !important;
@@ -206,7 +250,6 @@ body, html {
 }
 .btn-remove-supplier:hover { background: rgba(231, 76, 60, 0.2); border-color: #e74c3c; }
 
-/* Modal Summenbereich */
 .supplier-actions {
     display: flex; justify-content: space-between; align-items: flex-end; margin-top: 12px;
     border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 12px;
@@ -215,7 +258,6 @@ body, html {
 .supplier-total { font-size: 0.75rem; color: #a0aec0; text-align: right; text-transform: uppercase; }
 .supplier-total span { color: #e74c3c; font-weight: bold; font-size: 1.1rem; }
 
-/* Dashboard-Karte: Die Lieferanten-Auflistung unter der Summe */
 .breakdown-container {
     margin-top: 6px; padding-top: 8px; border-top: 1px dashed rgba(231, 76, 60, 0.2);
 }
@@ -290,7 +332,7 @@ form input {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
 }
 .summary-card:hover {
     transform: translateY(-2px);
@@ -314,6 +356,7 @@ form input {
     color: white;
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
     text-shadow: 0 0 10px rgba(255,255,255,0.1);
+    transition: color 0.3s ease;
 }
 
 .section-divider {
@@ -328,7 +371,7 @@ form input {
 }
 
 /* ==================================================== */
-/* 8. DETAIL SUPPPLIER BREAKDOWN PANEL                 */
+/* 8. DETAIL SUPPPLIER BREAKDOWN PANEL (Mit Transitions)*/
 /* ==================================================== */
 .supplier-summary-details {
     display: grid;
@@ -342,7 +385,8 @@ form input {
     border-left: 3px solid #e74c3c;
     border-radius: 8px;
     padding: 14px;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s, opacity 0.3s ease;
+    animation: rowSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 .supplier-stat-card:hover {
     transform: translateY(-2px);

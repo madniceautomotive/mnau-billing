@@ -1,7 +1,6 @@
 let AIRTABLE_TOKEN = localStorage.getItem('MNAU_AIRTABLE_TOKEN');
 let BASE_ID = localStorage.getItem('MNAU_BASE_ID');
 
-// Wir sprechen mit zwei Tabellen (Auftraege und Lieferanten)
 let API_URL_ORDERS = "";
 let API_URL_SUPPLIERS = "";
 let HEADERS = {};
@@ -16,7 +15,7 @@ if (AIRTABLE_TOKEN && BASE_ID) {
 }
 
 let loadedRecords = [];
-let globalSuppliers = []; // Hier speichern wir das unzerstörbare Lieferanten-Gedächtnis
+let globalSuppliers = []; // Unzerstörbares Lieferanten-Gedächtnis
 
 const orderList = document.getElementById('order-list');
 const loading = document.getElementById('loading');
@@ -79,7 +78,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Modal Speichern-Logik (Voll-synchronisiert)
     if (formNewOrder) {
         formNewOrder.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -87,7 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const name = document.getElementById('input-name').value;
             const betrag = parseFloat(document.getElementById('input-betrag').value || 0);
 
-            // Lieferanten einsammeln
             const suppliers = [];
             const rows = document.querySelectorAll('.supplier-row');
             rows.forEach(row => {
@@ -98,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // 1. Unbekannte Lieferanten filtern (Case-Insensitive Prüfung)
+            // 1. Unbekannte Lieferanten filtern
             const newSuppliersToSave = [];
             suppliers.forEach(s => {
                 const alreadyExists = globalSuppliers.some(g => g.toLowerCase() === s.name.toLowerCase());
@@ -107,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // 2. Neue Lieferanten zuerst in Airtable abspeichern (Wichtig gegen Race Conditions!)
+            // 2. Lieferanten in Airtable abspeichern (Wartet synchron)
             if (newSuppliersToSave.length > 0) {
                 try {
                     const resSupp = await fetch(API_URL_SUPPLIERS, {
@@ -118,15 +115,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (!resSupp.ok) {
                         const errData = await resSupp.json();
-                        console.error("Airtable Lieferanten Fehler:", errData);
-                        alert(`Airtable lehnt das Speichern des Lieferanten ab!\n\nFehlermeldung: "${errData.error?.message}"\n\nPrüfe bitte:\n1. Heißt die Tabelle in Airtable exakt "Lieferanten"?\n2. Heißt die erste Spalte in dieser Tabelle exakt "Name" (großgeschrieben)?`);
-                        return; // Prozess stoppen
+                        alert(`Airtable lehnt das Speichern der Lieferanten ab!\n\nFehlermeldung: "${errData.error?.message}"`);
+                        return;
                     } else {
-                        // Lokal ins temporäre Gedächtnis schieben
                         newSuppliersToSave.forEach(s => globalSuppliers.push(s.fields.Name));
                     }
                 } catch (err) {
-                    console.error("Netzwerkfehler beim Lieferanten-POST:", err);
                     alert("Netzwerkfehler: Lieferanten konnten nicht dauerhaft gespeichert werden.");
                     return;
                 }
@@ -135,7 +129,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const totalFremdkosten = calculateTotalFremdkosten();
             const suppliersJSON = JSON.stringify(suppliers);
 
-            // 3. Erst jetzt den eigentlichen Auftrag speichern
             const payload = {
                 records: [{
                     fields: {
@@ -157,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 modal.classList.add('hidden');
                 formNewOrder.reset();
-                fetchOrders();
+                fetchOrders(); // Silent Sync lädt den neuen Auftrag sanft ein
             } catch (error) {
                 alert("Verbindungsfehler beim Erstellen des Auftrags.");
             }
@@ -178,16 +171,17 @@ async function fetchOrders() {
         return;
     }
 
-    loading.classList.remove('hidden');
-    orderList.innerHTML = '';
+    // SILENT REFRESH: Spinner nur zeigen, wenn die Liste noch komplett leer ist!
+    if (loadedRecords.length === 0) {
+        loading.classList.remove('hidden');
+        orderList.innerHTML = '';
+    }
 
     try {
-        // 1. Aufträge laden
         const responseOrders = await fetch(`${API_URL_ORDERS}?sort[0][field]=Created%20Time&sort[0][direction]=desc`, { headers: HEADERS });
         const dataOrders = await responseOrders.json();
         loadedRecords = dataOrders.records || [];
 
-        // 2. Lieferanten-Gedächtnis laden (Mit lautem Fehler-Reporting)
         try {
             const responseSuppliers = await fetch(API_URL_SUPPLIERS, { headers: HEADERS });
             if (responseSuppliers.ok) {
@@ -195,13 +189,9 @@ async function fetchOrders() {
                 if (dataSuppliers.records) {
                     globalSuppliers = dataSuppliers.records.map(r => r.fields.Name).filter(n => n);
                 }
-            } else {
-                const errData = await responseSuppliers.json();
-                console.error("Fehler beim Laden der Lieferanten-Tabelle:", errData);
-                alert(`⚠️ FEHLER: Die Tabelle "Lieferanten" konnte in Airtable nicht abgerufen werden!\n\nFehlermeldung von Airtable: "${errData.error?.message || 'Nicht gefunden'}"\n\nBitte erstelle eine neue Tabelle namens "Lieferanten" (exakte Schreibweise!) und setze die erste Spalte auf "Name".`);
             }
         } catch (e) {
-            console.error("Kritischer Fehler bei Lieferanten-Abfrage:", e);
+            console.warn("Lieferanten-Tabelle konnte im Hintergrund nicht geladen werden.");
         }
 
         updateSupplierDatalist();
@@ -219,7 +209,6 @@ function updateSupplierDatalist() {
     datalist.innerHTML = '';
 
     const uniqueSuppliers = new Set(globalSuppliers);
-
     loadedRecords.forEach(record => {
         if (record.fields.Fremdkosten_Details) {
             try {
@@ -243,7 +232,6 @@ function addSupplierRow() {
     const row = document.createElement('div');
     row.className = 'supplier-row';
 
-    // REPARIERT: Kürzere, kompakte Platzhalter
     row.innerHTML = `
         <input type="text" class="search-input supplier-name" list="supplier-list" placeholder="Lieferant...">
         <input type="number" step="0.01" class="search-input supplier-amount" placeholder="0.00">
@@ -377,7 +365,7 @@ function updateSupplierBreakdown(records) {
     supplierNames.forEach(name => {
         const data = openSuppliers[name];
         html += `
-            <div class="supplier-stat-card">
+            <div class="supplier-stat-card" data-supplier="${name}">
                 <div class="supplier-stat-header">
                     <span class="supplier-stat-name">${name}</span>
                     <span class="supplier-stat-total">€ ${data.total.toFixed(2)}</span>
@@ -397,18 +385,35 @@ function updateSupplierBreakdown(records) {
     supplierContainer.innerHTML = html;
 }
 
+// --- SYSTEM-INTELLIGENTES DOM-DIFFING RE-RENDERING (NEW) ---
 function renderOrders(records) {
     updateSummary(records);
     updateSupplierBreakdown(records);
-
-    orderList.innerHTML = '';
 
     if(!records || records.length === 0) {
         orderList.innerHTML = '<p style="color:#a0aec0; padding: 20px;">Keine passenden Aufträge vorhanden.</p>';
         return;
     }
 
-    records.forEach(record => {
+    // Statischen Fehlertext entfernen, falls nötig
+    if (orderList.querySelector('p')) {
+        orderList.innerHTML = '';
+    }
+
+    const incomingIds = new Set(records.map(r => r.id));
+
+    // 1. Gelöschte Zeilen butterweich herausschrumpfen lassen
+    const currentRows = Array.from(orderList.querySelectorAll('.billing-row'));
+    currentRows.forEach(row => {
+        const rowId = row.getAttribute('data-id');
+        if (!incomingIds.has(rowId)) {
+            row.classList.add('row-exit-active');
+            setTimeout(() => row.remove(), 400); // Exakt nach der CSS-Animation löschen
+        }
+    });
+
+    // 2. Bestehende Zeilen aktualisieren (ohne Löschen!) oder neue einfliegen lassen
+    records.forEach((record, index) => {
         const fields = record.fields;
         const id = record.id;
         const status = fields.Status || "Zu verrechnen";
@@ -449,10 +454,12 @@ function renderOrders(records) {
             badgeClass = "badge-bezahlt";
         }
 
-        const card = document.createElement('div');
-        card.className = `billing-row ${cardStatusClass}`;
+        let actionHTML = '';
+        if(status !== "Bezahlt") {
+            actionHTML = `<button class="btn-primary" onclick="updateStatus('${id}', '${nextStatus}')">➔ ${btnText}</button>`;
+        }
 
-        let html = `
+        const innerHTML = `
             <div class="billing-info-block">
                 <div class="billing-row-title">${fields.Auftrag || "Unbenannt"}</div>
                 <div class="billing-row-meta">Erstellt: ${new Date(record.createdTime).toLocaleDateString('de-DE')}</div>
@@ -466,35 +473,85 @@ function renderOrders(records) {
             
             <div class="action-group">
                 <span class="alloc-row-badge ${badgeClass}">${status}</span>
-        `;
-
-        if(status !== "Bezahlt") {
-            html += `<button class="btn-primary" onclick="updateStatus('${id}', '${nextStatus}')">➔ ${btnText}</button>`;
-        }
-
-        html += `
+                ${actionHTML}
                 <button class="delete-btn" onclick="deleteOrder('${id}')" title="Auftrag löschen">
                     <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                 </button>
             </div>
         `;
 
-        card.innerHTML = html;
-        orderList.appendChild(card);
+        let existingRow = orderList.querySelector(`.billing-row[data-id="${id}"]`);
+
+        if (existingRow) {
+            // Verhindert Flackern: Nur austauschen, wenn sich inhaltlich etwas geändert hat!
+            const cleanExisting = existingRow.innerHTML.replace(/\s+/g, ' ').trim();
+            const cleanIncoming = innerHTML.replace(/\s+/g, ' ').trim();
+
+            if (cleanExisting !== cleanIncoming) {
+                existingRow.innerHTML = innerHTML;
+            }
+
+            // Weicher Farbübergang für den linken Rand wird ausgelöst:
+            existingRow.className = `billing-row ${cardStatusClass}`;
+        } else {
+            // Neue Zeile erstellen & einfliegen lassen
+            const newRow = document.createElement('div');
+            newRow.className = `billing-row ${cardStatusClass} row-enter-active`;
+            newRow.setAttribute('data-id', id);
+            newRow.innerHTML = innerHTML;
+
+            const referenceNode = orderList.children[index];
+            if (referenceNode) {
+                orderList.insertBefore(newRow, referenceNode);
+            } else {
+                orderList.appendChild(newRow);
+            }
+        }
     });
 }
 
+// --- OPTIMISTIC UI: Status sofort anpassen ---
 window.updateStatus = async function(recordId, newStatus) {
+    const record = loadedRecords.find(r => r.id === recordId);
+    if (record) {
+        record.fields.Status = newStatus;
+        renderOrders(loadedRecords); // Sofortige lokale Aktualisierung!
+    }
+
     try {
-        await fetch(`${API_URL_ORDERS}/${recordId}`, { method: 'PATCH', headers: HEADERS, body: JSON.stringify({ fields: { "Status": newStatus } }) });
-        fetchOrders();
-    } catch (error) { alert("Fehler beim Status-Update."); }
+        await fetch(`${API_URL_ORDERS}/${recordId}`, {
+            method: 'PATCH',
+            headers: HEADERS,
+            body: JSON.stringify({ fields: { "Status": newStatus } })
+        });
+        fetchOrders(); // Silent Refresh im Hintergrund zur Datenvalidierung
+    } catch (error) {
+        alert("Fehler beim Status-Update.");
+        fetchOrders(); // Rollback bei Netzwerkfehler
+    }
 }
 
+// --- OPTIMISTIC UI: Zeile sofort ausblenden ---
 window.deleteOrder = async function(recordId) {
     if (!confirm("Auftrag wirklich dauerhaft löschen?")) return;
+
+    // Sofort lokal ausblenden:
+    const row = orderList.querySelector(`.billing-row[data-id="${recordId}"]`);
+    if (row) {
+        row.classList.add('row-exit-active');
+    }
+
     try {
         const response = await fetch(`${API_URL_ORDERS}/${recordId}`, { method: 'DELETE', headers: HEADERS });
-        if (response.ok) fetchOrders();
-    } catch (error) { alert("Verbindungsfehler beim Löschen."); }
+        if (response.ok) {
+            loadedRecords = loadedRecords.filter(r => r.id !== recordId);
+            renderOrders(loadedRecords); // Ansicht endgültig aktualisieren
+        } else {
+            alert("Fehler beim Löschen.");
+            fetchOrders();
+        }
+    } catch (error) {
+        alert("Verbindungsfehler beim Löschen.");
+        fetchOrders();
+    }
 }
