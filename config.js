@@ -21,11 +21,12 @@ if (window.AIRTABLE_TOKEN && window.BASE_ID) {
 
 // Globaler App-State
 window.loadedRecords = [];
-window.globalSuppliers = []; // Speichert Lieferanten als Objekte: { id: "rec...", name: "Lieferant" }
+window.globalSuppliers = [];
 
-// Globale DOM-Schnittstellen (Verhindert Redeclaration-Errors im globalen Scope)
+// Globale DOM-Schnittstellen
 window.DOM = {
     orderList: document.getElementById('order-list'),
+    archiveList: document.getElementById('archive-list'), // NEU: Archiv-Liste verankert
     loading: document.getElementById('loading'),
     modal: document.getElementById('modal-overlay'),
     btnNewOrder: document.getElementById('btn-new-order'),

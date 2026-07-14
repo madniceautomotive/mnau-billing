@@ -51,6 +51,12 @@
 
         <div class="section-divider red-divider">OFFENE_LIEFERANTEN_POSTEN</div>
         <div id="supplier-summary-details" class="supplier-summary-details"></div>
+
+        <!-- NEU: Einklappbarer Archiv Block für bezahlte Projekte -->
+        <details class="archive-details">
+            <summary class="section-divider archive-divider">ARCHIV_LOG (BEZAHLT)</summary>
+            <div id="archive-list"></div>
+        </details>
     </main>
 
 </div>
@@ -61,7 +67,6 @@
         <h2>Neuen Auftrag erfassen</h2>
         <form id="form-new-order">
             <label>Auftragsname / Projekt</label>
-            <!-- REPARIERT: Nutzt jetzt die saubere .mnau-input Klasse -->
             <input type="text" id="input-name" class="mnau-input" required placeholder="z.B. Porsche GW Shooting">
 
             <label>Betrag Automotive (Netto EUR)</label>

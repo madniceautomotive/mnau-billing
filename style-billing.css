@@ -122,3 +122,55 @@ form label { display: block; margin-top: 14px; font-size: 0.8rem; color: #a0aec0
     .billing-financials { text-align: left; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 10px; }
     .action-group { justify-content: space-between; width: 100%; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 12px; }
 }
+
+/* ==================================================== */
+/* 9. ARCHIVE BLOCK COLLAPSIBLE INTERACTION             */
+/* ==================================================== */
+.archive-details {
+    margin-top: 40px;
+}
+/* Summary als interaktiver HUD-Header */
+.archive-divider {
+    cursor: pointer;
+    user-select: none;
+    color: #666; /* Standardmäßig dezent im Hintergrund */
+    transition: color 0.2s ease;
+}
+.archive-divider:hover {
+    color: #00ff73;
+}
+/* Hässlichen Standard-Browser-Pfeil komplett eliminieren */
+.archive-details summary::-webkit-details-marker,
+.archive-details summary::marker {
+    display: none !important;
+}
+/* Cyberpunk-Rotations-Dreieck vor den Text spannen */
+.archive-details summary::before {
+    content: '▶ // ' !important;
+    display: inline-block;
+    margin-right: 6px;
+    transition: transform 0.25s ease, color 0.25s ease;
+    color: #555;
+}
+/* Wenn geöffnet: Pfeil drehen und Divider giftgrün glühen lassen */
+.archive-details[open] summary::before {
+    transform: rotate(90deg);
+    color: #00ff73;
+}
+.archive-details[open] summary {
+    color: #00ff73;
+}
+#archive-list {
+    margin-top: 16px;
+    padding: 2px 0;
+}
+/* Historische Einträge im Archiv clean abdunkeln gegen Ablenkung */
+#archive-list .billing-row {
+    background: rgba(255, 255, 255, 0.01);
+    border-left-color: #00663a;
+    opacity: 0.4;
+}
+#archive-list .billing-row:hover {
+    opacity: 0.85;
+    background: rgba(255, 255, 255, 0.025);
+}

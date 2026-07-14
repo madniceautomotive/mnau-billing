@@ -7,98 +7,109 @@ window.UI = {
         UI.updateSummary(records);
         UI.updateSupplierBreakdown(records);
 
-        if(!records || records.length === 0) {
-            window.DOM.orderList.innerHTML = '<p style="color:#a0aec0; padding: 20px;">Keine passenden Aufträge vorhanden.</p>';
-            return;
-        }
+        // NEU: Datensätze trennen in Aktiv und Bezahlt (Archiv)
+        const activeRecords = records.filter(r => (r.fields.Status || "Zu verrechnen") !== "Bezahlt");
+        const archivedRecords = records.filter(r => r.fields.Status === "Bezahlt");
 
-        if (window.DOM.orderList.querySelector('p')) {
-            window.DOM.orderList.innerHTML = '';
-        }
-
-        const incomingIds = new Set(records.map(r => r.id));
-
-        const currentRows = Array.from(window.DOM.orderList.querySelectorAll('.billing-row'));
-        currentRows.forEach(row => {
-            const rowId = row.getAttribute('data-id');
-            if (!incomingIds.has(rowId)) {
-                row.classList.add('row-exit-active');
-                setTimeout(() => row.remove(), 350);
+        // Geteilte Sub-Rendering-Engine für duale Listen-Pflege
+        const renderContainer = (containerEl, listRecords, emptyMessage) => {
+            if(!listRecords || listRecords.length === 0) {
+                containerEl.innerHTML = `<p style="color:#444; padding: 16px; font-size:0.8rem; text-align:center; border: 1px dashed rgba(255,255,255,0.02); border-radius:8px; letter-spacing:0.5px;">${emptyMessage}</p>`;
+                return;
             }
-        });
-
-        records.forEach((record, index) => {
-            const fields = record.fields;
-            const id = record.id;
-            const status = fields.Status || "Zu verrechnen";
-            const betrag = fields.Betrag_Automotive ? fields.Betrag_Automotive.toFixed(2) : "0.00";
-            const fremdkosten = fields.Fremdkosten ? fields.Fremdkosten.toFixed(2) : "0.00";
-
-            let breakdownHTML = '';
-            if (fields.Fremdkosten_Details) {
-                try {
-                    const details = JSON.parse(fields.Fremdkosten_Details);
-                    if (details.length > 0) {
-                        breakdownHTML = `<div class="breakdown-container">`;
-                        details.forEach((d) => {
-                            const isPaid = d.paid === true;
-                            breakdownHTML += `
-                                <div class="breakdown-row ${isPaid ? 'supplier-paid' : ''}">
-                                    <span>↳ ${d.name} ${isPaid ? '✓' : ''}</span>
-                                    <span>€ ${d.amount.toFixed(2)}</span>
-                                </div>
-                            `;
-                        });
-                        breakdownHTML += `</div>`;
-                    }
-                } catch(e) {}
+            if (containerEl.querySelector('p')) {
+                containerEl.innerHTML = '';
             }
 
-            let cardStatusClass = "status-zu-verrechnen";
-            if(status === "An Group verrechnet") { cardStatusClass = "status-an-group-verrechnet"; }
-            else if(status === "Bezahlt") { cardStatusClass = "status-bezahlt"; }
+            const incomingIds = new Set(listRecords.map(r => r.id));
 
-            const innerHTML = `
-                <div class="billing-info-block">
-                    <div class="billing-row-title">${fields.Auftrag || "Unbenannt"}</div>
-                    <div class="billing-row-meta">Erstellt: ${new Date(record.createdTime).toLocaleDateString('de-DE')}</div>
-                </div>
-                
-                <div class="billing-financials">
-                    <div class="amount-main">€ ${betrag}</div>
-                    <div class="amount-fremdkosten">Gesamt Fremdkosten: € ${fremdkosten}</div>
-                    ${breakdownHTML}
-                </div>
-                
-                <div class="action-group">
-                    <select class="status-select" onchange="changeOrderStatus('${id}', this.value)">
-                        <option value="Zu verrechnen" ${status === "Zu verrechnen" ? "selected" : ""}>Zu verrechnen</option>
-                        <option value="An Group verrechnet" ${status === "An Group verrechnet" ? "selected" : ""}>An Group verrechnet</option>
-                        <option value="Bezahlt" ${status === "Bezahlt" ? "selected" : ""}>Bezahlt</option>
-                    </select>
-                    <!-- REPARIERT: Greift jetzt wieder sauber auf die knallrote .delete-btn Klasse in der CSS zu -->
-                    <button class="delete-btn" onclick="deleteOrder('${id}')" title="Auftrag löschen">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                    </button>
-                </div>
-            `;
+            // 1. Ausgeblendete oder in eine andere Liste verschobene Zeilen herausschrumpfen lassen
+            const currentRows = Array.from(containerEl.querySelectorAll('.billing-row'));
+            currentRows.forEach(row => {
+                const rowId = row.getAttribute('data-id');
+                if (!incomingIds.has(rowId)) {
+                    row.classList.add('row-exit-active');
+                    setTimeout(() => row.remove(), 350);
+                }
+            });
 
-            let existingRow = window.DOM.orderList.querySelector(`.billing-row[data-id="${id}"]`);
-            if (existingRow) {
-                const cleanExisting = existingRow.innerHTML.replace(/\s+/g, ' ').trim();
-                const cleanIncoming = innerHTML.replace(/\s+/g, ' ').trim();
-                if (cleanExisting !== cleanIncoming) { existingRow.innerHTML = innerHTML; }
-                existingRow.className = `billing-row ${cardStatusClass}`;
-            } else {
-                const newRow = document.createElement('div');
-                newRow.className = `billing-row ${cardStatusClass} row-enter-active`;
-                newRow.setAttribute('data-id', id);
-                newRow.innerHTML = innerHTML;
-                const referenceNode = window.DOM.orderList.children[index];
-                if (referenceNode) { window.DOM.orderList.insertBefore(newRow, referenceNode); }
-                else { window.DOM.orderList.appendChild(newRow); }
-            }
-        });
+            // 2. Zeilen abgleichen, neu bauen oder updaten
+            listRecords.forEach((record, index) => {
+                const fields = record.fields;
+                const id = record.id;
+                const status = fields.Status || "Zu verrechnen";
+                const betrag = fields.Betrag_Automotive ? fields.Betrag_Automotive.toFixed(2) : "0.00";
+                const fremdkosten = fields.Fremdkosten ? fields.Fremdkosten.toFixed(2) : "0.00";
+
+                let breakdownHTML = '';
+                if (fields.Fremdkosten_Details) {
+                    try {
+                        const details = JSON.parse(fields.Fremdkosten_Details);
+                        if (details.length > 0) {
+                            breakdownHTML = `<div class="breakdown-container">`;
+                            details.forEach((d) => {
+                                const isPaid = d.paid === true;
+                                breakdownHTML += `
+                                    <div class="breakdown-row ${isPaid ? 'supplier-paid' : ''}">
+                                        <span>↳ ${d.name} ${isPaid ? '✓' : ''}</span>
+                                        <span>€ ${d.amount.toFixed(2)}</span>
+                                    </div>
+                                `;
+                            });
+                            breakdownHTML += `</div>`;
+                        }
+                    } catch(e) {}
+                }
+
+                let cardStatusClass = "status-zu-verrechnen";
+                if(status === "An Group verrechnet") { cardStatusClass = "status-an-group-verrechnet"; }
+                else if(status === "Bezahlt") { cardStatusClass = "status-bezahlt"; }
+
+                const innerHTML = `
+                    <div class="billing-info-block">
+                        <div class="billing-row-title">${fields.Auftrag || "Unbenannt"}</div>
+                        <div class="billing-row-meta">Erstellt: ${new Date(record.createdTime).toLocaleDateString('de-DE')}</div>
+                    </div>
+                    
+                    <div class="billing-financials">
+                        <div class="amount-main">€ ${betrag}</div>
+                        <div class="amount-fremdkosten">Gesamt Fremdkosten: € ${fremdkosten}</div>
+                        ${breakdownHTML}
+                    </div>
+                    
+                    <div class="action-group">
+                        <select class="status-select" onchange="changeOrderStatus('${id}', this.value)">
+                            <option value="Zu verrechnen" ${status === "Zu verrechnen" ? "selected" : ""}>Zu verrechnen</option>
+                            <option value="An Group verrechnet" ${status === "An Group verrechnet" ? "selected" : ""}>An Group verrechnet</option>
+                            <option value="Bezahlt" ${status === "Bezahlt" ? "selected" : ""}>Bezahlt</option>
+                        </select>
+                        <button class="delete-btn" onclick="deleteOrder('${id}')" title="Auftrag löschen">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        </button>
+                    </div>
+                `;
+
+                let existingRow = containerEl.querySelector(`.billing-row[data-id="${id}"]`);
+                if (existingRow) {
+                    const cleanExisting = existingRow.innerHTML.replace(/\s+/g, ' ').trim();
+                    const cleanIncoming = innerHTML.replace(/\s+/g, ' ').trim();
+                    if (cleanExisting !== cleanIncoming) { existingRow.innerHTML = innerHTML; }
+                    existingRow.className = `billing-row ${cardStatusClass}`;
+                } else {
+                    const newRow = document.createElement('div');
+                    newRow.className = `billing-row ${cardStatusClass} row-enter-active`;
+                    newRow.setAttribute('data-id', id);
+                    newRow.innerHTML = innerHTML;
+                    const referenceNode = containerEl.children[index];
+                    if (referenceNode) { containerEl.insertBefore(newRow, referenceNode); }
+                    else { containerEl.appendChild(newRow); }
+                }
+            });
+        };
+
+        // Beide Container unabhängig voneinander synchron zeichnen
+        renderContainer(window.DOM.orderList, activeRecords, "Keine aktiven Aufträge im Log.");
+        renderContainer(window.DOM.archiveList, archivedRecords, "Archiv-Log leer.");
     },
 
     updateSummary(records) {
@@ -256,7 +267,6 @@ window.UI = {
         const container = document.getElementById('supplier-container');
         const row = document.createElement('div');
         row.className = 'supplier-row';
-        // REPARIERT: Nutzt mnau-input und negiert den Margin-Top für Inline-Felder!
         row.innerHTML = `
             <input type="text" class="mnau-input supplier-name" list="supplier-list" placeholder="Lieferant..." style="margin-top:0;">
             <input type="number" step="0.01" class="mnau-input supplier-amount" placeholder="0.00" style="margin-top:0;">
