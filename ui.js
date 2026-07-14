@@ -18,7 +18,6 @@ window.UI = {
 
         const incomingIds = new Set(records.map(r => r.id));
 
-        // 1. Gelöschte Zeilen schrumpfen lassen
         const currentRows = Array.from(window.DOM.orderList.querySelectorAll('.billing-row'));
         currentRows.forEach(row => {
             const rowId = row.getAttribute('data-id');
@@ -28,7 +27,6 @@ window.UI = {
             }
         });
 
-        // 2. Bestehende Zeilen aktualisieren oder neue einfliegen lassen
         records.forEach((record, index) => {
             const fields = record.fields;
             const id = record.id;
@@ -44,7 +42,6 @@ window.UI = {
                         breakdownHTML = `<div class="breakdown-container">`;
                         details.forEach((d) => {
                             const isPaid = d.paid === true;
-                            // KORREKTUR: Oben im Log nur noch schicke Read-Only Anzeige, keine Checkboxen mehr!
                             breakdownHTML += `
                                 <div class="breakdown-row ${isPaid ? 'supplier-paid' : ''}">
                                     <span>↳ ${d.name} ${isPaid ? '✓' : ''}</span>
@@ -58,14 +55,9 @@ window.UI = {
             }
 
             let cardStatusClass = "status-zu-verrechnen";
+            if(status === "An Group verrechnet") { cardStatusClass = "status-an-group-verrechnet"; }
+            else if(status === "Bezahlt") { cardStatusClass = "status-bezahlt"; }
 
-            if(status === "An Group verrechnet") {
-                cardStatusClass = "status-an-group-verrechnet";
-            } else if(status === "Bezahlt") {
-                cardStatusClass = "status-bezahlt";
-            }
-
-            // KORREKTUR: fill="currentColor" erzwingt perfekte, knackige Theme-Reaktionen ohne Orange-Stich!
             const innerHTML = `
                 <div class="billing-info-block">
                     <div class="billing-row-title">${fields.Auftrag || "Unbenannt"}</div>
@@ -84,6 +76,7 @@ window.UI = {
                         <option value="An Group verrechnet" ${status === "An Group verrechnet" ? "selected" : ""}>An Group verrechnet</option>
                         <option value="Bezahlt" ${status === "Bezahlt" ? "selected" : ""}>Bezahlt</option>
                     </select>
+                    <!-- REPARIERT: Greift jetzt wieder sauber auf die knallrote .delete-btn Klasse in der CSS zu -->
                     <button class="delete-btn" onclick="deleteOrder('${id}')" title="Auftrag löschen">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                     </button>
@@ -91,34 +84,25 @@ window.UI = {
             `;
 
             let existingRow = window.DOM.orderList.querySelector(`.billing-row[data-id="${id}"]`);
-
             if (existingRow) {
                 const cleanExisting = existingRow.innerHTML.replace(/\s+/g, ' ').trim();
                 const cleanIncoming = innerHTML.replace(/\s+/g, ' ').trim();
-
-                if (cleanExisting !== cleanIncoming) {
-                    existingRow.innerHTML = innerHTML;
-                }
+                if (cleanExisting !== cleanIncoming) { existingRow.innerHTML = innerHTML; }
                 existingRow.className = `billing-row ${cardStatusClass}`;
             } else {
                 const newRow = document.createElement('div');
                 newRow.className = `billing-row ${cardStatusClass} row-enter-active`;
                 newRow.setAttribute('data-id', id);
                 newRow.innerHTML = innerHTML;
-
                 const referenceNode = window.DOM.orderList.children[index];
-                if (referenceNode) {
-                    window.DOM.orderList.insertBefore(newRow, referenceNode);
-                } else {
-                    window.DOM.orderList.appendChild(newRow);
-                }
+                if (referenceNode) { window.DOM.orderList.insertBefore(newRow, referenceNode); }
+                else { window.DOM.orderList.appendChild(newRow); }
             }
         });
     },
 
     updateSummary(records) {
         let sumZuVerrechnen = 0, sumAnGroup = 0, sumFremdkosten = 0, sumAutomotiveGesamt = 0;
-
         records.forEach(record => {
             const fields = record.fields;
             const status = fields.Status || "Zu verrechnen";
@@ -158,13 +142,11 @@ window.UI = {
     updateSupplierBreakdown(records) {
         const supplierContainer = document.getElementById('supplier-summary-details');
         if (!supplierContainer) return;
-
         const openSuppliers = {};
 
         records.forEach(record => {
             const fields = record.fields;
             const orderName = fields.Auftrag || "Unbenanntes Projekt";
-
             if (fields.Fremdkosten_Details) {
                 try {
                     const details = JSON.parse(fields.Fremdkosten_Details);
@@ -174,17 +156,9 @@ window.UI = {
                         const isPaid = d.paid === true;
 
                         if (amount > 0 && !isPaid) {
-                            if (!openSuppliers[name]) {
-                                openSuppliers[name] = { total: 0, items: [] };
-                            }
+                            if (!openSuppliers[name]) { openSuppliers[name] = { total: 0, items: [] }; }
                             openSuppliers[name].total += amount;
-                            // Wir reichen ID und Array-Index weiter, um von unten direkt nach oben zu feuern!
-                            openSuppliers[name].items.push({
-                                order: orderName,
-                                amount: amount,
-                                orderId: record.id,
-                                index: dIdx
-                            });
+                            openSuppliers[name].items.push({ order: orderName, amount: amount, orderId: record.id, index: dIdx });
                         }
                     });
                 } catch (e) {}
@@ -220,7 +194,6 @@ window.UI = {
                         </div>
                     </div>
             `;
-            // KORREKTUR: Jedes Herkunftsprojekt hat ab jetzt die funktionale Checkbox zum direkten Abhaken!
             data.items.forEach(item => {
                 html += `
                     <div class="supplier-stat-item">
@@ -234,7 +207,6 @@ window.UI = {
             });
             html += `</div>`;
         });
-
         supplierContainer.innerHTML = html;
     },
 
@@ -242,21 +214,16 @@ window.UI = {
         const datalist = document.getElementById('supplier-list');
         if (!datalist) return;
         datalist.innerHTML = '';
-
         const uniqueSuppliers = new Set();
         window.globalSuppliers.forEach(s => uniqueSuppliers.add(s.name));
-
         window.loadedRecords.forEach(record => {
             if (record.fields.Fremdkosten_Details) {
                 try {
                     const details = JSON.parse(record.fields.Fremdkosten_Details);
-                    details.forEach(d => {
-                        if (d.name && d.name.trim() !== '') uniqueSuppliers.add(d.name.trim());
-                    });
+                    details.forEach(d => { if (d.name && d.name.trim() !== '') uniqueSuppliers.add(d.name.trim()); });
                 } catch (e) {}
             }
         });
-
         Array.from(uniqueSuppliers).sort().forEach(supplier => {
             const option = document.createElement('option');
             option.value = supplier;
@@ -268,12 +235,10 @@ window.UI = {
         const listContainer = document.getElementById('suppliers-manager-list');
         if (!listContainer) return;
         listContainer.innerHTML = '';
-
         if (window.globalSuppliers.length === 0) {
             listContainer.innerHTML = '<p style="color:#666; font-size:0.8rem; text-align:center; padding:16px;">Datenbank leer.</p>';
             return;
         }
-
         window.globalSuppliers.forEach(supplier => {
             const row = document.createElement('div');
             row.className = 'supplier-manager-row';
@@ -291,9 +256,10 @@ window.UI = {
         const container = document.getElementById('supplier-container');
         const row = document.createElement('div');
         row.className = 'supplier-row';
+        // REPARIERT: Nutzt mnau-input und negiert den Margin-Top für Inline-Felder!
         row.innerHTML = `
-            <input type="text" class="search-input supplier-name" list="supplier-list" placeholder="Lieferant...">
-            <input type="number" step="0.01" class="search-input supplier-amount" placeholder="0.00">
+            <input type="text" class="mnau-input supplier-name" list="supplier-list" placeholder="Lieferant..." style="margin-top:0;">
+            <input type="number" step="0.01" class="mnau-input supplier-amount" placeholder="0.00" style="margin-top:0;">
             <button type="button" class="btn-remove-supplier" title="Entfernen">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
             </button>

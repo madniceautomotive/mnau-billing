@@ -35,10 +35,12 @@ body, html {
 .search-group {
     position: relative; flex: 1;
 }
+
+/* Suchleiste im Header */
 .search-input {
-    width: 100%; background: #1c1c1c; color: white; border: 1px solid rgba(0, 102, 58, 0.5);
+    width: 100%; background: #1c1c1c; color: white !important; border: 1px solid rgba(0, 102, 58, 0.5);
     padding: 11px 42px 11px 14px; border-radius: 10px; box-sizing: border-box;
-    outline: none; font-size: 0.9rem; font-weight: 500;
+    outline: none; font-size: 0.9rem; font-weight: 500; font-family: inherit;
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 .search-input:focus {
@@ -53,6 +55,19 @@ body, html {
 }
 .search-clear-btn svg { width: 13px; height: 13px; fill: #718096; }
 .search-clear-btn:hover svg { fill: #e74c3c; }
+
+/* REPARIERT: Formular-Eingabefelder im Modal (Garantiert weiße Schrift & gute Abstände) */
+.mnau-input {
+    width: 100%; background: #1c1c1c; color: #ffffff !important; border: 1px solid rgba(0, 102, 58, 0.5);
+    padding: 11px 14px; border-radius: 10px; box-sizing: border-box;
+    outline: none; font-size: 0.9rem; font-weight: 500; font-family: inherit;
+    margin-top: 6px; /* Der korrekte Abstand zum Label */
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.mnau-input:focus {
+    border-color: #00ff73; box-shadow: 0 0 12px rgba(0, 255, 115, 0.15);
+}
+.mnau-input::placeholder { color: #555; }
 
 .sort-icon-btn {
     background: #1c1c1c; border: 1px solid rgba(0, 102, 58, 0.5); color: #a0aec0;
@@ -79,6 +94,21 @@ body, html {
     transition: all 0.2s;
 }
 .btn-secondary:hover { color: white; border-color: rgba(255, 255, 255, 0.25); background: #222222; }
+
+/* REPARIERT: Der knallrote Lösch-Button ist zurück! */
+.delete-btn {
+    background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(231, 76, 60, 0.25); color: #e74c3c;
+    width: 41px; height: 41px; border-radius: 10px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-sizing: border-box;
+}
+.delete-btn svg { width: 16px; height: 16px; fill: currentColor; }
+.delete-btn:hover {
+    background: #e74c3c; color: #ffffff; border-color: #ffffff;
+    box-shadow: 0 0 15px rgba(231, 76, 60, 0.45);
+}
+.delete-btn:active { transform: scale(0.92); }
 
 /* Weiche Animations-Keyframes */
 @keyframes rowSlideIn {
