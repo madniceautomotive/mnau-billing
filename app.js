@@ -1,6 +1,17 @@
 // ==================================================== 
 // app.js: USER ACTIONS & CONTROLLER HUB
 // ==================================================== 
+
+// DOM-Schnittstellen für die Steuerung
+const orderList = document.getElementById('order-list');
+const loading = document.getElementById('loading');
+const modal = document.getElementById('modal-overlay');
+const btnNewOrder = document.getElementById('btn-new-order');
+const btnCancel = document.getElementById('btn-cancel');
+const formNewOrder = document.getElementById('form-new-order');
+const searchInput = document.getElementById('search-input');
+const searchClearBtn = document.getElementById('search-clear-btn');
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // Setup-Events binden
@@ -84,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     fields: {
                         "Auftrag": name,
                         "Betrag_Automotive": betrag,
-                        "Fremdkosten": totalFremskosten,
+                        "Fremdkosten": totalFremdkosten,
                         "Fremdkosten_Details": suppliersJSON,
                         "Status": "Zu verrechnen"
                     }

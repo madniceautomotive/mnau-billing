@@ -1,6 +1,11 @@
 // ====================================================
 // ui.js: DOM RENDERING & STATS COMPILING
 // ====================================================
+
+// DOM-Schnittstellen für das Rendering-Modul
+const orderList = document.getElementById('order-list');
+const loading = document.getElementById('loading');
+
 window.UI = {
     renderOrders(records) {
         UI.updateSummary(records);
@@ -17,7 +22,7 @@ window.UI = {
 
         const incomingIds = new Set(records.map(r => r.id));
 
-        // 1. Gelöschte Zeilen butterweich herausschrumpfen lassen
+        // 1. Gelöschte Zeilen schrumpfen lassen
         const currentRows = Array.from(orderList.querySelectorAll('.billing-row'));
         currentRows.forEach(row => {
             const rowId = row.getAttribute('data-id');
@@ -65,7 +70,6 @@ window.UI = {
                 badgeClass = "badge-bezahlt";
             }
 
-            // NEU: Selektives, frei steuerbares Dropdown statt starrer Klick-Buttons
             const innerHTML = `
                 <div class="billing-info-block">
                     <div class="billing-row-title">${fields.Auftrag || "Unbenannt"}</div>
@@ -187,7 +191,6 @@ window.UI = {
 
         const supplierNames = Object.keys(openSuppliers);
 
-        // KORREKTUR: Atemberaubend gestaltetes Diagnostic No-Debts Panel
         if (supplierNames.length === 0) {
             supplierContainer.innerHTML = `
                 <div class="no-debts-panel">
@@ -253,7 +256,6 @@ window.UI = {
         });
     },
 
-    // NEU: Der dedizierte Lieferanten-Datenbank Renderer
     renderSuppliersManager() {
         const listContainer = document.getElementById('suppliers-manager-list');
         if (!listContainer) return;
