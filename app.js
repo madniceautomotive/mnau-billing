@@ -1,12 +1,14 @@
 let AIRTABLE_TOKEN = localStorage.getItem('MNAU_AIRTABLE_TOKEN');
 let BASE_ID = localStorage.getItem('MNAU_BASE_ID');
-const TABLE_NAME = "Auftraege";
 
-let API_URL = "";
+// Wir sprechen jetzt mit ZWEI Tabellen
+let API_URL_ORDERS = "";
+let API_URL_SUPPLIERS = "";
 let HEADERS = {};
 
 if (AIRTABLE_TOKEN && BASE_ID) {
-    API_URL = `https://api.airtable.com/v0/${BASE_ID}/${TABLE_NAME}`;
+    API_URL_ORDERS = `https://api.airtable.com/v0/${BASE_ID}/Auftraege`;
+    API_URL_SUPPLIERS = `https://api.airtable.com/v0/${BASE_ID}/Lieferanten`;
     HEADERS = {
         "Authorization": `Bearer ${AIRTABLE_TOKEN}`,
         "Content-Type": "application/json"
@@ -14,6 +16,7 @@ if (AIRTABLE_TOKEN && BASE_ID) {
 }
 
 let loadedRecords = [];
+let globalSuppliers = []; // Hier speichern wir das unzerstörbare Lieferanten-Gedächtnis
 
 const orderList = document.getElementById('order-list');
 const loading = document.getElementById('loading');
@@ -93,6 +96,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
+            // NEU: Unbekannte Lieferanten sofort im Hintergrund in Airtable anlegen!
+            const newSuppliersToSave = [];
+            suppliers.forEach(s => {
+                if (s.name !== "Unbekannt" && !globalSuppliers.includes(s.name)) {
+                    newSuppliersToSave.push({ fields: { "Name": s.name } });
+                    globalSuppliers.push(s.name); // Damit er sofort beim nächsten Tippen verfügbar ist
+                }
+            });
+
+            if (newSuppliersToSave.length > 0) {
+                fetch(API_URL_SUPPLIERS, {
+                    method: 'POST',
+                    headers: HEADERS,
+                    body: JSON.stringify({ records: newSuppliersToSave })
+                }).catch(err => console.error("Konnte Lieferant nicht im Hintergrund speichern", err));
+            }
+
             const totalFremdkosten = calculateTotalFremdkosten();
             const suppliersJSON = JSON.stringify(suppliers);
 
@@ -109,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             try {
-                await fetch(API_URL, { method: 'POST', headers: HEADERS, body: JSON.stringify(payload) });
+                await fetch(API_URL_ORDERS, { method: 'POST', headers: HEADERS, body: JSON.stringify(payload) });
                 modal.classList.add('hidden');
                 formNewOrder.reset();
                 fetchOrders();
@@ -137,10 +157,22 @@ async function fetchOrders() {
     orderList.innerHTML = '';
 
     try {
-        const response = await fetch(`${API_URL}?sort[0][field]=Created%20Time&sort[0][direction]=desc`, { headers: HEADERS });
-        const data = await response.json();
+        // 1. Aufträge laden
+        const responseOrders = await fetch(`${API_URL_ORDERS}?sort[0][field]=Created%20Time&sort[0][direction]=desc`, { headers: HEADERS });
+        const dataOrders = await responseOrders.json();
+        loadedRecords = dataOrders.records || [];
 
-        loadedRecords = data.records || [];
+        // 2. Lieferanten-Gedächtnis laden
+        try {
+            const responseSuppliers = await fetch(API_URL_SUPPLIERS, { headers: HEADERS });
+            const dataSuppliers = await responseSuppliers.json();
+            if (dataSuppliers.records) {
+                globalSuppliers = dataSuppliers.records.map(r => r.fields.Name).filter(n => n);
+            }
+        } catch (e) {
+            console.warn("Lieferanten-Tabelle konnte nicht abgerufen werden.");
+        }
+
         updateSupplierDatalist();
         renderOrders(loadedRecords);
     } catch (error) {
@@ -155,7 +187,9 @@ function updateSupplierDatalist() {
     if (!datalist) return;
     datalist.innerHTML = '';
 
-    const uniqueSuppliers = new Set();
+    // Kombinieren: Feste Lieferanten aus der Datenbank + zur Sicherheit die aus den JSON-Daten
+    const uniqueSuppliers = new Set(globalSuppliers);
+
     loadedRecords.forEach(record => {
         if (record.fields.Fremdkosten_Details) {
             try {
@@ -167,7 +201,8 @@ function updateSupplierDatalist() {
         }
     });
 
-    uniqueSuppliers.forEach(supplier => {
+    // Alphabetisch sortiert ins Dropdown einfügen
+    Array.from(uniqueSuppliers).sort().forEach(supplier => {
         const option = document.createElement('option');
         option.value = supplier;
         datalist.appendChild(option);
@@ -265,7 +300,6 @@ function updateSummary(records) {
     `;
 }
 
-// --- NEU: Detaillierte Aggregation der offenen Lieferanten-Forderungen ---
 function updateSupplierBreakdown(records) {
     const supplierContainer = document.getElementById('supplier-summary-details');
     if (!supplierContainer) return;
@@ -277,7 +311,6 @@ function updateSupplierBreakdown(records) {
         const status = fields.Status || "Zu verrechnen";
         const orderName = fields.Auftrag || "Unbenanntes Projekt";
 
-        // Wir tracken nur Lieferanten von Aufträgen, die noch NICHT bezahlt sind!
         if (status !== "Bezahlt" && fields.Fremdkosten_Details) {
             try {
                 const details = JSON.parse(fields.Fremdkosten_Details);
@@ -335,7 +368,6 @@ function updateSupplierBreakdown(records) {
 }
 
 function renderOrders(records) {
-    // Beide Statistiken live berechnen
     updateSummary(records);
     updateSupplierBreakdown(records);
 
@@ -424,7 +456,7 @@ function renderOrders(records) {
 
 window.updateStatus = async function(recordId, newStatus) {
     try {
-        await fetch(`${API_URL}/${recordId}`, { method: 'PATCH', headers: HEADERS, body: JSON.stringify({ fields: { "Status": newStatus } }) });
+        await fetch(`${API_URL_ORDERS}/${recordId}`, { method: 'PATCH', headers: HEADERS, body: JSON.stringify({ fields: { "Status": newStatus } }) });
         fetchOrders();
     } catch (error) { alert("Fehler beim Status-Update."); }
 }
@@ -432,7 +464,7 @@ window.updateStatus = async function(recordId, newStatus) {
 window.deleteOrder = async function(recordId) {
     if (!confirm("Auftrag wirklich dauerhaft löschen?")) return;
     try {
-        const response = await fetch(`${API_URL}/${recordId}`, { method: 'DELETE', headers: HEADERS });
+        const response = await fetch(`${API_URL_ORDERS}/${recordId}`, { method: 'DELETE', headers: HEADERS });
         if (response.ok) fetchOrders();
     } catch (error) { alert("Verbindungsfehler beim Löschen."); }
 }
