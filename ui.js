@@ -42,10 +42,14 @@ window.UI = {
                     const details = JSON.parse(fields.Fremdkosten_Details);
                     if (details.length > 0) {
                         breakdownHTML = `<div class="breakdown-container">`;
-                        details.forEach(d => {
+                        details.forEach((d, dIdx) => {
+                            const isPaid = d.paid === true;
                             breakdownHTML += `
-                                <div class="breakdown-row">
-                                    <span>↳ ${d.name}</span>
+                                <div class="breakdown-row ${isPaid ? 'supplier-paid' : ''}">
+                                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0; text-transform:none; user-select:none;">
+                                        <input type="checkbox" ${isPaid ? 'checked' : ''} onchange="toggleSupplierPaid('${id}', ${dIdx})" style="accent-color:#00ff73; cursor:pointer; width:14px; height:14px;">
+                                        <span>↳ ${d.name}</span>
+                                    </label>
                                     <span>€ ${d.amount.toFixed(2)}</span>
                                 </div>
                             `;
@@ -56,16 +60,14 @@ window.UI = {
             }
 
             let cardStatusClass = "status-zu-verrechnen";
-            let badgeClass = "badge-zu-verrechnen";
 
             if(status === "An Group verrechnet") {
                 cardStatusClass = "status-an-group-verrechnet";
-                badgeClass = "badge-verrechnet";
             } else if(status === "Bezahlt") {
                 cardStatusClass = "status-bezahlt";
-                badgeClass = "badge-bezahlt";
             }
 
+            // KORREKTUR: Vektorgrafik hat nun fest integrierte Füllfarbe gegen das Viereck-Problem
             const innerHTML = `
                 <div class="billing-info-block">
                     <div class="billing-row-title">${fields.Auftrag || "Unbenannt"}</div>
@@ -85,7 +87,7 @@ window.UI = {
                         <option value="Bezahlt" ${status === "Bezahlt" ? "selected" : ""}>Bezahlt</option>
                     </select>
                     <button class="delete-btn" onclick="deleteOrder('${id}')" title="Auftrag löschen">
-                        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#e74c3c"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                     </button>
                 </div>
             `;
@@ -155,6 +157,7 @@ window.UI = {
         `;
     },
 
+    // REPARIERT: Lieferanten fliegen jetzt NUR noch raus, wenn d.paid === true ist (Status Bezahlt wird ignoriert!)
     updateSupplierBreakdown(records) {
         const supplierContainer = document.getElementById('supplier-summary-details');
         if (!supplierContainer) return;
@@ -163,17 +166,18 @@ window.UI = {
 
         records.forEach(record => {
             const fields = record.fields;
-            const status = fields.Status || "Zu verrechnen";
             const orderName = fields.Auftrag || "Unbenanntes Projekt";
 
-            if (status !== "Bezahlt" && fields.Fremdkosten_Details) {
+            if (fields.Fremdkosten_Details) {
                 try {
                     const details = JSON.parse(fields.Fremdkosten_Details);
-                    details.forEach(d => {
+                    details.forEach((d) => {
                         const name = (d.name || "Unbekannt").trim();
                         const amount = parseFloat(d.amount) || 0;
+                        const isPaid = d.paid === true;
 
-                        if (amount > 0) {
+                        // Kriterium: Es muss Geld offen sein UND das bezahlt-Flag darf nicht gesetzt sein!
+                        if (amount > 0 && !isPaid) {
                             if (!openSuppliers[name]) {
                                 openSuppliers[name] = { total: 0, items: [] };
                             }
@@ -190,9 +194,7 @@ window.UI = {
         if (supplierNames.length === 0) {
             supplierContainer.innerHTML = `
                 <div class="no-debts-panel">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
                     <div class="no-debts-text">
                         <h3>SYSTEM_SECURE</h3>
                         <p>Sämtliche Lieferanten-Kosten sind ausgeglichen. Keine aktiven Posten ausstehend.</p>
@@ -205,11 +207,16 @@ window.UI = {
         let html = '';
         supplierNames.forEach(name => {
             const data = openSuppliers[name];
+            const safeName = name.replace(/'/g, "\\'"); // Verhindert JS-String-Abbrüche bei O'Connor etc.
             html += `
                 <div class="supplier-stat-card">
                     <div class="supplier-stat-header">
                         <span class="supplier-stat-name">${name}</span>
-                        <span class="supplier-stat-total">€ ${data.total.toFixed(2)}</span>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span class="supplier-stat-total">€ ${data.total.toFixed(2)}</span>
+                            <!-- NEU: Bulk Action Button -->
+                            <button class="btn-primary btn-small" style="padding:4px 8px; font-size:0.65rem;" onclick="bulkPaySupplier('${safeName}')">✓ Alle abgelten</button>
+                        </div>
                     </div>
             `;
             data.items.forEach(item => {
@@ -268,7 +275,7 @@ window.UI = {
             row.innerHTML = `
                 <span class="supplier-manager-name">${supplier.name}</span>
                 <button class="delete-btn" style="width:34px; height:34px; border-radius:6px;" onclick="deleteSupplier('${supplier.id}', '${supplier.name}')">
-                    <svg viewBox="0 0 24 24" width="14" height="14"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#e74c3c"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                 </button>
             `;
             listContainer.appendChild(row);

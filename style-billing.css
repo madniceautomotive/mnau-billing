@@ -109,3 +109,13 @@ form label { display: block; margin-top: 14px; font-size: 0.8rem; color: #a0aec0
     .billing-financials { text-align: left; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 10px; }
     .action-group { justify-content: space-between; width: 100%; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 12px; }
 }
+
+/* Erledigte Lieferanten-Posten im Auftrags-Log dimmen */
+.breakdown-row.supplier-paid {
+    opacity: 0.35;
+    text-decoration: line-through;
+    color: #666;
+}
+.breakdown-row.supplier-paid span:last-child {
+    color: #666 !important; /* Überschreibt das Signalrot */
+}
