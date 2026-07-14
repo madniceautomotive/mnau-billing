@@ -1,7 +1,7 @@
 let AIRTABLE_TOKEN = localStorage.getItem('MNAU_AIRTABLE_TOKEN');
 let BASE_ID = localStorage.getItem('MNAU_BASE_ID');
 
-// Wir sprechen jetzt mit ZWEI Tabellen
+// Wir sprechen mit zwei Tabellen (Auftraege und Lieferanten)
 let API_URL_ORDERS = "";
 let API_URL_SUPPLIERS = "";
 let HEADERS = {};
@@ -79,6 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Modal Speichern-Logik (Jetzt voll-synchronisiert!)
     if (formNewOrder) {
         formNewOrder.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -86,6 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const name = document.getElementById('input-name').value;
             const betrag = parseFloat(document.getElementById('input-betrag').value || 0);
 
+            // Lieferanten einsammeln
             const suppliers = [];
             const rows = document.querySelectorAll('.supplier-row');
             rows.forEach(row => {
@@ -96,26 +98,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // NEU: Unbekannte Lieferanten sofort im Hintergrund in Airtable anlegen!
+            // 1. Unbekannte Lieferanten filtern (Case-Insensitive Prüfung)
             const newSuppliersToSave = [];
             suppliers.forEach(s => {
-                if (s.name !== "Unbekannt" && !globalSuppliers.includes(s.name)) {
+                const alreadyExists = globalSuppliers.some(g => g.toLowerCase() === s.name.toLowerCase());
+                if (s.name !== "Unbekannt" && s.name.trim() !== "" && !alreadyExists) {
                     newSuppliersToSave.push({ fields: { "Name": s.name } });
-                    globalSuppliers.push(s.name); // Damit er sofort beim nächsten Tippen verfügbar ist
                 }
             });
 
+            // 2. Neue Lieferanten zuerst in Airtable abspeichern und auf Antwort warten (Verhindert Race Conditions)
             if (newSuppliersToSave.length > 0) {
-                fetch(API_URL_SUPPLIERS, {
-                    method: 'POST',
-                    headers: HEADERS,
-                    body: JSON.stringify({ records: newSuppliersToSave })
-                }).catch(err => console.error("Konnte Lieferant nicht im Hintergrund speichern", err));
+                try {
+                    const resSupp = await fetch(API_URL_SUPPLIERS, {
+                        method: 'POST',
+                        headers: HEADERS,
+                        body: JSON.stringify({ records: newSuppliersToSave })
+                    });
+
+                    if (!resSupp.ok) {
+                        const errData = await resSupp.json();
+                        console.error("Airtable Lieferanten Fehler:", errData);
+                        alert(`Airtable lehnt das Speichern der Lieferanten ab!\n\nDetails: ${errData.error?.message || "Unbekannter Fehler"}\n\nBitte prüfe, ob deine Tabelle in Airtable exakt "Lieferanten" heißt und die erste Spalte den Namen "Name" trägt.`);
+                        return; // Prozess abbrechen, falls der Lieferant nicht gespeichert werden kann
+                    } else {
+                        // Lokal das Gedächtnis direkt aktualisieren
+                        newSuppliersToSave.forEach(s => globalSuppliers.push(s.fields.Name));
+                    }
+                } catch (err) {
+                    console.error("Netzwerkfehler beim Lieferanten-POST:", err);
+                    alert("Netzwerkfehler: Lieferanten konnten nicht gespeichert werden.");
+                    return;
+                }
             }
 
             const totalFremdkosten = calculateTotalFremdkosten();
             const suppliersJSON = JSON.stringify(suppliers);
 
+            // 3. Erst jetzt den eigentlichen Auftrag speichern
             const payload = {
                 records: [{
                     fields: {
@@ -129,12 +149,17 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             try {
-                await fetch(API_URL_ORDERS, { method: 'POST', headers: HEADERS, body: JSON.stringify(payload) });
+                const resOrder = await fetch(API_URL_ORDERS, { method: 'POST', headers: HEADERS, body: JSON.stringify(payload) });
+                if (!resOrder.ok) {
+                    const errData = await resOrder.json();
+                    alert(`Fehler beim Speichern des Auftrags:\n${errData.error?.message}`);
+                    return;
+                }
                 modal.classList.add('hidden');
                 formNewOrder.reset();
                 fetchOrders();
             } catch (error) {
-                alert("Fehler beim Erstellen des Auftrags.");
+                alert("Verbindungsfehler beim Erstellen des Auftrags.");
             }
         });
     }
@@ -165,9 +190,14 @@ async function fetchOrders() {
         // 2. Lieferanten-Gedächtnis laden
         try {
             const responseSuppliers = await fetch(API_URL_SUPPLIERS, { headers: HEADERS });
-            const dataSuppliers = await responseSuppliers.json();
-            if (dataSuppliers.records) {
-                globalSuppliers = dataSuppliers.records.map(r => r.fields.Name).filter(n => n);
+            if (responseSuppliers.ok) {
+                const dataSuppliers = await responseSuppliers.json();
+                if (dataSuppliers.records) {
+                    globalSuppliers = dataSuppliers.records.map(r => r.fields.Name).filter(n => n);
+                }
+            } else {
+                const errData = await responseSuppliers.json();
+                console.error("Fehler beim Laden der Lieferanten-Tabelle:", errData);
             }
         } catch (e) {
             console.warn("Lieferanten-Tabelle konnte nicht abgerufen werden.");
@@ -187,7 +217,6 @@ function updateSupplierDatalist() {
     if (!datalist) return;
     datalist.innerHTML = '';
 
-    // Kombinieren: Feste Lieferanten aus der Datenbank + zur Sicherheit die aus den JSON-Daten
     const uniqueSuppliers = new Set(globalSuppliers);
 
     loadedRecords.forEach(record => {
@@ -201,7 +230,6 @@ function updateSupplierDatalist() {
         }
     });
 
-    // Alphabetisch sortiert ins Dropdown einfügen
     Array.from(uniqueSuppliers).sort().forEach(supplier => {
         const option = document.createElement('option');
         option.value = supplier;
