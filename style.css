@@ -169,21 +169,22 @@ body, html {
     display: flex; gap: 8px; align-items: center;
 }
 
-/* REPARIERT: Neues Padding für die Lieferanten-Eingabe gegen abgeschnittenen Text */
+/* REPARIERT: Massiver, neon-grüner Vektor-Pfeil direkt als Grafik-Hintergrund */
 .supplier-row .supplier-name {
     flex: 2; min-width: 0;
-    padding: 11px 32px 11px 12px !important; /* Platz für den Pfeil rechts, links schmaler */
+    padding: 11px 36px 11px 12px !important; /* Genug Abstand rechts für unseren Pfeil */
+    background: #1c1c1c url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2300ff73'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e") no-repeat right 10px center / 16px !important;
 }
 .supplier-row .supplier-amount {
     flex: 1; min-width: 0;
-    padding: 11px 12px !important; /* Kein unnötiges rechtes Riesen-Padding */
+    padding: 11px 12px !important; /* Normaler Abstand, kein ungenutzter Platz */
 }
 
-/* REPARIERT: Erzwingt, dass der native Browser-Pfeil auf dunklem Grund hell leuchtet */
+/* Verhindert doppelte Pfeile (blendet den standardmäßigen, schwarzen Pfeil von Chrome/Safari aus) */
 .supplier-name::-webkit-calendar-picker-indicator {
-    display: block !important;
-    opacity: 1 !important;
-    filter: invert(1) brightness(2) !important; /* Invertiert Schwarz zu Weiß */
+    opacity: 0 !important;
+    width: 28px;
+    height: 100%;
     cursor: pointer;
 }
 
