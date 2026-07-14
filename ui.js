@@ -7,7 +7,7 @@ window.UI = {
         UI.updateSummary(records);
         UI.updateSupplierBreakdown(records);
 
-        // NEU: Datensätze trennen in Aktiv und Bezahlt (Archiv)
+        // Datensätze trennen in Aktiv und Bezahlt (Archiv)
         const activeRecords = records.filter(r => (r.fields.Status || "Zu verrechnen") !== "Bezahlt");
         const archivedRecords = records.filter(r => r.fields.Status === "Bezahlt");
 
@@ -178,13 +178,14 @@ window.UI = {
 
         const supplierNames = Object.keys(openSuppliers);
 
+        // REPARIERT: Menschlicher, klar verständlicher Text ohne Unterstriche
         if (supplierNames.length === 0) {
             supplierContainer.innerHTML = `
                 <div class="no-debts-panel">
                     <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
                     <div class="no-debts-text">
-                        <h3>SYSTEM_SECURE</h3>
-                        <p>Sämtliche Lieferanten-Kosten sind ausgeglichen. Keine aktiven Posten ausstehend.</p>
+                        <h3>Keine offenen Posten</h3>
+                        <p>Alle Lieferantenkosten wurden vollständig beglichen.</p>
                     </div>
                 </div>
             `;
