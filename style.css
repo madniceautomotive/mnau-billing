@@ -168,11 +168,24 @@ body, html {
 .supplier-row {
     display: flex; gap: 8px; align-items: center;
 }
-.supplier-row input {
-    margin-top: 0 !important;
+
+/* REPARIERT: Neues Padding für die Lieferanten-Eingabe gegen abgeschnittenen Text */
+.supplier-row .supplier-name {
+    flex: 2; min-width: 0;
+    padding: 11px 32px 11px 12px !important; /* Platz für den Pfeil rechts, links schmaler */
 }
-.supplier-name { flex: 2; min-width: 0; }
-.supplier-amount { flex: 1; min-width: 0; }
+.supplier-row .supplier-amount {
+    flex: 1; min-width: 0;
+    padding: 11px 12px !important; /* Kein unnötiges rechtes Riesen-Padding */
+}
+
+/* REPARIERT: Erzwingt, dass der native Browser-Pfeil auf dunklem Grund hell leuchtet */
+.supplier-name::-webkit-calendar-picker-indicator {
+    display: block !important;
+    opacity: 1 !important;
+    filter: invert(1) brightness(2) !important; /* Invertiert Schwarz zu Weiß */
+    cursor: pointer;
+}
 
 .btn-remove-supplier {
     background: transparent; border: 1px solid rgba(231, 76, 60, 0.4); color: #e74c3c;
@@ -257,7 +270,6 @@ form input {
     gap: 12px;
     margin-bottom: 24px;
 }
-
 .summary-card {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -272,8 +284,6 @@ form input {
     transform: translateY(-2px);
     background: rgba(255, 255, 255, 0.04);
 }
-
-/* Leuchtende Bodenlinien für die Stats */
 .summary-card.red { border-bottom: 3px solid #e74c3c; }
 .summary-card.yellow { border-bottom: 3px solid #f6e05e; }
 .summary-card.orange { border-bottom: 3px solid #ff7b00; }
@@ -294,7 +304,6 @@ form input {
     text-shadow: 0 0 10px rgba(255,255,255,0.1);
 }
 
-/* Die Cyberpunk-Trennlinie */
 .section-divider {
     display: flex; align-items: center; margin: 30px 0 16px 0;
     font-size: 0.72rem; font-weight: 800; letter-spacing: 2px;
@@ -315,12 +324,10 @@ form input {
     gap: 12px;
     margin-bottom: 24px;
 }
-
-/* Lieferanten-HUD-Karte */
 .supplier-stat-card {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.05);
-    border-left: 3px solid #e74c3c; /* Rote Signal-Kante für offene Posten */
+    border-left: 3px solid #e74c3c;
     border-radius: 8px;
     padding: 14px;
     transition: transform 0.2s, box-shadow 0.2s;
@@ -329,7 +336,6 @@ form input {
     transform: translateY(-2px);
     background: rgba(255, 255, 255, 0.04);
 }
-
 .supplier-stat-header {
     display: flex;
     justify-content: space-between;
@@ -350,8 +356,6 @@ form input {
     font-weight: 800;
     font-size: 1rem;
 }
-
-/* Die einzelnen Herkunfts-Projekte */
 .supplier-stat-item {
     display: flex;
     justify-content: space-between;
@@ -369,7 +373,6 @@ form input {
     color: #ef4444;
 }
 
-/* Roter Cyberpunk Trenner */
 .section-divider.red-divider {
     color: #e74c3c;
 }

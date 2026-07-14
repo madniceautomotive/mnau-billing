@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Modal Speichern-Logik (Jetzt voll-synchronisiert!)
+    // Modal Speichern-Logik (Voll-synchronisiert)
     if (formNewOrder) {
         formNewOrder.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // 2. Neue Lieferanten zuerst in Airtable abspeichern und auf Antwort warten (Verhindert Race Conditions)
+            // 2. Neue Lieferanten zuerst in Airtable abspeichern (Wichtig gegen Race Conditions!)
             if (newSuppliersToSave.length > 0) {
                 try {
                     const resSupp = await fetch(API_URL_SUPPLIERS, {
@@ -119,15 +119,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!resSupp.ok) {
                         const errData = await resSupp.json();
                         console.error("Airtable Lieferanten Fehler:", errData);
-                        alert(`Airtable lehnt das Speichern der Lieferanten ab!\n\nDetails: ${errData.error?.message || "Unbekannter Fehler"}\n\nBitte prüfe, ob deine Tabelle in Airtable exakt "Lieferanten" heißt und die erste Spalte den Namen "Name" trägt.`);
-                        return; // Prozess abbrechen, falls der Lieferant nicht gespeichert werden kann
+                        alert(`Airtable lehnt das Speichern des Lieferanten ab!\n\nFehlermeldung: "${errData.error?.message}"\n\nPrüfe bitte:\n1. Heißt die Tabelle in Airtable exakt "Lieferanten"?\n2. Heißt die erste Spalte in dieser Tabelle exakt "Name" (großgeschrieben)?`);
+                        return; // Prozess stoppen
                     } else {
-                        // Lokal das Gedächtnis direkt aktualisieren
+                        // Lokal ins temporäre Gedächtnis schieben
                         newSuppliersToSave.forEach(s => globalSuppliers.push(s.fields.Name));
                     }
                 } catch (err) {
                     console.error("Netzwerkfehler beim Lieferanten-POST:", err);
-                    alert("Netzwerkfehler: Lieferanten konnten nicht gespeichert werden.");
+                    alert("Netzwerkfehler: Lieferanten konnten nicht dauerhaft gespeichert werden.");
                     return;
                 }
             }
@@ -187,7 +187,7 @@ async function fetchOrders() {
         const dataOrders = await responseOrders.json();
         loadedRecords = dataOrders.records || [];
 
-        // 2. Lieferanten-Gedächtnis laden
+        // 2. Lieferanten-Gedächtnis laden (Mit lautem Fehler-Reporting)
         try {
             const responseSuppliers = await fetch(API_URL_SUPPLIERS, { headers: HEADERS });
             if (responseSuppliers.ok) {
@@ -198,9 +198,10 @@ async function fetchOrders() {
             } else {
                 const errData = await responseSuppliers.json();
                 console.error("Fehler beim Laden der Lieferanten-Tabelle:", errData);
+                alert(`⚠️ FEHLER: Die Tabelle "Lieferanten" konnte in Airtable nicht abgerufen werden!\n\nFehlermeldung von Airtable: "${errData.error?.message || 'Nicht gefunden'}"\n\nBitte erstelle eine neue Tabelle namens "Lieferanten" (exakte Schreibweise!) und setze die erste Spalte auf "Name".`);
             }
         } catch (e) {
-            console.warn("Lieferanten-Tabelle konnte nicht abgerufen werden.");
+            console.error("Kritischer Fehler bei Lieferanten-Abfrage:", e);
         }
 
         updateSupplierDatalist();
@@ -242,8 +243,9 @@ function addSupplierRow() {
     const row = document.createElement('div');
     row.className = 'supplier-row';
 
+    // REPARIERT: Kürzere, kompakte Platzhalter
     row.innerHTML = `
-        <input type="text" class="search-input supplier-name" list="supplier-list" placeholder="Lieferant (neu oder wählen)...">
+        <input type="text" class="search-input supplier-name" list="supplier-list" placeholder="Lieferant...">
         <input type="number" step="0.01" class="search-input supplier-amount" placeholder="0.00">
         <button type="button" class="btn-remove-supplier" title="Entfernen">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
