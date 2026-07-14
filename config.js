@@ -22,3 +22,18 @@ if (window.AIRTABLE_TOKEN && window.BASE_ID) {
 // Globaler App-State
 window.loadedRecords = [];
 window.globalSuppliers = []; // Speichert Lieferanten als Objekte: { id: "rec...", name: "Lieferant" }
+
+// Globale DOM-Schnittstellen (Verhindert Redeclaration-Errors im globalen Scope)
+window.DOM = {
+    orderList: document.getElementById('order-list'),
+    loading: document.getElementById('loading'),
+    modal: document.getElementById('modal-overlay'),
+    btnNewOrder: document.getElementById('btn-new-order'),
+    btnCancel: document.getElementById('btn-cancel'),
+    formNewOrder: document.getElementById('form-new-order'),
+    searchInput: document.getElementById('search-input'),
+    searchClearBtn: document.getElementById('search-clear-btn'),
+    btnManageSuppliers: document.getElementById('btn-manage-suppliers'),
+    modalSuppliers: document.getElementById('modal-suppliers-overlay'),
+    btnCloseSuppliers: document.getElementById('btn-close-suppliers')
+};

@@ -2,52 +2,38 @@
 // app.js: USER ACTIONS & CONTROLLER HUB
 // ==================================================== 
 
-// DOM-Schnittstellen für die Steuerung
-const orderList = document.getElementById('order-list');
-const loading = document.getElementById('loading');
-const modal = document.getElementById('modal-overlay');
-const btnNewOrder = document.getElementById('btn-new-order');
-const btnCancel = document.getElementById('btn-cancel');
-const formNewOrder = document.getElementById('form-new-order');
-const searchInput = document.getElementById('search-input');
-const searchClearBtn = document.getElementById('search-clear-btn');
-
 document.addEventListener('DOMContentLoaded', () => {
 
     // Setup-Events binden
-    if (btnNewOrder) {
-        btnNewOrder.addEventListener('click', () => {
+    if (DOM.btnNewOrder) {
+        DOM.btnNewOrder.addEventListener('click', () => {
             document.getElementById('supplier-container').innerHTML = '';
             UI.addSupplierRow();
             UI.calculateTotalFremdkosten();
-            modal.classList.remove('hidden');
+            DOM.modal.classList.remove('hidden');
         });
     }
 
-    if (btnCancel) {
-        btnCancel.addEventListener('click', () => {
-            modal.classList.add('hidden');
-            formNewOrder.reset();
+    if (DOM.btnCancel) {
+        DOM.btnCancel.addEventListener('click', () => {
+            DOM.modal.classList.add('hidden');
+            DOM.formNewOrder.reset();
         });
     }
 
     // Modal Lieferanten-Verwaltung anbinden
-    const btnManageSuppliers = document.getElementById('btn-manage-suppliers');
-    const modalSuppliers = document.getElementById('modal-suppliers-overlay');
-    const btnCloseSuppliers = document.getElementById('btn-close-suppliers');
-
-    if (btnManageSuppliers) {
-        btnManageSuppliers.addEventListener('click', () => {
+    if (DOM.btnManageSuppliers) {
+        DOM.btnManageSuppliers.addEventListener('click', () => {
             UI.renderSuppliersManager();
-            modalSuppliers.classList.remove('hidden');
+            DOM.modalSuppliers.classList.remove('hidden');
         });
     }
-    if (btnCloseSuppliers) {
-        btnCloseSuppliers.addEventListener('click', () => modalSuppliers.classList.add('hidden'));
+    if (DOM.btnCloseSuppliers) {
+        DOM.btnCloseSuppliers.addEventListener('click', () => DOM.modalSuppliers.classList.add('hidden'));
     }
 
-    if (formNewOrder) {
-        formNewOrder.addEventListener('submit', async (e) => {
+    if (DOM.formNewOrder) {
+        DOM.formNewOrder.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const name = document.getElementById('input-name').value;
@@ -104,8 +90,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 await API.saveOrder(payload);
-                modal.classList.add('hidden');
-                formNewOrder.reset();
+                DOM.modal.classList.add('hidden');
+                DOM.formNewOrder.reset();
                 fetchOrders();
             } catch (error) {
                 alert("Fehler beim Erstellen des Auftrags.");
@@ -115,6 +101,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const btnAddSupplier = document.getElementById('btn-add-supplier');
     if (btnAddSupplier) btnAddSupplier.addEventListener('click', () => UI.addSupplierRow());
+
+    // Live-Suche
+    if (DOM.searchInput) {
+        DOM.searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            DOM.searchClearBtn.style.display = query.length > 0 ? 'flex' : 'none';
+
+            const filtered = window.loadedRecords.filter(record => {
+                const orderName = (record.fields.Auftrag || "").toLowerCase();
+                const detailsStr = (record.fields.Fremdkosten_Details || "").toLowerCase();
+                return orderName.includes(query) || detailsStr.includes(query);
+            });
+            UI.renderOrders(filtered);
+        });
+    }
+
+    if (DOM.searchClearBtn) {
+        DOM.searchClearBtn.addEventListener('click', () => {
+            DOM.searchInput.value = '';
+            DOM.searchClearBtn.style.display = 'none';
+            UI.renderOrders(window.loadedRecords);
+            DOM.searchInput.focus();
+        });
+    }
+
+    const btnResetKeys = document.getElementById('btn-reset-keys');
+    if (btnResetKeys) {
+        btnResetKeys.addEventListener('click', () => {
+            if (confirm("Möchtest du die Airtable-Schlüssel zurücksetzen?")) {
+                localStorage.removeItem('MNAU_AIRTABLE_TOKEN');
+                localStorage.removeItem('MNAU_BASE_ID');
+                location.reload();
+            }
+        });
+    }
 
     fetchOrders();
 });
@@ -126,8 +147,8 @@ async function fetchOrders() {
     }
 
     if (window.loadedRecords.length === 0) {
-        loading.classList.remove('hidden');
-        orderList.innerHTML = '';
+        DOM.loading.classList.remove('hidden');
+        DOM.orderList.innerHTML = '';
     }
 
     try {
@@ -146,9 +167,9 @@ async function fetchOrders() {
         UI.updateSupplierDatalist();
         UI.renderOrders(window.loadedRecords);
     } catch (error) {
-        orderList.innerHTML = `<p style="color:#e74c3c; padding: 20px;">Verbindungsfehler zu Airtable. Schlüssel korrekt?</p>`;
+        DOM.orderList.innerHTML = `<p style="color:#e74c3c; padding: 20px;">Verbindungsfehler zu Airtable. Schlüssel korrekt?</p>`;
     } finally {
-        loading.classList.add('hidden');
+        DOM.loading.classList.add('hidden');
     }
 }
 
@@ -191,7 +212,7 @@ window.deleteSupplier = async function(supplierId, supplierName) {
 window.deleteOrder = async function(recordId) {
     if (!confirm("Auftrag wirklich dauerhaft löschen?")) return;
 
-    const row = orderList.querySelector(`.billing-row[data-id="${recordId}"]`);
+    const row = DOM.orderList.querySelector(`.billing-row[data-id="${recordId}"]`);
     if (row) row.classList.add('row-exit-active');
 
     try {

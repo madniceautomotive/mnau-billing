@@ -2,28 +2,24 @@
 // ui.js: DOM RENDERING & STATS COMPILING
 // ====================================================
 
-// DOM-Schnittstellen für das Rendering-Modul
-const orderList = document.getElementById('order-list');
-const loading = document.getElementById('loading');
-
 window.UI = {
     renderOrders(records) {
         UI.updateSummary(records);
         UI.updateSupplierBreakdown(records);
 
         if(!records || records.length === 0) {
-            orderList.innerHTML = '<p style="color:#a0aec0; padding: 20px;">Keine passenden Aufträge vorhanden.</p>';
+            DOM.orderList.innerHTML = '<p style="color:#a0aec0; padding: 20px;">Keine passenden Aufträge vorhanden.</p>';
             return;
         }
 
-        if (orderList.querySelector('p')) {
-            orderList.innerHTML = '';
+        if (DOM.orderList.querySelector('p')) {
+            DOM.orderList.innerHTML = '';
         }
 
         const incomingIds = new Set(records.map(r => r.id));
 
         // 1. Gelöschte Zeilen schrumpfen lassen
-        const currentRows = Array.from(orderList.querySelectorAll('.billing-row'));
+        const currentRows = Array.from(DOM.orderList.querySelectorAll('.billing-row'));
         currentRows.forEach(row => {
             const rowId = row.getAttribute('data-id');
             if (!incomingIds.has(rowId)) {
@@ -94,7 +90,7 @@ window.UI = {
                 </div>
             `;
 
-            let existingRow = orderList.querySelector(`.billing-row[data-id="${id}"]`);
+            let existingRow = DOM.orderList.querySelector(`.billing-row[data-id="${id}"]`);
 
             if (existingRow) {
                 const cleanExisting = existingRow.innerHTML.replace(/\s+/g, ' ').trim();
@@ -110,11 +106,11 @@ window.UI = {
                 newRow.setAttribute('data-id', id);
                 newRow.innerHTML = innerHTML;
 
-                const referenceNode = orderList.children[index];
+                const referenceNode = DOM.orderList.children[index];
                 if (referenceNode) {
-                    orderList.insertBefore(newRow, referenceNode);
+                    DOM.orderList.insertBefore(newRow, referenceNode);
                 } else {
-                    orderList.appendChild(newRow);
+                    DOM.orderList.appendChild(newRow);
                 }
             }
         });
@@ -303,8 +299,8 @@ window.UI = {
     },
 
     showSetupRequired() {
-        loading.classList.add('hidden');
-        orderList.innerHTML = `
+        DOM.loading.classList.add('hidden');
+        DOM.orderList.innerHTML = `
             <div style="padding: 60px 20px; text-align: center; color: #a0aec0;">
                 <h3 style="color: white; margin-bottom: 12px; text-transform: uppercase;">Konfiguration fehlt</h3>
                 <button class="btn-primary" style="margin: 0 auto;" onclick="triggerSetup()">➔ Setup starten</button>
