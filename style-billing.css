@@ -40,7 +40,7 @@
 .badge-verrechnet { background: #b79400; }
 .badge-bezahlt { background: #00663a; color: #00ff73; }
 
-/* KORREKTUR: Das neue, hochauflösende MNAU Status-Auswahlelement (Dropdown) */
+/* MNAU Status-Auswahlelement */
 .status-select {
     background-color: #1c1c1c; color: white; border: 1px solid rgba(0, 102, 58, 0.5);
     padding: 8px 30px 8px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
@@ -58,7 +58,7 @@
 .section-divider.red-divider { color: #e74c3c; }
 .section-divider.red-divider::after { background: linear-gradient(to right, rgba(231, 76, 60, 0.5), transparent); }
 
-/* KORREKTUR: Das wunderschöne 'System Secure' No-Debts Panel */
+/* System Secure No-Debts Panel */
 .no-debts-panel {
     grid-column: 1 / -1; background: rgba(0, 255, 115, 0.02); border: 1px dashed rgba(0, 255, 115, 0.2);
     border-radius: 12px; padding: 24px; display: flex; align-items: center; gap: 16px; justify-content: center;
@@ -78,7 +78,12 @@
 .supplier-stat-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255, 255, 255, 0.08); padding-bottom: 6px; margin-bottom: 8px; }
 .supplier-stat-name { font-weight: 800; font-size: 0.8rem; color: white; text-transform: uppercase; }
 .supplier-stat-total { color: #e74c3c; font-weight: 800; font-size: 1rem; }
-.supplier-stat-item { display: flex; justify-content: space-between; font-size: 0.72rem; color: #a0aec0; margin-bottom: 4px; }
+
+/* Einzelner Lieferantenposten im Controlling Panel */
+.supplier-stat-item {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.75rem; color: #a0aec0; margin-bottom: 6px;
+}
 
 /* Modals */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 200; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: opacity 0.25s, visibility 0.25s; }
@@ -86,6 +91,14 @@
 .modal-card { background: #141414; border: 1px solid rgba(0, 102, 58, 0.4); border-radius: 16px; padding: 24px; width: 92%; max-width: 440px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); box-sizing: border-box; }
 .modal-card h2 { margin-top: 0; font-size: 1.4rem; font-weight: 800; color: white; text-transform: uppercase; margin-bottom: 20px; }
 form label { display: block; margin-top: 14px; font-size: 0.8rem; color: #a0aec0; font-weight: 600; text-transform: uppercase; }
+
+/* Lieferanten-Eintrag im Haupt-Log (Historie) */
+.breakdown-container { margin-top: 6px; padding-top: 8px; border-top: 1px dashed rgba(255, 255, 255, 0.08); }
+.breakdown-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: #a0aec0; margin-bottom: 4px; }
+.breakdown-row.supplier-paid {
+    opacity: 0.3;
+    text-decoration: line-through;
+}
 
 /* Lieferanten Input & iOS fix */
 .supplier-container { max-height: 160px; overflow-y: auto; margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
@@ -108,14 +121,4 @@ form label { display: block; margin-top: 14px; font-size: 0.8rem; color: #a0aec0
     .billing-row { flex-direction: column; align-items: stretch; gap: 14px; }
     .billing-financials { text-align: left; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 10px; }
     .action-group { justify-content: space-between; width: 100%; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 12px; }
-}
-
-/* Erledigte Lieferanten-Posten im Auftrags-Log dimmen */
-.breakdown-row.supplier-paid {
-    opacity: 0.35;
-    text-decoration: line-through;
-    color: #666;
-}
-.breakdown-row.supplier-paid span:last-child {
-    color: #666 !important; /* Überschreibt das Signalrot */
 }

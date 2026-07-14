@@ -8,18 +8,18 @@ window.UI = {
         UI.updateSupplierBreakdown(records);
 
         if(!records || records.length === 0) {
-            DOM.orderList.innerHTML = '<p style="color:#a0aec0; padding: 20px;">Keine passenden Aufträge vorhanden.</p>';
+            window.DOM.orderList.innerHTML = '<p style="color:#a0aec0; padding: 20px;">Keine passenden Aufträge vorhanden.</p>';
             return;
         }
 
-        if (DOM.orderList.querySelector('p')) {
-            DOM.orderList.innerHTML = '';
+        if (window.DOM.orderList.querySelector('p')) {
+            window.DOM.orderList.innerHTML = '';
         }
 
         const incomingIds = new Set(records.map(r => r.id));
 
         // 1. Gelöschte Zeilen schrumpfen lassen
-        const currentRows = Array.from(DOM.orderList.querySelectorAll('.billing-row'));
+        const currentRows = Array.from(window.DOM.orderList.querySelectorAll('.billing-row'));
         currentRows.forEach(row => {
             const rowId = row.getAttribute('data-id');
             if (!incomingIds.has(rowId)) {
@@ -42,14 +42,12 @@ window.UI = {
                     const details = JSON.parse(fields.Fremdkosten_Details);
                     if (details.length > 0) {
                         breakdownHTML = `<div class="breakdown-container">`;
-                        details.forEach((d, dIdx) => {
+                        details.forEach((d) => {
                             const isPaid = d.paid === true;
+                            // KORREKTUR: Oben im Log nur noch schicke Read-Only Anzeige, keine Checkboxen mehr!
                             breakdownHTML += `
                                 <div class="breakdown-row ${isPaid ? 'supplier-paid' : ''}">
-                                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0; text-transform:none; user-select:none;">
-                                        <input type="checkbox" ${isPaid ? 'checked' : ''} onchange="toggleSupplierPaid('${id}', ${dIdx})" style="accent-color:#00ff73; cursor:pointer; width:14px; height:14px;">
-                                        <span>↳ ${d.name}</span>
-                                    </label>
+                                    <span>↳ ${d.name} ${isPaid ? '✓' : ''}</span>
                                     <span>€ ${d.amount.toFixed(2)}</span>
                                 </div>
                             `;
@@ -67,7 +65,7 @@ window.UI = {
                 cardStatusClass = "status-bezahlt";
             }
 
-            // KORREKTUR: Vektorgrafik hat nun fest integrierte Füllfarbe gegen das Viereck-Problem
+            // KORREKTUR: fill="currentColor" erzwingt perfekte, knackige Theme-Reaktionen ohne Orange-Stich!
             const innerHTML = `
                 <div class="billing-info-block">
                     <div class="billing-row-title">${fields.Auftrag || "Unbenannt"}</div>
@@ -87,12 +85,12 @@ window.UI = {
                         <option value="Bezahlt" ${status === "Bezahlt" ? "selected" : ""}>Bezahlt</option>
                     </select>
                     <button class="delete-btn" onclick="deleteOrder('${id}')" title="Auftrag löschen">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#e74c3c"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                     </button>
                 </div>
             `;
 
-            let existingRow = DOM.orderList.querySelector(`.billing-row[data-id="${id}"]`);
+            let existingRow = window.DOM.orderList.querySelector(`.billing-row[data-id="${id}"]`);
 
             if (existingRow) {
                 const cleanExisting = existingRow.innerHTML.replace(/\s+/g, ' ').trim();
@@ -108,11 +106,11 @@ window.UI = {
                 newRow.setAttribute('data-id', id);
                 newRow.innerHTML = innerHTML;
 
-                const referenceNode = DOM.orderList.children[index];
+                const referenceNode = window.DOM.orderList.children[index];
                 if (referenceNode) {
-                    DOM.orderList.insertBefore(newRow, referenceNode);
+                    window.DOM.orderList.insertBefore(newRow, referenceNode);
                 } else {
-                    DOM.orderList.appendChild(newRow);
+                    window.DOM.orderList.appendChild(newRow);
                 }
             }
         });
@@ -157,7 +155,6 @@ window.UI = {
         `;
     },
 
-    // REPARIERT: Lieferanten fliegen jetzt NUR noch raus, wenn d.paid === true ist (Status Bezahlt wird ignoriert!)
     updateSupplierBreakdown(records) {
         const supplierContainer = document.getElementById('supplier-summary-details');
         if (!supplierContainer) return;
@@ -171,18 +168,23 @@ window.UI = {
             if (fields.Fremdkosten_Details) {
                 try {
                     const details = JSON.parse(fields.Fremdkosten_Details);
-                    details.forEach((d) => {
+                    details.forEach((d, dIdx) => {
                         const name = (d.name || "Unbekannt").trim();
                         const amount = parseFloat(d.amount) || 0;
                         const isPaid = d.paid === true;
 
-                        // Kriterium: Es muss Geld offen sein UND das bezahlt-Flag darf nicht gesetzt sein!
                         if (amount > 0 && !isPaid) {
                             if (!openSuppliers[name]) {
                                 openSuppliers[name] = { total: 0, items: [] };
                             }
                             openSuppliers[name].total += amount;
-                            openSuppliers[name].items.push({ order: orderName, amount: amount });
+                            // Wir reichen ID und Array-Index weiter, um von unten direkt nach oben zu feuern!
+                            openSuppliers[name].items.push({
+                                order: orderName,
+                                amount: amount,
+                                orderId: record.id,
+                                index: dIdx
+                            });
                         }
                     });
                 } catch (e) {}
@@ -207,23 +209,26 @@ window.UI = {
         let html = '';
         supplierNames.forEach(name => {
             const data = openSuppliers[name];
-            const safeName = name.replace(/'/g, "\\'"); // Verhindert JS-String-Abbrüche bei O'Connor etc.
+            const safeName = name.replace(/'/g, "\\'");
             html += `
                 <div class="supplier-stat-card">
                     <div class="supplier-stat-header">
                         <span class="supplier-stat-name">${name}</span>
                         <div style="display:flex; align-items:center; gap:10px;">
                             <span class="supplier-stat-total">€ ${data.total.toFixed(2)}</span>
-                            <!-- NEU: Bulk Action Button -->
                             <button class="btn-primary btn-small" style="padding:4px 8px; font-size:0.65rem;" onclick="bulkPaySupplier('${safeName}')">✓ Alle abgelten</button>
                         </div>
                     </div>
             `;
+            // KORREKTUR: Jedes Herkunftsprojekt hat ab jetzt die funktionale Checkbox zum direkten Abhaken!
             data.items.forEach(item => {
                 html += `
                     <div class="supplier-stat-item">
-                        <span>↳ ${item.order}</span>
-                        <span>€ ${item.amount.toFixed(2)}</span>
+                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0; text-transform:none; user-select:none; min-width:0; flex:1;">
+                            <input type="checkbox" onchange="window.toggleSupplierPaid('${item.orderId}', ${item.index})" style="accent-color:#00ff73; cursor:pointer; width:14px; height:14px; flex-shrink:0;">
+                            <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">↳ ${item.order}</span>
+                        </label>
+                        <span style="color:#ef4444; font-weight:600; flex-shrink:0;">€ ${item.amount.toFixed(2)}</span>
                     </div>
                 `;
             });
@@ -275,7 +280,7 @@ window.UI = {
             row.innerHTML = `
                 <span class="supplier-manager-name">${supplier.name}</span>
                 <button class="delete-btn" style="width:34px; height:34px; border-radius:6px;" onclick="deleteSupplier('${supplier.id}', '${supplier.name}')">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#e74c3c"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                 </button>
             `;
             listContainer.appendChild(row);
@@ -306,8 +311,8 @@ window.UI = {
     },
 
     showSetupRequired() {
-        DOM.loading.classList.add('hidden');
-        DOM.orderList.innerHTML = `
+        window.DOM.loading.classList.add('hidden');
+        window.DOM.orderList.innerHTML = `
             <div style="padding: 60px 20px; text-align: center; color: #a0aec0;">
                 <h3 style="color: white; margin-bottom: 12px; text-transform: uppercase;">Konfiguration fehlt</h3>
                 <button class="btn-primary" style="margin: 0 auto;" onclick="triggerSetup()">➔ Setup starten</button>
