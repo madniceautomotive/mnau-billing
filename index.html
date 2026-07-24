@@ -70,7 +70,7 @@
                     <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
                 </button>
 
-                <!-- NEU: DEBUG LOGS BUTTON FÜR BETA-TESTER -->
+                <!-- DEBUG LOGS BUTTON FÜR BETA-TESTER -->
                 <button id="btn-view-logs" class="sort-icon-btn" title="System-Logs &amp; Fehlermeldungen anzeigen" onclick="window.openLogsModal()">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 19V7H4v12h16m0-14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h16M13 17v-2h-2v2h2m0-4v-4h-2v4h2z"/></svg>
                 </button>
@@ -129,7 +129,7 @@
                 <!-- STICKY HINWEIS-BANNER BEI DER BEARBEITUNG EINES BESTEHENDEN AUFTRAGS -->
                 <div id="kalk-edit-banner" class="kalk-edit-banner hidden">
                     <div class="kalk-edit-text">
-                        <span>✏️ <strong>PROJEKT-BEARBEITUNG:</strong> Sie erstellen eine neue Version für <u id="kalk-edit-title"></u></span>
+                        <span><strong>PROJEKT-BEARBEITUNG:</strong> Sie erstellen eine neue Version für <u id="kalk-edit-title"></u></span>
                     </div>
                     <button class="btn-secondary btn-small" onclick="cancelKalkulatorEdit()">Bearbeitung abbrechen</button>
                 </div>
@@ -262,7 +262,7 @@
     </div>
 </div>
 
-<!-- NEU: DEBUG LOGS MODAL FÜR BETA-TESTER -->
+<!-- DEBUG LOGS MODAL FÜR BETA-TESTER -->
 <div id="modal-logs-overlay" class="modal-overlay hidden">
     <div class="modal-card" style="max-width: 680px; width: 100%;">
         <h2>System-Logs &amp; Diagnose</h2>
@@ -271,18 +271,18 @@
         <div id="debug-log-terminal" class="log-terminal"></div>
 
         <div class="modal-actions" style="margin-top: 18px; flex-wrap: wrap; gap: 8px;">
-            <button type="button" class="btn-secondary btn-small" onclick="window.Logger.clear(); window.renderLogsModal();">🗑️ Logs leeren</button>
-            <button type="button" class="btn-secondary btn-small" onclick="window.downloadLogsFile()">💾 Als Textdatei speichern</button>
-            <button type="button" class="btn-primary btn-small" onclick="window.copyLogsToClipboard()">📋 In Zwischenablage kopieren</button>
+            <button type="button" class="btn-secondary btn-small" onclick="window.Logger.clear(); window.renderLogsModal();">Logs leeren</button>
+            <button type="button" class="btn-secondary btn-small" onclick="window.downloadLogsFile()">Als Textdatei speichern</button>
+            <button type="button" class="btn-primary btn-small" onclick="window.copyLogsToClipboard()">In Zwischenablage kopieren</button>
             <button type="button" class="btn-secondary btn-small" onclick="window.hideModal('modal-logs-overlay')">Schließen</button>
         </div>
     </div>
 </div>
 
-<!-- ZENTRALES DIALOG MODAL (ERSETZT BROWSER ALERTS & CONFIRMS) -->
+<!-- STATE-OF-THE-ART DIALOG MODAL (Sleek Vector Icons & Glassmorphism) -->
 <div id="custom-dialog-overlay" class="modal-overlay hidden">
     <div class="modal-card custom-dialog-card">
-        <div class="dialog-icon" id="custom-dialog-icon">ℹ️</div>
+        <div class="dialog-icon-wrapper" id="custom-dialog-icon-wrap"></div>
         <h2 id="custom-dialog-title">Hinweis</h2>
         <div id="custom-dialog-body" class="dialog-body-text"></div>
         <div class="modal-actions dialog-actions">

@@ -5,6 +5,14 @@
 const SUN_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
 const MOON_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
 
+// HIGH-END VEKTOR-ICONS FÜR STATE-OF-THE-ART MODAL DIALOGS
+const DIALOG_ICONS = {
+    info: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
+    success: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+    error: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
+    confirm: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`
+};
+
 // ====================================================
 // ZENTRALES AUTOMATISCHES SYSTEM-LOGGER ENGINE (BETA-TESTING)
 // ====================================================
@@ -34,7 +42,7 @@ window.Logger = {
             details: typeof details === 'object' ? JSON.stringify(details, null, 2) : String(details)
         };
         this.logs.unshift(entry);
-        if (this.logs.length > 200) this.logs.pop(); // Max 200 Einträge
+        if (this.logs.length > 200) this.logs.pop();
         try {
             localStorage.setItem('mngr_debug_logs', JSON.stringify(this.logs));
         } catch(e) {}
@@ -96,25 +104,23 @@ window.downloadLogsFile = function() {
 };
 
 // ====================================================
-// PROMISE-BASED CUSTOM MODAL DIALOG HELPER (ANIMIERT)
+// STATE-OF-THE-ART MODAL CONTROLLER (GLASSMORPHISM & ANIMATED)
 // ====================================================
 window.showModal = function(id) {
     const el = document.getElementById(id);
-    if(!el) return;
+    if (!el) return;
     el.classList.remove('hidden');
-    // Force CSS reflow für Animation
-    void el.offsetWidth;
+    void el.offsetWidth; // Force CSS reflow
     el.classList.add('modal-visible');
 };
 
 window.hideModal = function(id) {
     const el = document.getElementById(id);
-    if(!el) return;
+    if (!el) return;
     el.classList.remove('modal-visible');
-    // Warte auf CSS Transition (300ms) bevor Display None gesetzt wird
     setTimeout(() => {
         el.classList.add('hidden');
-    }, 300);
+    }, 280);
 };
 
 window.customAlert = function(message, title = "Hinweis") {
@@ -123,17 +129,20 @@ window.customAlert = function(message, title = "Hinweis") {
         const bodyEl = document.getElementById('custom-dialog-body');
         const btnOk = document.getElementById('custom-dialog-ok');
         const btnCancel = document.getElementById('custom-dialog-cancel');
+        const iconWrap = document.getElementById('custom-dialog-icon-wrap');
 
-        if (!titleEl || !bodyEl || !btnOk) {
+        if (!titleEl || !bodyEl || !btnOk || !iconWrap) {
             alert(message);
             return resolve(true);
         }
 
-        let icon = "ℹ️";
-        if (title.toLowerCase().includes("erfolg")) icon = "✅";
-        if (title.toLowerCase().includes("fehler") || title.toLowerCase().includes("system")) icon = "❌";
-        if (title.toLowerCase().includes("achtung")) icon = "⚠️";
-        document.getElementById('custom-dialog-icon').textContent = icon;
+        let type = "info";
+        if (title.toLowerCase().includes("erfolg")) type = "success";
+        if (title.toLowerCase().includes("fehler") || title.toLowerCase().includes("system")) type = "error";
+        if (title.toLowerCase().includes("achtung")) type = "confirm";
+
+        iconWrap.className = `dialog-icon-wrapper icon-${type}`;
+        iconWrap.innerHTML = DIALOG_ICONS[type] || DIALOG_ICONS.info;
 
         titleEl.textContent = title;
         bodyEl.innerHTML = message;
@@ -157,13 +166,16 @@ window.customConfirm = function(message, title = "Bestätigung erforderlich") {
         const bodyEl = document.getElementById('custom-dialog-body');
         const btnOk = document.getElementById('custom-dialog-ok');
         const btnCancel = document.getElementById('custom-dialog-cancel');
+        const iconWrap = document.getElementById('custom-dialog-icon-wrap');
 
-        if (!titleEl || !bodyEl || !btnOk || !btnCancel) {
+        if (!titleEl || !bodyEl || !btnOk || !btnCancel || !iconWrap) {
             const res = confirm(message);
             return resolve(res);
         }
 
-        document.getElementById('custom-dialog-icon').textContent = "❓";
+        iconWrap.className = `dialog-icon-wrapper icon-confirm`;
+        iconWrap.innerHTML = DIALOG_ICONS.confirm;
+
         titleEl.textContent = title;
         bodyEl.innerHTML = message;
         btnCancel.classList.remove('hidden');
