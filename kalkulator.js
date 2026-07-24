@@ -57,14 +57,54 @@ function buildBaseCards(){
     <div class="entity-card">
       <div class="entity-name col-${e}">${e}</div>
       <div class="field"><label id="base-label-${e}">Volumen (€)</label><input type="number" id="base-${e}" class="mnau-input" value="0" min="0" step="100" oninput="syncCostsToVolume()"></div>
-      <div class="field" style="margin-top:6px"><label>Fremdkosten (€)</label><input type="number" id="fk-${e}" class="mnau-input" value="0" min="0" step="10"></div>
-      <div class="field" style="margin-top:6px"><label>Lieferant Fremdkosten</label><input type="text" id="fk-supplier-${e}" class="mnau-input" list="supplier-list" placeholder="Lieferant..."></div>
+      
+      <!-- DYNAMISCHE LIEFERANTEN ZEILEN -->
+      <div class="field" style="margin-top:6px">
+        <label>Lieferanten &amp; Fremdkosten</label>
+        <div id="suppliers-list-${e}" class="kalk-suppliers-list"></div>
+        <button type="button" class="btn-secondary btn-small" style="padding:3px 8px; font-size:0.68rem; margin-top:4px;" onclick="addKalkSupplierRow('${e}')">+ Lieferant</button>
+        <input type="hidden" id="fk-${e}" value="0">
+      </div>
+
       ${e==='MNGR'?`<div class="field" style="margin-top:6px"><label>Fremdkosten MNGR (€)</label><input type="number" id="fkmngr" class="mnau-input" value="0" min="0" step="10"></div>`:''}
       <div class="field" style="margin-top:6px"><label>Spesen (€)</label><input type="number" id="sp-${e}" class="mnau-input" value="0" min="0" step="10"></div>
       <div class="field" style="margin-top:6px"><label>Stundenpreis (€)</label><input type="number" id="hp-${e}" class="mnau-input" value="150" min="0" step="5"></div>
       <div class="field note-field note-sep"><label>✎ Notiz ${e}</label><textarea id="note-${e}" class="mnau-input" rows="1" placeholder="Anmerkung zu ${e} …"></textarea></div>
     </div>`).join('');
+
+    // Initialisiere jede Karte mit mindestens einer leeren Lieferantenzeile
+    ENTITIES.forEach(e => {
+        addKalkSupplierRow(e);
+    });
 }
+
+window.addKalkSupplierRow = function(entity, name = '', amount = '') {
+    const container = document.getElementById(`suppliers-list-${entity}`);
+    if (!container) return;
+    const row = document.createElement('div');
+    row.className = 'kalk-supplier-row';
+    row.innerHTML = `
+    <input type="text" class="mnau-input kalk-supp-name" list="supplier-list" placeholder="Lieferant..." value="${name}" oninput="updateEntityFremdkosten('${entity}')">
+    <input type="number" step="0.01" class="mnau-input kalk-supp-amount" placeholder="0.00" value="${amount}" oninput="updateEntityFremdkosten('${entity}')">
+    <button type="button" class="btn-remove-supplier kalk-supp-remove" title="Entfernen" onclick="this.parentElement.remove(); updateEntityFremdkosten('${entity}');">
+      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+    </button>
+  `;
+    container.appendChild(row);
+    updateEntityFremdkosten(entity);
+};
+
+window.updateEntityFremdkosten = function(entity) {
+    const container = document.getElementById(`suppliers-list-${entity}`);
+    if (!container) return;
+    let total = 0;
+    container.querySelectorAll('.kalk-supp-amount').forEach(input => {
+        total += parseFloat(input.value) || 0;
+    });
+    const fkInput = document.getElementById(`fk-${entity}`);
+    if (fkInput) fkInput.value = total;
+    window.syncCostsToVolume();
+};
 
 function buildCostCards(){
     document.getElementById('cost-cards').innerHTML = ENTITIES.map(e=>`
@@ -314,7 +354,7 @@ window.saveMNAUOrderToLog = async function() {
     });
     summe['MNGR'] += fkMNGR;
 
-    // 1. MNAU Eigenanteil (das, was MNAU an die Group verrechnet)
+    // 1. MNAU Umsatz (Exakte MNAU Summe aus dem Kalkulator - Fremdkosten werden NICHT extra dazugezählt)
     const mnauUmsatz = Math.round((summe['MNAU'] || 0) * 100) / 100;
 
     if (mnauUmsatz <= 0) {
@@ -322,46 +362,46 @@ window.saveMNAUOrderToLog = async function() {
         return;
     }
 
-    // 2. Echte Fremdkosten NUR von MNAU selbst (Lieferanten & Spesen)
+    // 2. Echte Fremdkosten aus allen eingegebenen MNAU-Lieferantenzeilen auslesen
     const suppliers = [];
-    const mnauFK = FK['MNAU'] || 0;
-    const mnauSP = SP['MNAU'] || 0;
+    const containerMNAU = document.getElementById('suppliers-list-MNAU');
 
-    const customSupplierName = getVal('fk-supplier-MNAU');
-    const supplierName = customSupplierName ? customSupplierName : "Fremdkosten MNAU";
+    if (containerMNAU) {
+        containerMNAU.querySelectorAll('.kalk-supplier-row').forEach(row => {
+            const sName = (row.querySelector('.kalk-supp-name').value || '').trim();
+            const sAmount = parseFloat(row.querySelector('.kalk-supp-amount').value) || 0;
+            if (sName !== '' || sAmount > 0) {
+                suppliers.push({
+                    name: sName || "Fremdkosten MNAU",
+                    amount: Math.round(sAmount * 100) / 100,
+                    paid: false
+                });
 
-    if (mnauFK > 0) {
-        suppliers.push({
-            name: supplierName,
-            amount: Math.round(mnauFK * 100) / 100,
-            paid: false
+                // Falls ein neuer Lieferant eingegeben wurde, in Airtable speichern
+                if (sName !== '' && window.globalSuppliers && window.API && window.API.saveSuppliers) {
+                    const exists = window.globalSuppliers.some(g => g.name.toLowerCase() === sName.toLowerCase());
+                    if (!exists) {
+                        window.API.saveSuppliers([{ fields: { "Name": sName } }])
+                            .then(res => {
+                                if (res && res.records) {
+                                    res.records.forEach(r => window.globalSuppliers.push({ id: r.id, name: r.fields.Name }));
+                                    if (window.UI && window.UI.updateSupplierDatalist) window.UI.updateSupplierDatalist();
+                                }
+                            }).catch(e => console.warn("Lieferant konnte nicht gespeichert werden:", e));
+                    }
+                }
+            }
         });
     }
 
+    // Spesen MNAU als eigener Lieferantenposten falls vorhanden
+    const mnauSP = SP['MNAU'] || 0;
     if (mnauSP > 0) {
         suppliers.push({
             name: "Spesen MNAU",
             amount: Math.round(mnauSP * 100) / 100,
             paid: false
         });
-    }
-
-    // LIEFERANTEN-CHECK: Falls ein neuer Lieferantenname eingegeben wurde, in Airtable speichern!
-    if (customSupplierName && window.globalSuppliers && window.API && window.API.saveSuppliers) {
-        const exists = window.globalSuppliers.some(s => s.name.toLowerCase() === customSupplierName.toLowerCase());
-        if (!exists) {
-            try {
-                const newSuppRes = await window.API.saveSuppliers([{ fields: { "Name": customSupplierName } }]);
-                if (newSuppRes && newSuppRes.records) {
-                    newSuppRes.records.forEach(r => window.globalSuppliers.push({ id: r.id, name: r.fields.Name }));
-                    if (window.UI && window.UI.updateSupplierDatalist) {
-                        window.UI.updateSupplierDatalist();
-                    }
-                }
-            } catch (suppErr) {
-                console.warn("Lieferant konnte nicht automatisch in Airtable gespeichert werden:", suppErr);
-            }
-        }
     }
 
     const totalFremdkosten = suppliers.reduce((s, item) => s + item.amount, 0);
@@ -442,8 +482,12 @@ window.saveMNAUOrderToLog = async function() {
 
 window.resetAll = function(){
     ENTITIES.forEach(e=>{
-        ['base','fk','sp'].forEach(p=>{const el=document.getElementById(p+'-'+e);if(el)el.value=0;});
-        const suppEl = document.getElementById('fk-supplier-'+e); if(suppEl) suppEl.value='';
+        ['base','sp'].forEach(p=>{const el=document.getElementById(p+'-'+e);if(el)el.value=0;});
+        const container = document.getElementById(`suppliers-list-${e}`);
+        if (container) {
+            container.innerHTML = '';
+            addKalkSupplierRow(e);
+        }
         const hp=document.getElementById('hp-'+e); if(hp) hp.value=150;
         const nt=document.getElementById('note-'+e); if(nt) nt.value='';
         COSTS.forEach(c=>{const el=document.getElementById('cost-'+e+'-'+c.key);if(el){el.value=c.def;el.disabled=false;delete el.dataset.prev;}});

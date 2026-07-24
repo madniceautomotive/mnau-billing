@@ -143,6 +143,45 @@
 #view-calculator .auto-field.neg { color: #e74c3c !important; border-color: rgba(231,76,60,0.5) !important; background: rgba(231,76,60,0.1) !important; }
 #view-calculator .auto-tag { font-size: 8px; background: rgba(0, 255, 115, 0.15); color: #00ff73; padding: 1px 4px; border-radius: 4px; }
 
+/* Dynamic Supplier Rows in Kalkulator Cards */
+#view-calculator .kalk-suppliers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 120px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+#view-calculator .kalk-supplier-row {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+#view-calculator .kalk-supplier-row .kalk-supp-name {
+    flex: 2;
+    min-width: 0;
+    padding: 6px 8px !important;
+    font-size: 0.75rem !important;
+}
+#view-calculator .kalk-supplier-row .kalk-supp-amount {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 6px !important;
+    font-size: 0.75rem !important;
+    text-align: right;
+}
+#view-calculator .kalk-supplier-row .kalk-supp-remove {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+}
+
 /* Entitäts-Karten */
 #view-calculator .entity-card {
     background: #1c1c1c;
