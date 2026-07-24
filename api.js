@@ -1,5 +1,5 @@
 // ====================================================
-// api.js: AIRTABLE CRUD API INTERFACE
+// api.js: AIRTABLE CRUD API INTERFACE (EFFICIENT)
 // ====================================================
 window.API = {
     async fetchOrders() {
@@ -56,6 +56,17 @@ window.API = {
             body: JSON.stringify({ fields: { "Status": newStatus } })
         });
         if (!response.ok) throw new Error("Status-Update fehlgeschlagen.");
+        return await response.json();
+    },
+
+    // NEU: Bündelt bis zu 10 Updates in 1 einzigen API-Call!
+    async batchUpdateOrders(recordsPayload) {
+        const response = await fetch(window.API_URL_ORDERS, {
+            method: 'PATCH',
+            headers: window.HEADERS,
+            body: JSON.stringify({ records: recordsPayload })
+        });
+        if (!response.ok) throw new Error("Batch-Update fehlgeschlagen.");
         return await response.json();
     },
 

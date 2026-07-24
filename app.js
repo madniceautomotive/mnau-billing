@@ -1,10 +1,9 @@
 // ==================================================== 
-// app.js: USER ACTIONS & CONTROLLER HUB
-// ==================================================== 
+// app.js: USER ACTIONS & CONTROLLER HUB (OPTIMIZED)
+// ====================================================
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // Setup-Events binden via window.DOM Bridge
     if (window.DOM.btnNewOrder) {
         window.DOM.btnNewOrder.addEventListener('click', () => {
             document.getElementById('supplier-container').innerHTML = '';
@@ -21,7 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Modal Lieferanten-Verwaltung anbinden
     if (window.DOM.btnManageSuppliers) {
         window.DOM.btnManageSuppliers.addEventListener('click', () => {
             window.UI.renderSuppliersManager();
@@ -49,7 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // 1. Unbekannte Lieferanten filtern
             const newSuppliersToSave = [];
             suppliers.forEach(s => {
                 const alreadyExists = window.globalSuppliers.some(g => g.name.toLowerCase() === s.name.toLowerCase());
@@ -58,7 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // 2. Lieferanten in Airtable abspeichern
             if (newSuppliersToSave.length > 0) {
                 try {
                     const resData = await window.API.saveSuppliers(newSuppliersToSave);
@@ -76,7 +72,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const totalFremdkosten = window.UI.calculateTotalFremdkosten();
             const suppliersJSON = JSON.stringify(suppliers);
 
-            // REPARIERT: Tippfehler totalFremskosten restlos eliminiert
             const payload = {
                 records: [{
                     fields: {
@@ -90,10 +85,15 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             try {
-                await window.API.saveOrder(payload);
+                // Senden & Antwort direkt lokal verwenden (KEIN neuer GET-Call!)
+                const createdData = await window.API.saveOrder(payload);
+                if (createdData && createdData.records && createdData.records.length > 0) {
+                    window.loadedRecords.unshift(createdData.records[0]); // An den Anfang der Liste schieben
+                    window.UI.updateSupplierDatalist();
+                    window.UI.renderOrders(window.loadedRecords);
+                }
                 window.DOM.modal.classList.add('hidden');
                 window.DOM.formNewOrder.reset();
-                fetchOrders();
             } catch (error) {
                 alert("Fehler beim Erstellen des Auftrags.");
             }
@@ -103,7 +103,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnAddSupplier = document.getElementById('btn-add-supplier');
     if (btnAddSupplier) btnAddSupplier.addEventListener('click', () => window.UI.addSupplierRow());
 
-    // Live-Suche
     if (window.DOM.searchInput) {
         window.DOM.searchInput.addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase().trim();
@@ -141,6 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchOrders();
 });
 
+// Nur beim allerersten Öffnen der App aufrufen!
 async function fetchOrders() {
     if (!window.AIRTABLE_TOKEN || !window.BASE_ID) {
         window.UI.showSetupRequired();
@@ -181,6 +181,7 @@ async function fetchOrders() {
     }
 }
 
+// Sparsames Status-Update: Genau 1 PATCH Call, 0 GET Calls
 window.changeOrderStatus = async function(recordId, newStatus) {
     const record = window.loadedRecords.find(r => r.id === recordId);
     if (record) {
@@ -190,15 +191,14 @@ window.changeOrderStatus = async function(recordId, newStatus) {
 
     try {
         await window.API.updateOrderStatus(recordId, newStatus);
-        const data = await window.API.fetchOrders();
-        window.loadedRecords = data.records || [];
-        window.UI.renderOrders(window.loadedRecords);
+        // Kein Re-Fetch notwendig! Der lokale Speicher ist bereits korrekt.
     } catch (error) {
         alert("Fehler beim Status-Update.");
-        fetchOrders();
+        fetchOrders(); // Nur im echten Fehlerfall als Fallback neu laden
     }
 };
 
+// Sparsamer Checkbox-Toggle: Genau 1 PATCH Call, 0 GET Calls
 window.toggleSupplierPaid = async function(orderId, supplierIndex) {
     const record = window.loadedRecords.find(r => r.id === orderId);
     if (!record || !record.fields.Fremdkosten_Details) return;
@@ -215,12 +215,14 @@ window.toggleSupplierPaid = async function(orderId, supplierIndex) {
             headers: window.HEADERS,
             body: JSON.stringify({ fields: { "Fremdkosten_Details": record.fields.Fremdkosten_Details } })
         });
+        // Kein Re-Fetch notwendig!
     } catch (error) {
         alert("Fehler beim Aktualisieren des Lieferanten-Zahlungsstatus.");
         fetchOrders();
     }
 };
 
+// Effiziente Massen-Abgeltung: Bündelt Updates in 1 Call pro 10 Einträge
 window.bulkPaySupplier = async function(supplierName) {
     if (!confirm(`Möchtest du wirklich alle offenen Rechnungen für "${supplierName}" auf einmal als erledigt markieren?`)) return;
 
@@ -241,7 +243,7 @@ window.bulkPaySupplier = async function(supplierName) {
 
                 if (mutated) {
                     const jsonStr = JSON.stringify(details);
-                    updates.push({ id: record.id, payload: jsonStr });
+                    updates.push({ id: record.id, fields: { "Fremdkosten_Details": jsonStr } });
                     record.fields.Fremdkosten_Details = jsonStr;
                 }
             } catch (e) {}
@@ -251,15 +253,12 @@ window.bulkPaySupplier = async function(supplierName) {
     window.UI.renderOrders(window.loadedRecords);
 
     try {
-        const queue = updates.map(up => {
-            return fetch(`${window.API_URL_ORDERS}/${up.id}`, {
-                method: 'PATCH',
-                headers: window.HEADERS,
-                body: JSON.stringify({ fields: { "Fremdkosten_Details": up.payload } })
-            });
-        });
-        await Promise.all(queue);
-        fetchOrders();
+        // Updates in 10er-Blöcke teilen und per Batch-PATCH schicken
+        for (let i = 0; i < updates.length; i += 10) {
+            const batch = updates.slice(i, i + 10);
+            await window.API.batchUpdateOrders(batch);
+        }
+        // Kein Re-Fetch notwendig!
     } catch (error) {
         alert("Massen-Update fehlgeschlagen.");
         fetchOrders();
@@ -267,7 +266,7 @@ window.bulkPaySupplier = async function(supplierName) {
 };
 
 window.deleteSupplier = async function(supplierId, supplierName) {
-    if (!confirm(`Möchtest du "${supplierName}" dauerhaft aus der Lieferanten-Datenbank lüschen?`)) return;
+    if (!confirm(`Möchtest du "${supplierName}" dauerhaft aus der Lieferanten-Datenbank löschen?`)) return;
 
     try {
         await window.API.deleteSupplierFromAirtable(supplierId);
