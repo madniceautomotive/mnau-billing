@@ -59,7 +59,7 @@
                 <!-- FIRMEN UMSCHALTER DROPDOWN -->
                 <select id="company-select" class="status-select" onchange="switchCompany(this.value)" style="border-color: #00ff73; color: #00ff73; font-weight: 800; min-width: 110px;" title="Aktive Firma wechseln"></select>
 
-                <!-- THEME TOGGLE BUTTON (SUBTILES FLAT DESIGN) -->
+                <!-- THEME TOGGLE BUTTON -->
                 <button id="btn-theme-toggle" class="theme-toggle-btn" onclick="toggleTheme()" title="Design wechseln (Dark / Light)"></button>
 
                 <button id="btn-manage-suppliers" class="sort-icon-btn" title="Lieferanten-Datenbank verwalten">
@@ -73,7 +73,7 @@
         <div class="header-controls-row" id="billing-search-row" style="display:flex; gap:12px; align-items:center;">
             <div class="search-group" style="flex:1;">
                 <input type="text" id="search-input" class="search-input" placeholder="Nach Auftrag, Betrag oder Lieferant suchen...">
-                <button id="search-clear-btn" class="search-clear-btn"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 13.41 12z"/></svg></button>
+                <button id="search-clear-btn" class="search-clear-btn"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
             </div>
             <!-- GLOBALER STATUS FILTER -->
             <select id="status-filter" class="status-select" style="max-width: 220px;">
@@ -159,7 +159,8 @@
                         <div class="field"><label>Angebotsnummer</label><input type="text" id="proj-offer" class="mnau-input" placeholder="AN-2026-001"></div>
                         <div class="field"><label>Rechnungsnummer</label><input type="text" id="proj-invoice" class="mnau-input" placeholder="RE-2026-001"></div>
                     </div>
-                    <div class="field" style="margin-top:12px"><label>Allgemeine Notizen</label><textarea id="proj-notes" class="mnau-input" rows="2" placeholder="Übergreifende Anmerkungen zum gesamten Projekt …"></textarea></div>
+                    <!-- ALLGEMEINES NOTIZFELD AUF 3 ZEILEN -->
+                    <div class="field" style="margin-top:12px"><label>Allgemeine Notizen</label><textarea id="proj-notes" class="mnau-input" rows="3" placeholder="Übergreifende Anmerkungen zum gesamten Projekt …"></textarea></div>
                 </div>
 
                 <div class="kalk-section">

@@ -53,6 +53,7 @@ function relabelBase(){
 }
 
 function buildBaseCards(){
+    // NOTIZFELD EINHEITLICH AUF 3 ZEILEN GESETZT (rows="3")
     document.getElementById('base-cards').innerHTML = ENTITIES.map(e=>`
     <div class="entity-card">
       <div class="entity-name col-${e}">${e}</div>
@@ -72,7 +73,7 @@ function buildBaseCards(){
           <div class="field" style="flex:1;"><label>Stundenpreis (€)</label><input type="number" id="hp-${e}" class="mnau-input" value="150" min="0" step="5"></div>
       </div>
       
-      <div class="field note-field note-sep"><label>✎ Notiz ${e}</label><textarea id="note-${e}" class="mnau-input" rows="1" placeholder="Anmerkung zu ${e} …"></textarea></div>
+      <div class="field note-field note-sep"><label>✎ Notiz ${e}</label><textarea id="note-${e}" class="mnau-input" rows="3" placeholder="Anmerkung zu ${e} …"></textarea></div>
     </div>`).join('');
 
     ENTITIES.forEach(e => {
@@ -201,7 +202,6 @@ window.calculate = function(){
     };
     const nc = val => `<td class="val-neutral"><span class="num-val">${vn(val)}</span></td>`;
 
-    // WICHTIG: Tabelle nutzt jetzt kalk-results-table statt der flexbox-behafteten .flow Klasse!
     let h='<table class="results kalk-results-table">';
     h+='<colgroup><col class="cg-label">'+COLS.map(()=>'<col class="cg-col">').join('')+'</colgroup>';
     h+='<thead><tr>';
@@ -263,7 +263,7 @@ window.calculate = function(){
 
     const myCompany = window.currentUserCompany || "MNAU";
     const userUmsatz = summe[myCompany] || 0;
-    const userEchteFremdkosten = (FK[myCompany] || 0) + (SP[myCompany] || 0);
+    const userEchteFremdkosten = FK[myCompany] || 0; // REINE LIEFERANTEN-KOSTEN (OHNE SPESEN!)
     const userErtrag = userUmsatz - userEchteFremdkosten;
     const mngrAbgabe = summe['MNGR'] || 0;
 
@@ -292,7 +292,7 @@ window.calculate = function(){
     <div class="metric">
       <div class="ml">${myCompany} Echte Fremdkosten</div>
       <div class="mv">${fmt(userEchteFremdkosten)}</div>
-      <div class="sub-info">Eigene Lieferanten &amp; Spesen</div>
+      <div class="sub-info">Nur externe Lieferanten</div>
     </div>
     <div class="metric">
       <div class="ml">Gesamt-Projektvolumen</div>
@@ -311,9 +311,6 @@ window.calculate = function(){
     document.getElementById('results-section').scrollIntoView({behavior:'smooth',block:'nearest'});
 };
 
-// ====================================================
-// ZUSTAND DES KALKULATORS ZURÜCKLADEN (FÜR EDIT-MODUS)
-// ====================================================
 window.loadKalkulatorInputs = function(inputs) {
     if (!inputs) return;
 
@@ -417,7 +414,7 @@ function exportKalkulatorInputs() {
 }
 
 // ====================================================
-// AUFTRAG IM LOG ERFASSEN / AKTUALISIEREN (MIT VERSIONIERUNG)
+// AUFTRAG IM LOG ERFASSEN / AKTUALISIEREN (MIT NOTIZEN & SPESEN)
 // ====================================================
 window.saveMNAUOrderToLog = async function() {
     const myCompany = window.currentUserCompany || "MNAU";
@@ -461,6 +458,7 @@ window.saveMNAUOrderToLog = async function() {
     });
     summe['MNGR'] += fkMNGR;
 
+    // REINE EXTERNE LIEFERANTEN (SPESEN WERDEN HIER NICHT MEHR REINGEMISCHT!)
     const getSuppliersForCompany = (compName) => {
         const compSuppliers = [];
         const container = document.getElementById(`suppliers-list-${compName}`);
@@ -469,7 +467,7 @@ window.saveMNAUOrderToLog = async function() {
                 const sName = (row.querySelector('.kalk-supp-name').value || '').trim();
                 const sAmount = parseFloat(row.querySelector('.kalk-supp-amount').value) || 0;
                 if (sName !== '' || sAmount > 0) {
-                    compSuppliers.push({ name: sName || `Fremdkosten ${compName}`, amount: Math.round(sAmount * 100) / 100, paid: false });
+                    compSuppliers.push({ name: sName || `Lieferant ${compName}`, amount: Math.round(sAmount * 100) / 100, paid: false });
                     if (sName !== '' && window.globalSuppliers && window.API && window.API.saveSuppliers) {
                         const exists = window.globalSuppliers.some(g => g.name.toLowerCase() === sName.toLowerCase());
                         if (!exists) {
@@ -484,8 +482,6 @@ window.saveMNAUOrderToLog = async function() {
                 }
             });
         }
-        const compSP = SP[compName] || 0;
-        if (compSP > 0) compSuppliers.push({ name: `Spesen ${compName}`, amount: Math.round(compSP * 100) / 100, paid: false });
         return compSuppliers;
     };
 
@@ -587,6 +583,11 @@ window.saveMNAUOrderToLog = async function() {
                     isReadOnlyShare: !isMain,
                     originCompany: myCompany,
                     originProject: projName,
+                    projOffer: getVal('proj-offer'),
+                    projInvoice: getVal('proj-invoice'),
+                    projNotes: getVal('proj-notes'),
+                    entityNote: (kalkInputs.notes && kalkInputs.notes[comp]) || '',
+                    spesen: SP[comp] || 0,
                     kundenpreis: Math.round(kundenpreis * 100) / 100,
                     mngrAbgabe: Math.round(mngrAbgabe * 100) / 100,
                     allSharesDetail: allSharesDetail,
@@ -622,6 +623,8 @@ window.saveMNAUOrderToLog = async function() {
                     const compFremdkosten = compSuppliers.reduce((s, item) => s + item.amount, 0);
                     const groupMeta = {
                         groupId: calcGroupId, isReadOnlyShare: (comp !== myCompany), originCompany: myCompany, originProject: projName,
+                        projOffer: getVal('proj-offer'), projInvoice: getVal('proj-invoice'), projNotes: getVal('proj-notes'),
+                        entityNote: (kalkInputs.notes && kalkInputs.notes[comp]) || '', spesen: SP[comp] || 0,
                         kundenpreis: Math.round(kundenpreis * 100) / 100, mngrAbgabe: Math.round(mngrAbgabe * 100) / 100,
                         allSharesDetail: allSharesDetail, snapshots: updatedSnapshots
                     };
@@ -668,7 +671,10 @@ window.saveMNAUOrderToLog = async function() {
             const INITIAL_STATUS = "In Bearbeitung";
 
             const groupMetaMain = {
-                groupId: calcGroupId, originCompany: myCompany, kundenpreis: Math.round(kundenpreis * 100) / 100,
+                groupId: calcGroupId, originCompany: myCompany,
+                projOffer: getVal('proj-offer'), projInvoice: getVal('proj-invoice'), projNotes: getVal('proj-notes'),
+                entityNote: (kalkInputs.notes && kalkInputs.notes[myCompany]) || '', spesen: SP[myCompany] || 0,
+                kundenpreis: Math.round(kundenpreis * 100) / 100,
                 mngrAbgabe: Math.round(mngrAbgabe * 100) / 100, allSharesDetail: allSharesDetail, snapshots: [newSnapshot]
             };
 
@@ -685,7 +691,13 @@ window.saveMNAUOrderToLog = async function() {
                 if (comp !== myCompany && amt > 0) {
                     const compSuppliers = getSuppliersForCompany(comp);
                     const compFremdkosten = compSuppliers.reduce((s, item) => s + item.amount, 0);
-                    const shareGroupMeta = { groupId: calcGroupId, isReadOnlyShare: true, originCompany: myCompany, originProject: projName, kundenpreis: Math.round(kundenpreis * 100) / 100, mngrAbgabe: Math.round(mngrAbgabe * 100) / 100, allSharesDetail: allSharesDetail, snapshots: [newSnapshot] };
+                    const shareGroupMeta = {
+                        groupId: calcGroupId, isReadOnlyShare: true, originCompany: myCompany, originProject: projName,
+                        projOffer: getVal('proj-offer'), projInvoice: getVal('proj-invoice'), projNotes: getVal('proj-notes'),
+                        entityNote: (kalkInputs.notes && kalkInputs.notes[comp]) || '', spesen: SP[comp] || 0,
+                        kundenpreis: Math.round(kundenpreis * 100) / 100, mngrAbgabe: Math.round(mngrAbgabe * 100) / 100,
+                        allSharesDetail: allSharesDetail, snapshots: [newSnapshot]
+                    };
                     const shareChangelog = [{
                         user: window.currentUserEmail || "Unbekannt", timestamp: new Date().toISOString(), action: "Erlösanteil aus Group Kalkulator erfasst", comment: `Automatisch von ${myCompany} für ${comp} angelegt`,
                         details: [`Erlösanteil für ${comp} aus Projekt "${projName}" (${myCompany}):`, `• Anteil ${comp}: € ${amt.toFixed(2)}`]
@@ -713,9 +725,6 @@ window.saveMNAUOrderToLog = async function() {
     }
 };
 
-// ====================================================
-// PDF DOWNLOAD DIREKT AUS DEM AUFTRAGS-LOG
-// ====================================================
 window.downloadKalkulatorPDFFromLog = function(recordId, snapshotIndex = null) {
     const record = (window.loadedRecords || []).find(r => r.id === recordId);
     if (!record || !record.fields.Fremdkosten_Details) { alert("Kein Kalkulator-Datensatz gefunden."); return; }

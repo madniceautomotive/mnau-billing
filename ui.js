@@ -1,5 +1,5 @@
 // ====================================================
-// ui.js: DOM RENDERING WITH CLEAN THEME-AWARE UI
+// ui.js: DOM RENDERING WITH PROJEKT-DETAILS, NOTIZEN & SPESEN-HINWEIS
 // ====================================================
 
 window.toggleCardExpand = function(recordId, event) {
@@ -63,7 +63,7 @@ window.UI = {
                 const status = fields.Status || "Zu verrechnen";
                 const betragVal = parseFloat(fields.Betrag_Automotive) || 0;
                 const fremdkostenVal = parseFloat(fields.Fremdkosten) || 0;
-                const deckungsbeitragVal = betragVal - fremdkostenVal;
+                const deckungsbeitragVal = betragVal - fremdkostenVal; // Spesen mindern den DB nicht!
 
                 const betrag = betragVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
                 const fremdkosten = fremdkostenVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -90,6 +90,15 @@ window.UI = {
                 const isReadOnlyShare = groupMeta && groupMeta.isReadOnlyShare === true;
                 const creatorCompany = (groupMeta && groupMeta.originCompany) ? groupMeta.originCompany.toUpperCase() : (fields.Firma || "MNAU").toUpperCase();
 
+                // Extrahiere Spesen & Projektdetails aus GroupMeta
+                const spesenVal = groupMeta ? (parseFloat(groupMeta.spesen) || 0) : 0;
+                const spesenText = spesenVal > 0 ? ` <span style="font-size:0.72rem; color:var(--text-muted); font-weight:normal;">(davon Spesen: € ${spesenVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2})})</span>` : '';
+
+                const projOffer = groupMeta ? groupMeta.projOffer : '';
+                const projInvoice = groupMeta ? groupMeta.projInvoice : '';
+                const projNotes = groupMeta ? groupMeta.projNotes : '';
+                const entityNote = groupMeta ? groupMeta.entityNote : '';
+
                 // 1. DETAIL PANEL: Lieferanten
                 let suppliersHTML = '';
                 if (suppliers.length > 0) {
@@ -107,7 +116,7 @@ window.UI = {
                     });
                     suppliersHTML += `</div>`;
                 } else {
-                    suppliersHTML = `<div style="font-size:0.75rem; color:var(--text-muted);">Keine Lieferanten erfasst.</div>`;
+                    suppliersHTML = `<div style="font-size:0.75rem; color:var(--text-muted);">Keine externen Lieferanten.</div>`;
                 }
 
                 // 2. DETAIL PANEL: Erlösverteilung (Group Info)
@@ -144,7 +153,23 @@ window.UI = {
                     groupMetaHTML = `<div style="font-size:0.75rem; color:var(--text-muted);">Keine Group-Daten verfügbar.</div>`;
                 }
 
-                // 3. FOOTER: PDF Versions Buttons
+                // 3. DETAIL PANEL: Projektdetails & Notizen (FALLS VORHANDEN)
+                let projectNotesPanelHTML = '';
+                if (projOffer || projInvoice || projNotes || entityNote) {
+                    projectNotesPanelHTML = `
+                        <div class="oc-detail-panel" style="margin-bottom: 14px;">
+                            <h5>Projektdetails &amp; Notizen</h5>
+                            <div style="font-size:0.78rem; color:var(--text-main); display:flex; flex-direction:column; gap:6px;">
+                                ${projOffer ? `<div><strong style="color:var(--text-muted);">Angebots-Nr.:</strong> ${projOffer}</div>` : ''}
+                                ${projInvoice ? `<div><strong style="color:var(--text-muted);">Rechnungs-Nr.:</strong> ${projInvoice}</div>` : ''}
+                                ${projNotes ? `<div><strong style="color:var(--text-muted);">Allg. Notizen:</strong> ${projNotes}</div>` : ''}
+                                ${entityNote ? `<div style="padding-top:4px; border-top:1px dashed var(--border-color); color:var(--active-company-color); font-weight:600;"><strong>Notiz (${myCompany}):</strong> ${entityNote}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // 4. FOOTER: PDF Versions Buttons
                 let pdfVersionsHTML = '';
                 if (groupMeta) {
                     const snapshots = groupMeta.snapshots || (groupMeta.snapshot ? [groupMeta.snapshot] : []);
@@ -237,7 +262,7 @@ window.UI = {
                             <div class="oc-metrics-bar">
                                 <div class="oc-metric-box">
                                     <span class="oc-metric-lbl">Umsatz (${myCompany})</span>
-                                    <span class="oc-metric-val" style="color:var(--active-company-color);">€ ${betrag}</span>
+                                    <span class="oc-metric-val" style="color:var(--active-company-color);">€ ${betrag} ${spesenText}</span>
                                 </div>
                                 <div class="oc-metric-box">
                                     <span class="oc-metric-lbl">Deckungsbeitrag</span>
@@ -249,9 +274,11 @@ window.UI = {
                                 </div>
                             </div>
 
+                            ${projectNotesPanelHTML}
+
                             <div class="oc-details-grid">
                                 <div class="oc-detail-panel">
-                                    <h5>Lieferanten & Spesen</h5>
+                                    <h5>Externe Lieferanten</h5>
                                     ${suppliersHTML}
                                 </div>
                                 <div class="oc-detail-panel">
