@@ -1,5 +1,5 @@
 /* ==================================================== */
-/* style-billing.css: MULTI-BRAND & HIGH-END THEME HUB  */
+/* style-billing.css: MULTI-BRAND, THEME & HEADER FIX   */
 /* ==================================================== */
 
 :root {
@@ -30,10 +30,10 @@
 
 /* LIGHT THEME (EDLES SLATE-GRAU ALS BASIS) */
 [data-theme="light"] {
-    --bg-body: #e2e8f0;       /* Deutliches Hellgrau als Kontrast zu weißen Karten */
-    --bg-header: #f8fafc;     /* Sehr zartes Grau für den Header */
-    --bg-card: #ffffff;       /* Reinweiß für Karten */
-    --bg-card-hover: #f1f5f9; /* Zarter Hover-Effekt */
+    --bg-body: #e2e8f0;
+    --bg-header: #f8fafc;
+    --bg-card: #ffffff;
+    --bg-card-hover: #f1f5f9;
     --bg-input: #ffffff;
     --bg-panel: #f1f5f9;
     --bg-metrics: #f8fafc;
@@ -55,6 +55,11 @@ body, html {
     padding: 0;
 }
 
+/* ALLGEMEINE HIDDEN KLASSE HAS STRICT DISPLAY NONE */
+.hidden {
+    display: none !important;
+}
+
 /* FIRMEN-SPEZIFISCHE THEME-ADAPTION */
 [data-company="MNAG"] { --active-company-color: #ed694b; }
 [data-company="MNMH"] { --active-company-color: #d42168; }
@@ -63,7 +68,7 @@ body, html {
 [data-company="MNAU"] { --active-company-color: #00663a; }
 [data-company="MNGR"] { --active-company-color: #64748b; }
 
-/* APP LAYOUT CONTAINER OVERRIDES */
+/* APP LAYOUT CONTAINER */
 #database-view {
     background-color: var(--bg-body) !important;
     color: var(--text-main) !important;
@@ -87,7 +92,7 @@ body, html {
     align-items: center; justify-content: center; gap: 18px;
     transition: opacity 0.35s ease, visibility 0.35s ease;
 }
-.app-init-loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.app-init-loader.hidden { opacity: 0 !important; visibility: hidden !important; pointer-events: none; }
 .loader-spinner {
     width: 44px; height: 44px;
     border: 4px solid var(--border-color-strong);
@@ -101,16 +106,26 @@ body, html {
 }
 @keyframes appSpin { to { transform: rotate(360deg); } }
 
-/* HEADER & SEARCH */
+/* HEADER GRID (STABILES MITTIGES TAB-SWITCHING OHNE SPRINGEN) */
 .database-header {
     background-color: var(--bg-header) !important;
     border-bottom: 1px solid var(--border-color) !important;
     transition: background-color 0.25s, border-color 0.25s;
+    padding: 14px 20px;
 }
 
-.database-header h1 { color: var(--text-main) !important; }
+.header-main-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+}
+.header-main-row > h1 { justify-self: start; margin: 0; font-size: 1.3rem; color: var(--text-main) !important; }
+.header-main-row > .mnau-tabs { justify-self: center; }
+.header-main-row > div:last-child { justify-self: end; }
 
-/* NAVIGATION TABS (HIGHLIGHT IN FIRMENFARBE) */
+/* NAVIGATION TABS */
 .mnau-tabs {
     background: var(--bg-panel) !important;
     border: 1px solid var(--border-color) !important;
@@ -221,7 +236,49 @@ form label {
 .summary-label { font-size: 0.65rem; color: var(--text-muted) !important; text-transform: uppercase; font-weight: 700; }
 .summary-value { font-size: 1.2rem; font-weight: 800; color: var(--text-main) !important; }
 
-/* LEERE STATUS BEHÄLTER (EMPTY STATES) */
+/* BEARBEITUNGS-BANNER IM KALKULATOR (SAUBER GESTYLT & ABSOLUT HIDDEN LOGIK) */
+.kalk-edit-banner {
+    background: rgba(234, 179, 8, 0.12) !important;
+    border: 1px solid rgba(234, 179, 8, 0.4) !important;
+    border-radius: 10px;
+    padding: 12px 18px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+.kalk-edit-banner.hidden {
+    display: none !important;
+}
+.kalk-edit-text {
+    color: #ca8a04;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+[data-theme="dark"] .kalk-edit-text { color: #f6e05e; }
+
+.kalk-edit-banner button {
+    background: transparent;
+    border: 1px solid #ca8a04 !important;
+    color: #ca8a04 !important;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.78rem;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+[data-theme="dark"] .kalk-edit-banner button {
+    border-color: #f6e05e !important;
+    color: #f6e05e !important;
+}
+.kalk-edit-banner button:hover {
+    background: rgba(234, 179, 8, 0.2) !important;
+}
+
+/* LEERE STATUS BEHÄLTER */
 #order-list p, #external-order-list p, #archive-list p {
     color: var(--text-muted) !important;
     border: 1px dashed var(--border-color-strong) !important;
@@ -229,7 +286,7 @@ form label {
     border-radius: 8px;
 }
 
-/* AUFTRAGS-KARTEN (ACCORDION & RESPONSIVE) */
+/* AUFTRAGS-KARTEN ACCORDION */
 .billing-row {
     background: var(--bg-card) !important;
     border: 1px solid var(--border-color) !important;
@@ -394,10 +451,10 @@ form label {
 [data-theme="dark"] .changelog-btn:hover { color: #00d2ff !important; border-color: #00d2ff !important; }
 [data-theme="dark"] .edit-btn:hover { color: #f6e05e !important; border-color: #f6e05e !important; }
 
-/* Status Dropdown (EXAKTE HÖHE FÜR HEADER) */
+/* Status Dropdown */
 .status-select {
     background-color: var(--bg-input) !important; color: var(--text-main) !important; border: 1px solid var(--active-company-color) !important;
-    height: 34px; line-height: 1.2; box-sizing: border-box; /* PERFEKTE AUSRICHTUNG ZU BUTTONS */
+    height: 34px; line-height: 1.2; box-sizing: border-box;
     padding: 0 26px 0 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700;
     cursor: pointer; -webkit-appearance: none; -moz-appearance: none; appearance: none;
     background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
@@ -417,7 +474,7 @@ form label {
 .section-divider.red-divider { color: #e74c3c !important; }
 .section-divider.red-divider::after { background: linear-gradient(to right, rgba(231, 76, 60, 0.4), transparent) !important; }
 
-/* OFFENE LIEFERANTEN POSTEN PANEL FIX */
+/* OFFENE LIEFERANTEN POSTEN PANEL */
 .no-debts-panel {
     grid-column: 1 / -1;
     background: var(--bg-panel) !important;
@@ -448,7 +505,7 @@ form label {
     display: flex; align-items: center; justify-content: center;
     opacity: 0; visibility: hidden; transition: opacity 0.25s; padding: 12px; box-sizing: border-box;
 }
-.modal-overlay:not(.hidden) { opacity: 1; visibility: visible; }
+.modal-overlay:not(.hidden) { opacity: 1 !important; visibility: visible !important; }
 .modal-card {
     background: var(--bg-card) !important;
     border: 1px solid var(--active-company-color) !important;
@@ -481,11 +538,14 @@ form label {
 .archive-details[open] summary::before, .external-details[open] summary::before { transform: rotate(90deg); color: var(--active-company-color) !important; }
 .external-details[open] summary::before { color: #0284c7 !important; }
 
-/* MOBILE (< 680px) */
-@media (max-width: 680px) {
-    .manager-content { padding: 10px; }
-    .database-header { padding: 10px; }
-    .header-main-row { flex-direction: column; align-items: stretch; gap: 10px; }
+/* MOBILE (< 850px) */
+@media (max-width: 850px) {
+    .header-main-row {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
     .header-main-row h1 { font-size: 1.15rem; text-align: center; }
     .mnau-tabs { width: 100%; justify-content: center; }
     .mnau-tab-btn { flex: 1; text-align: center; padding: 8px; font-size: 0.78rem; }
@@ -493,8 +553,13 @@ form label {
     #company-select { flex: 1; min-width: 90px; }
     .header-controls-row#billing-search-row { flex-direction: column; align-items: stretch; gap: 8px; margin-top: 8px; }
     #status-filter { max-width: 100% !important; width: 100%; }
+}
 
+@media (max-width: 680px) {
+    .manager-content { padding: 10px; }
+    .database-header { padding: 10px; }
     .billing-row { padding: 12px; }
+
     .oc-compact-bar {
         display: grid;
         grid-template-columns: 1fr auto auto;

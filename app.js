@@ -63,7 +63,7 @@ window.switchCompany = function(newCompany) {
         const colorMap = {
             'MNAG': '#ed694b',
             'MNMH': '#d42168',
-            'MNWB': '#58bfc5',
+            'MNWB': '#3bb3b9',
             'MNAT': '#5079ac',
             'MNAU': '#00663a',
             'MNGR': '#a0aec0'
@@ -258,7 +258,7 @@ window.openChangelogModal = function(recordId) {
     }
 
     if (logs.length === 0) {
-        timelineContainer.innerHTML = '<p style="color:#666; font-size:0.8rem; text-align:center; padding:16px;">Keine Historieneinträge vorhanden.</p>';
+        timelineContainer.innerHTML = '<p style="font-size:0.8rem; text-align:center; padding:16px;">Keine Historieneinträge vorhanden.</p>';
     } else {
         logs.forEach(log => {
             const dateStr = new Date(log.timestamp).toLocaleString('de-DE');
