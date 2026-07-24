@@ -100,7 +100,7 @@ window.UI = {
                     breakdownHTML += `</div>`;
                 }
 
-                // Group Erlös-Info Box
+                // Group Erlös-Info Box (ZEIGT DYNAMISCH DIE ANTEILE DER ANDERN FIRMEN AN)
                 let groupMetaHTML = '';
                 if (groupMeta) {
                     const kp = (parseFloat(groupMeta.kundenpreis)||0).toFixed(2);
@@ -146,7 +146,7 @@ window.UI = {
                 else if(status === "An Group verrechnet") { cardStatusClass = "status-an-group-verrechnet"; }
                 else if(status === "Bezahlt") { cardStatusClass = "status-bezahlt"; }
 
-                // Aktions-Steuerung: Bei passiven Anteilen zeigen wir das Dropdown "disabled" an, um den Status sichtbar zu machen.
+                // Aktions-Steuerung: Bei passiven Anteilen zeigen wir das Dropdown "disabled" an
                 const actionControlsHTML = isReadOnlyShare ? `
                     <div style="display:flex; align-items:center; gap:8px;">
                         <span title="Schreibgeschützter Status" style="font-size:1.2rem; filter:grayscale(1);">🔒</span>
@@ -382,10 +382,11 @@ window.UI = {
         window.globalSuppliers.forEach(supplier => {
             const row = document.createElement('div');
             row.className = 'supplier-manager-row';
+            // Korrigiertes Layout & Einheitlicher Button-Style für die Verwaltung!
             row.innerHTML = `
-                <span class="supplier-manager-name">${supplier.name}</span>
-                <button class="delete-btn" style="width:34px; height:34px; border-radius:6px;" onclick="deleteSupplier('${supplier.id}', '${supplier.name}')">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                <span class="supplier-manager-name" style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-right:10px;">${supplier.name}</span>
+                <button type="button" class="btn-remove-supplier" style="width:32px; height:32px; min-width:32px;" onclick="deleteSupplier('${supplier.id}', '${supplier.name.replace(/'/g, "\\'")}')">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
                 </button>
             `;
             listContainer.appendChild(row);
