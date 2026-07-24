@@ -257,7 +257,7 @@ window.calculate = function(){
 };
 
 // ====================================================
-// NEU: MNAU AUFTRAG IM LOG ERFASSEN
+// MNAU AUFTRAG IM LOG ERFASSEN (NEUE REGEL)
 // ====================================================
 window.saveMNAUOrderToLog = async function() {
     const projNameRaw = getVal('proj-name');
@@ -266,63 +266,56 @@ window.saveMNAUOrderToLog = async function() {
 
     const roles = getRoles();
     const OTHER = COSTS.filter(c => c.key !== FUL_KEY);
+    const COLS = ['MNAG','MNMH','MNWB','MNAT','MNAU','EXT','MNGR','OVERHEAD'];
 
-    const baseInput = getNum('base-MNAU');
-    const fk = getNum('fk-MNAU');
-    const sp = getNum('sp-MNAU');
-    const fulPct = getNum('cost-MNAU-' + FUL_KEY);
-    const d = MODE === 'bu' ? (fulPct > 0 ? baseInput / (fulPct / 100) : baseInput) : (baseInput - fk - sp);
-
-    const fulAmt = d * fulPct / 100;
-    const costAmts = OTHER.map(c => ({ label: c.label, pct: getNum('cost-MNAU-' + c.key), amt: d * getNum('cost-MNAU-' + c.key) / 100 }));
-    const salesAmts = roles.map(r => ({ label: r.label, entity: r.entity, pct: r.pct, amt: d * r.pct / 100 }));
-
-    let mnauSalesReceived = 0;
-    ENTITIES.forEach(e => {
-        const eBase = getNum('base-' + e);
-        const eFk = getNum('fk-' + e);
-        const eSp = getNum('sp-' + e);
-        const eFulPct = getNum('cost-' + e + '-' + FUL_KEY);
-        const eD = MODE === 'bu' ? (eFulPct > 0 ? eBase / (eFulPct / 100) : eBase) : (eBase - eFk - eSp);
-
-        roles.forEach(r => {
-            if (r.entity === 'MNAU') {
-                mnauSalesReceived += eD * r.pct / 100;
-            }
-        });
+    const D={}, FK={}, SP={}, FUL={}, FULp={}, COST={}, SALES={};
+    let gBase=0, gRef=0, gFul=0, gFK=0, gSP=0, kundenpreis=0;
+    ENTITIES.forEach(e=>{
+        const baseInput=getNum('base-'+e), fk=getNum('fk-'+e), sp=getNum('sp-'+e);
+        const fulPct=getNum('cost-'+e+'-'+FUL_KEY);
+        const d = MODE==='bu' ? (fulPct>0?baseInput/(fulPct/100):baseInput) : (baseInput-fk-sp);
+        D[e]=d; FK[e]=fk; SP[e]=sp; FULp[e]=fulPct; FUL[e]=d*fulPct/100;
+        COST[e]=OTHER.map(c=>{const pct=getNum('cost-'+e+'-'+c.key);return {pct,amt:d*pct/100};});
+        SALES[e]=roles.map(r=>({rec:r.entity,pct:r.pct,amt:d*r.pct/100}));
+        gBase+=baseInput; gRef+=d; gFul+=FUL[e]; gFK+=fk; gSP+=sp; kundenpreis+=d+fk+sp;
     });
+    const fkMNGR = getNum('fkmngr'); kundenpreis += fkMNGR;
 
-    const mnauSumme = fulAmt + mnauSalesReceived + fk + sp;
+    const salesPool = roles.map((r,ri)=>({rec:r.entity,pct:r.pct,pool:ENTITIES.reduce((s,e)=>s+SALES[e][ri].amt,0)}));
+    const costPool  = OTHER.map((c,ci)=>({pool:ENTITIES.reduce((s,e)=>s+COST[e][ci].amt,0)}));
+    const salesByRec={}; salesPool.forEach(p=>salesByRec[p.rec]=(salesByRec[p.rec]||0)+p.pool);
+    const totalCostPool = costPool.reduce((s,p)=>s+p.pool,0);
 
-    if (mnauSumme <= 0) {
-        alert("Der berechnete Betrag (Summe) für MNAU beträgt 0.00 € oder weniger. Es wurde kein Auftrag erfasst.");
-        return;
-    }
+    const summe={};
+    COLS.forEach(c=>{
+        if(c==='OVERHEAD') summe[c]=totalCostPool;
+        else if(ENTITIES.includes(c)) summe[c]=FUL[c]+(salesByRec[c]||0)+FK[c]+SP[c];
+        else summe[c]=salesByRec[c]||0;
+    });
+    summe['MNGR'] += fkMNGR;
 
-    // Fremdkosten & Lieferanten für MNAU aufbauen
+    // NEU: Fremdkosten im Log sind NUR die Volumen/Summen der ANDEREN Firmen (nicht MNAU)
+    const OTHER_COMPANIES = ['MNAG','MNMH','MNWB','MNAT','MNGR','EXT'];
     const suppliers = [];
 
-    if (fk > 0) {
-        suppliers.push({ name: "Fremdkosten MNAU", amount: Math.round(fk * 100) / 100, paid: false });
-    }
-
-    if (sp > 0) {
-        suppliers.push({ name: "Spesen MNAU", amount: Math.round(sp * 100) / 100, paid: false });
-    }
-
-    salesAmts.forEach(s => {
-        if (s.amt > 0) {
-            suppliers.push({ name: `Provision ${s.entity}`, amount: Math.round(s.amt * 100) / 100, paid: false });
+    OTHER_COMPANIES.forEach(comp => {
+        const amt = summe[comp] || 0;
+        if (amt > 0) {
+            suppliers.push({
+                name: comp,
+                amount: Math.round(amt * 100) / 100,
+                paid: false
+            });
         }
     });
 
-    costAmts.forEach(c => {
-        if (c.amt > 0) {
-            suppliers.push({ name: `${c.label} OVERHEAD`, amount: Math.round(c.amt * 100) / 100, paid: false });
-        }
-    });
+    const totalFremdkosten = suppliers.reduce((s, item) => s + item.amount, 0);
+    const totalBetrag = Math.round(kundenpreis * 100) / 100;
 
-    const totalFremdkosten = suppliers.reduce((sum, item) => sum + item.amount, 0);
+    if (totalBetrag <= 0) {
+        alert("Der Kundenpreis beträgt 0.00 €. Es wurde kein Auftrag erfasst.");
+        return;
+    }
 
     const btn = document.getElementById('btn-save-to-log');
     if (btn) {
@@ -336,14 +329,14 @@ window.saveMNAUOrderToLog = async function() {
             timestamp: new Date().toISOString(),
             action: "Auftrag aus Group Kalkulator erstellt",
             comment: "Automatisch aus Group Kalkulator erfasst",
-            details: [`Auftrag "${orderTitle}" mit Betrag € ${mnauSumme.toFixed(2)} und € ${totalFremdkosten.toFixed(2)} Fremdkosten angelegt`]
+            details: [`Auftrag "${orderTitle}" mit Gesamtbetrag € ${totalBetrag.toFixed(2)} und € ${totalFremdkosten.toFixed(2)} Fremdkosten (Volume anderer Firmen) angelegt`]
         }];
 
         const payload = {
             records: [{
                 fields: {
                     "Auftrag": orderTitle,
-                    "Betrag_Automotive": Math.round(mnauSumme * 100) / 100,
+                    "Betrag_Automotive": totalBetrag,
                     "Fremdkosten": Math.round(totalFremdkosten * 100) / 100,
                     "Fremdkosten_Details": JSON.stringify(suppliers),
                     "Status": "An Group verrechnet",
@@ -358,7 +351,7 @@ window.saveMNAUOrderToLog = async function() {
             window.loadedRecords.unshift(createdData.records[0]);
             window.UI.updateSupplierDatalist();
             window.UI.renderOrders(window.loadedRecords);
-            alert(`Erfolg! Auftrag "${orderTitle}" über € ${mnauSumme.toFixed(2)} wurde im Auftrags-Log erfasst.`);
+            alert(`Erfolg! Auftrag "${orderTitle}" über € ${totalBetrag.toFixed(2)} wurde im Auftrags-Log erfasst.`);
 
             if (typeof window.switchTab === 'function') {
                 window.switchTab('billing');

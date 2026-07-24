@@ -178,7 +178,7 @@
                     <div class="metric-grid" id="metrics"></div>
                     <div class="results-wrap" id="results-table-wrap"></div>
 
-                    <!-- NEU: BUTTON ZUM ERFASSEN DES MNAU AUFTRAGS IM LOG -->
+                    <!-- BUTTON ZUM ERFASSEN DES MNAU AUFTRAGS IM LOG -->
                     <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
                         <button class="btn-primary" id="btn-save-to-log" onclick="saveMNAUOrderToLog()" style="background: #00663a; padding: 12px 22px; font-size: 0.9rem; font-weight: bold; border-radius: 8px;">
                             <span class="ti">➔</span> MNAU Auftrag im Log erfassen
@@ -214,6 +214,7 @@
                 <div class="supplier-total">Summe: <br>€ <span id="display-total-fremdkosten">0.00</span></div>
             </div>
 
+            <!-- Kommentarfeld für Änderungen -->
             <div id="change-reason-group" style="display: none; margin-top: 14px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px;">
                 <label style="color: #00d2ff;">Änderungsgrund / Kommentar *</label>
                 <input type="text" id="input-change-reason" class="mnau-input" placeholder="z.B. Nachverhandlung mit Lieferant X..." style="border-color: rgba(0, 210, 255, 0.4);">

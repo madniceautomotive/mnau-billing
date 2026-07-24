@@ -166,7 +166,7 @@
 #view-calculator .actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
 
 /* ==================================================== */
-/* MNAU DARK THEME ERGEBNISTABELLE (PERFEKT EXAKT)       */
+/* MNAU DARK THEME ERGEBNISTABELLE                      */
 /* ==================================================== */
 #view-calculator .results-wrap {
     width: 100%;
@@ -181,7 +181,7 @@
     width: 100%;
     min-width: 950px;
     border-collapse: collapse;
-    table-layout: fixed; /* GARANTIERT EXAKTE SPALTEN-AUSRICHTUNG */
+    table-layout: fixed;
     font-variant-numeric: tabular-nums;
 }
 
