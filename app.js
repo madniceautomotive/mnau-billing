@@ -1,5 +1,5 @@
 // ==================================================== 
-// app.js: USER ACTIONS & CONTROLLER HUB (OPTIMIZED)
+// app.js: USER ACTIONS & CONTROLLER HUB (WITH CASCADE DELETE)
 // ====================================================
 
 // Globales Tab-Switching
@@ -33,12 +33,10 @@ window.switchCompany = function(newCompany) {
     if (!newCompany) return;
     window.currentUserCompany = newCompany.toUpperCase();
 
-    // 1. Auftrags-Log für die neu gewählte Firma rendern
     if (window.loadedRecords && window.UI && window.UI.renderOrders) {
         window.UI.renderOrders(window.loadedRecords);
     }
 
-    // 2. Kalkulator Metriken & Buttons neu berechnen
     if (typeof window.calculate === 'function') {
         window.calculate();
     }
@@ -533,19 +531,61 @@ window.deleteSupplier = async function(supplierId, supplierName) {
     }
 };
 
-// Auftrag dauerhaft löschen
+// AUFTRAG LÖSCHEN (INKL. KASKADIERENDEM LÖSCHEN ALLER SCHWESTERFIRMEN-EINTRÄGE)
 window.deleteOrder = async function(recordId) {
-    if (!confirm("Auftrag wirklich dauerhaft löschen?")) return;
+    const targetRecord = window.loadedRecords.find(r => r.id === recordId);
+    if (!targetRecord) return;
 
-    const row = window.DOM.orderList.querySelector(`.billing-row[data-id="${recordId}"]`);
-    if (row) row.classList.add('row-exit-active');
+    let linkedRecordIds = [recordId];
+    let groupId = null;
+    const auftragName = targetRecord.fields.Auftrag;
+
+    if (targetRecord.fields.Fremdkosten_Details) {
+        try {
+            const parsed = JSON.parse(targetRecord.fields.Fremdkosten_Details);
+            if (parsed && parsed.groupMeta && parsed.groupMeta.groupId) {
+                groupId = parsed.groupMeta.groupId;
+            }
+        } catch(e) {}
+    }
+
+    // 1. Suche nach verknüpften Datensätzen über groupId oder den exakten Auftragsnamen
+    if (groupId) {
+        linkedRecordIds = window.loadedRecords.filter(r => {
+            if (!r.fields.Fremdkosten_Details) return false;
+            try {
+                const p = JSON.parse(r.fields.Fremdkosten_Details);
+                return p && p.groupMeta && p.groupMeta.groupId === groupId;
+            } catch(e) { return false; }
+        }).map(r => r.id);
+    } else if (auftragName) {
+        // Fallback für ältere Aufträge ohne groupId: Matche den identischen Auftragsnamen
+        linkedRecordIds = window.loadedRecords.filter(r => r.fields.Auftrag === auftragName).map(r => r.id);
+    }
+
+    const count = linkedRecordIds.length;
+    const confirmMsg = count > 1
+        ? `Achtung: Dieser Kalkulator-Auftrag ist auch bei ${count - 1} Schwesterfirma/Firmen hinterlegt. Möchtest du das GESAMTE Projekt inkl. aller Firmen-Einträge löschen?`
+        : "Auftrag wirklich dauerhaft löschen?";
+
+    if (!confirm(confirmMsg)) return;
+
+    // Slide-out Animation für alle zu löschenden Reihen aktivieren
+    linkedRecordIds.forEach(id => {
+        const row = window.DOM.orderList.querySelector(`.billing-row[data-id="${id}"]`);
+        if (row) row.classList.add('row-exit-active');
+    });
 
     try {
-        await window.API.deleteOrder(recordId);
-        window.loadedRecords = window.loadedRecords.filter(r => r.id !== recordId);
+        // Lösche alle verknüpften Datensätze nacheinander aus Airtable
+        for (const id of linkedRecordIds) {
+            await window.API.deleteOrder(id);
+        }
+
+        window.loadedRecords = window.loadedRecords.filter(r => !linkedRecordIds.includes(r.id));
         window.UI.renderOrders(window.loadedRecords);
     } catch (error) {
-        alert("Fehler beim Löschen.");
+        alert("Fehler beim Löschen des Auftrags/der Aufträge.");
         fetchOrders();
     }
 };

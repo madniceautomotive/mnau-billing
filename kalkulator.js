@@ -86,7 +86,7 @@ window.addKalkSupplierRow = function(entity, name = '', amount = '') {
     <input type="text" class="mnau-input kalk-supp-name" list="supplier-list" placeholder="Lieferant..." value="${name}" oninput="updateEntityFremdkosten('${entity}')">
     <input type="number" step="0.01" class="mnau-input kalk-supp-amount" placeholder="0.00" value="${amount}" oninput="updateEntityFremdkosten('${entity}')">
     <button type="button" class="btn-remove-supplier kalk-supp-remove" title="Entfernen" onclick="this.parentElement.remove(); updateEntityFremdkosten('${entity}');">
-      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 13.41 12z"/></svg>
+      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
     </button>
   `;
     container.appendChild(row);
@@ -328,7 +328,7 @@ window.calculate = function(){
 };
 
 // ====================================================
-// AUFTRAG IM LOG ERFASSEN (HAUPTAUFTRAG + SCHWESTERFIRMEN-ANTEILE)
+// AUFTRAG IM LOG ERFASSEN (HAUPTAUFTRAG + SCHWESTERFIRMEN-ANTEILE + EINHEITLICHE GROUP-ID)
 // ====================================================
 window.saveMNAUOrderToLog = async function() {
     const myCompany = window.currentUserCompany || "MNAU";
@@ -337,6 +337,9 @@ window.saveMNAUOrderToLog = async function() {
 
     // Der Auftragsname gehört EXAKT der anlegenden Firma an (wird an alle vererbt)!
     const orderTitle = `${projName} (${myCompany})`;
+
+    // Einzigartige Projekt-ID erzeugen, um Haupt- & Passiv-Aufträge unzertrennlich zu koppeln
+    const calcGroupId = "grp_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
 
     const roles = getRoles();
     const OTHER = COSTS.filter(c => c.key !== FUL_KEY);
@@ -442,6 +445,7 @@ window.saveMNAUOrderToLog = async function() {
     };
 
     const groupMetaMain = {
+        groupId: calcGroupId,
         originCompany: myCompany,
         kundenpreis: Math.round(kundenpreis * 100) / 100,
         mngrAbgabe: Math.round(mngrAbgabe * 100) / 100,
@@ -486,6 +490,7 @@ window.saveMNAUOrderToLog = async function() {
             const compFremdkosten = compSuppliers.reduce((s, item) => s + item.amount, 0);
 
             const shareGroupMeta = {
+                groupId: calcGroupId, // SELBE GRUPPEN-ID FÜR DIE SCHWESTERFIRMA!
                 isReadOnlyShare: true,
                 originCompany: myCompany,
                 originProject: projName,
