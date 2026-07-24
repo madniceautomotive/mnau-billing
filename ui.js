@@ -80,8 +80,6 @@ window.UI = {
                 }
 
                 const isReadOnlyShare = groupMeta && groupMeta.isReadOnlyShare === true;
-
-                // Ersteller-Firma ermitteln (Zeigt immer die ERSTELLER-FIRMA an)
                 const creatorCompany = (groupMeta && groupMeta.originCompany) ? groupMeta.originCompany.toUpperCase() : (fields.Firma || "MNAU").toUpperCase();
 
                 // Echte Fremdkosten Breakdown (Checkboxen sind für EIGENE Lieferanten immer klickbar)
@@ -102,7 +100,7 @@ window.UI = {
                     breakdownHTML += `</div>`;
                 }
 
-                // Group Erlös-Info Box (ZEIGT DYNAMISCH DIE ANTEILE DER ANDERN FIRMEN AN)
+                // Group Erlös-Info Box
                 let groupMetaHTML = '';
                 if (groupMeta) {
                     const kp = (parseFloat(groupMeta.kundenpreis)||0).toFixed(2);
@@ -113,7 +111,6 @@ window.UI = {
 
                     if (sharesDict && Object.keys(sharesDict).length > 0) {
                         Object.entries(sharesDict).forEach(([comp, amt]) => {
-                            // Filtert die eigene Firma aus der Unter-Aufschlüsselung heraus!
                             if (comp.toUpperCase() !== myCompany) {
                                 sistersHTML += `<div class="group-info-row"><span>• Anteil ${comp}:</span><span>€ ${(parseFloat(amt)||0).toFixed(2)}</span></div>`;
                             }
@@ -149,9 +146,17 @@ window.UI = {
                 else if(status === "An Group verrechnet") { cardStatusClass = "status-an-group-verrechnet"; }
                 else if(status === "Bezahlt") { cardStatusClass = "status-bezahlt"; }
 
-                // Aktions-Steuerung: Für schreibgeschützte Anteile werden Edit/Delete/Status deaktiviert
+                // Aktions-Steuerung: Bei passiven Anteilen zeigen wir das Dropdown "disabled" an, um den Status sichtbar zu machen.
                 const actionControlsHTML = isReadOnlyShare ? `
-                    <span class="read-only-badge">🔒 Schreibgeschützt</span>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span title="Schreibgeschützter Status" style="font-size:1.2rem; filter:grayscale(1);">🔒</span>
+                        <select class="status-select" disabled style="opacity:0.75; cursor:not-allowed; border-color:rgba(255,255,255,0.2);">
+                            <option value="Zu verrechnen" ${status === "Zu verrechnen" ? "selected" : ""}>Zu verrechnen</option>
+                            <option value="In Bearbeitung" ${status === "In Bearbeitung" ? "selected" : ""}>In Bearbeitung</option>
+                            <option value="An Group verrechnet" ${status === "An Group verrechnet" ? "selected" : ""}>An Group verrechnet</option>
+                            <option value="Bezahlt" ${status === "Bezahlt" ? "selected" : ""}>Bezahlt</option>
+                        </select>
+                    </div>
                     <button class="changelog-btn" onclick="window.openChangelogModal('${id}')" title="Änderungshistorie anzeigen">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.25 2.52.77-1.28-3.52-2.09V8z"/></svg>
                     </button>

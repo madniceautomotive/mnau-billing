@@ -1,5 +1,5 @@
 // ==================================================== 
-// app.js: USER ACTIONS & CONTROLLER HUB (WITH CASCADE DELETE)
+// app.js: USER ACTIONS & CONTROLLER HUB (WITH GLOBAL FILTERS)
 // ====================================================
 
 // Globales Tab-Switching
@@ -33,13 +33,41 @@ window.switchCompany = function(newCompany) {
     if (!newCompany) return;
     window.currentUserCompany = newCompany.toUpperCase();
 
-    if (window.loadedRecords && window.UI && window.UI.renderOrders) {
+    if (typeof window.applyFilters === 'function') {
+        window.applyFilters();
+    } else if (window.loadedRecords && window.UI && window.UI.renderOrders) {
         window.UI.renderOrders(window.loadedRecords);
     }
 
     if (typeof window.calculate === 'function') {
         window.calculate();
     }
+};
+
+// ZENTRALE FILTER LOGIK (SUCHE + STATUS)
+window.applyFilters = function() {
+    if (!window.loadedRecords || !window.UI) return;
+
+    const query = (window.DOM.searchInput ? window.DOM.searchInput.value : '').toLowerCase().trim();
+    const statusFilterElement = document.getElementById('status-filter');
+    const statusFilter = statusFilterElement ? statusFilterElement.value : 'Alle';
+
+    if (window.DOM.searchClearBtn) {
+        window.DOM.searchClearBtn.style.display = query.length > 0 ? 'flex' : 'none';
+    }
+
+    const filtered = window.loadedRecords.filter(record => {
+        const orderName = (record.fields.Auftrag || "").toLowerCase();
+        const detailsStr = (record.fields.Fremdkosten_Details || "").toLowerCase();
+        const matchesSearch = orderName.includes(query) || detailsStr.includes(query);
+
+        const recordStatus = record.fields.Status || "Zu verrechnen";
+        const matchesStatus = statusFilter === "Alle" || recordStatus === statusFilter;
+
+        return matchesSearch && matchesStatus;
+    });
+
+    window.UI.renderOrders(filtered);
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -203,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         window.loadedRecords[idx].fields = { ...window.loadedRecords[idx].fields, ...updatePayload.fields, Status: currentStatus };
                     }
                     window.UI.updateSupplierDatalist();
-                    window.UI.renderOrders(window.loadedRecords);
+                    window.applyFilters(); // Filter beibehalten statt nur renderOrders
 
                     window.DOM.modal.classList.add('hidden');
                     window.DOM.formNewOrder.reset();
@@ -239,7 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (createdData && createdData.records && createdData.records.length > 0) {
                         window.loadedRecords.unshift(createdData.records[0]);
                         window.UI.updateSupplierDatalist();
-                        window.UI.renderOrders(window.loadedRecords);
+                        window.applyFilters();
                     }
                     window.DOM.modal.classList.add('hidden');
                     window.DOM.formNewOrder.reset();
@@ -254,27 +282,22 @@ document.addEventListener('DOMContentLoaded', () => {
         btnAddSupplier.addEventListener('click', () => window.UI.addSupplierRow());
     }
 
-    // Live-Suche
+    // Live-Suche (Nutzt jetzt applyFilters)
     if (window.DOM.searchInput) {
-        window.DOM.searchInput.addEventListener('input', (e) => {
-            const query = e.target.value.toLowerCase().trim();
-            window.DOM.searchClearBtn.style.display = query.length > 0 ? 'flex' : 'none';
+        window.DOM.searchInput.addEventListener('input', window.applyFilters);
+    }
 
-            const filtered = window.loadedRecords.filter(record => {
-                const orderName = (record.fields.Auftrag || "").toLowerCase();
-                const detailsStr = (record.fields.Fremdkosten_Details || "").toLowerCase();
-                return orderName.includes(query) || detailsStr.includes(query);
-            });
-            window.UI.renderOrders(filtered);
-        });
+    // Status Filter (Nutzt applyFilters)
+    const statusFilterElement = document.getElementById('status-filter');
+    if (statusFilterElement) {
+        statusFilterElement.addEventListener('change', window.applyFilters);
     }
 
     // Suche löschen
     if (window.DOM.searchClearBtn) {
         window.DOM.searchClearBtn.addEventListener('click', () => {
             window.DOM.searchInput.value = '';
-            window.DOM.searchClearBtn.style.display = 'none';
-            window.UI.renderOrders(window.loadedRecords);
+            window.applyFilters();
             window.DOM.searchInput.focus();
         });
     }
@@ -306,7 +329,7 @@ async function fetchOrders() {
         }
 
         window.UI.updateSupplierDatalist();
-        window.UI.renderOrders(window.loadedRecords);
+        window.applyFilters();
     } catch (error) {
         console.error("Kritischer Terminal-Fehler:", error);
     } finally {
@@ -394,7 +417,7 @@ window.changeOrderStatus = async function(recordId, newStatus) {
     const record = window.loadedRecords.find(r => r.id === recordId);
     if (record) {
         record.fields.Status = newStatus;
-        window.UI.renderOrders(window.loadedRecords);
+        window.applyFilters();
     }
 
     try {
@@ -439,7 +462,7 @@ window.toggleSupplierPaid = async function(orderId, supplierIndex) {
         record.fields.Flagged = true;
         record.fields.Changelog = JSON.stringify(changelog);
 
-        window.UI.renderOrders(window.loadedRecords);
+        window.applyFilters();
 
         await fetch(`${window.API_URL_ORDERS}/${orderId}`, {
             method: 'PATCH',
@@ -503,7 +526,7 @@ window.bulkPaySupplier = async function(supplierName) {
         }
     });
 
-    window.UI.renderOrders(window.loadedRecords);
+    window.applyFilters();
 
     try {
         for (let i = 0; i < updates.length; i += 10) {
@@ -525,7 +548,7 @@ window.deleteSupplier = async function(supplierId, supplierName) {
         window.globalSuppliers = window.globalSuppliers.filter(s => s.id !== supplierId);
         window.UI.renderSuppliersManager();
         window.UI.updateSupplierDatalist();
-        window.UI.renderOrders(window.loadedRecords);
+        window.applyFilters();
     } catch (error) {
         alert("Lieferant konnte nicht gelöscht werden.");
     }
@@ -549,7 +572,6 @@ window.deleteOrder = async function(recordId) {
         } catch(e) {}
     }
 
-    // 1. Suche nach verknüpften Datensätzen über groupId oder den exakten Auftragsnamen
     if (groupId) {
         linkedRecordIds = window.loadedRecords.filter(r => {
             if (!r.fields.Fremdkosten_Details) return false;
@@ -559,7 +581,6 @@ window.deleteOrder = async function(recordId) {
             } catch(e) { return false; }
         }).map(r => r.id);
     } else if (auftragName) {
-        // Fallback für ältere Aufträge ohne groupId: Matche den identischen Auftragsnamen
         linkedRecordIds = window.loadedRecords.filter(r => r.fields.Auftrag === auftragName).map(r => r.id);
     }
 
@@ -570,20 +591,18 @@ window.deleteOrder = async function(recordId) {
 
     if (!confirm(confirmMsg)) return;
 
-    // Slide-out Animation für alle zu löschenden Reihen aktivieren
     linkedRecordIds.forEach(id => {
-        const row = window.DOM.orderList.querySelector(`.billing-row[data-id="${id}"]`);
+        const row = document.querySelector(`.billing-row[data-id="${id}"]`);
         if (row) row.classList.add('row-exit-active');
     });
 
     try {
-        // Lösche alle verknüpften Datensätze nacheinander aus Airtable
         for (const id of linkedRecordIds) {
             await window.API.deleteOrder(id);
         }
 
         window.loadedRecords = window.loadedRecords.filter(r => !linkedRecordIds.includes(r.id));
-        window.UI.renderOrders(window.loadedRecords);
+        window.applyFilters();
     } catch (error) {
         alert("Fehler beim Löschen des Auftrags/der Aufträge.");
         fetchOrders();

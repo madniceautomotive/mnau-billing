@@ -61,11 +61,19 @@
                 <button id="btn-new-order" class="btn-primary">+ Neuer Auftrag</button>
             </div>
         </div>
-        <div class="header-controls-row" id="billing-search-row">
-            <div class="search-group">
+        <div class="header-controls-row" id="billing-search-row" style="display:flex; gap:12px; align-items:center;">
+            <div class="search-group" style="flex:1;">
                 <input type="text" id="search-input" class="search-input" placeholder="Nach Auftrag, Betrag oder Lieferant suchen...">
                 <button id="search-clear-btn" class="search-clear-btn"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
             </div>
+            <!-- NEU: GLOBALER STATUS FILTER -->
+            <select id="status-filter" class="status-select" style="max-width: 220px; border-color: rgba(255,255,255,0.2); background-color: #1a1a1a;">
+                <option value="Alle">Alle Stati anzeigen</option>
+                <option value="Zu verrechnen">Zu verrechnen</option>
+                <option value="In Bearbeitung">In Bearbeitung</option>
+                <option value="An Group verrechnet">An Group verrechnet</option>
+                <option value="Bezahlt">Bezahlt (Archiv)</option>
+            </select>
         </div>
     </header>
 
@@ -81,7 +89,7 @@
             <div class="section-divider red-divider">OFFENE_LIEFERANTEN_POSTEN</div>
             <div id="supplier-summary-details" class="supplier-summary-details"></div>
 
-            <!-- NEU: EIGENE KATEGORIE FÜR PASSIVE SCHWESTERFIRMEN-AUFTRÄGE -->
+            <!-- EIGENE KATEGORIE FÜR PASSIVE SCHWESTERFIRMEN-AUFTRÄGE -->
             <details class="archive-details external-details" open>
                 <summary class="section-divider archive-divider external-divider">PASSIVE_PARTNER_AUFTRÄGE</summary>
                 <div id="external-order-list" style="margin-top: 16px; padding: 2px 0;"></div>
