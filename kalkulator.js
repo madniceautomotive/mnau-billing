@@ -265,15 +265,10 @@ window.calculate = function(){
 
     const mngrAbgabe = summe['MNGR'] || 0;
 
-    const sisterSharesDetail = {};
     let totalSisterShares = 0;
     ['MNAG','MNMH','MNWB','MNAT','MNAU','EXT'].forEach(comp => {
         if (comp !== myCompany) {
-            const amt = summe[comp] || 0;
-            if (amt > 0) {
-                sisterSharesDetail[comp] = Math.round(amt * 100) / 100;
-                totalSisterShares += amt;
-            }
+            totalSisterShares += (summe[comp] || 0);
         }
     });
 
@@ -421,15 +416,13 @@ window.saveMNAUOrderToLog = async function() {
 
     const totalFremdkosten = suppliers.reduce((s, item) => s + item.amount, 0);
 
-    // Einzelne Schwesterfirmen Summen
+    // Vollständige Anteilsübersicht aller Firmen speichern
     const mngrAbgabe = summe['MNGR'] || 0;
-    const sisterSharesDetail = {};
-    ['MNAG','MNMH','MNWB','MNAT','MNGR','EXT'].forEach(comp => {
-        if (comp !== myCompany) {
-            const amt = summe[comp] || 0;
-            if (amt > 0) {
-                sisterSharesDetail[comp] = Math.round(amt * 100) / 100;
-            }
+    const allSharesDetail = {};
+    ['MNAG','MNMH','MNWB','MNAT','MNAU','EXT'].forEach(comp => {
+        const amt = summe[comp] || 0;
+        if (amt > 0) {
+            allSharesDetail[comp] = Math.round(amt * 100) / 100;
         }
     });
 
@@ -442,9 +435,10 @@ window.saveMNAUOrderToLog = async function() {
     };
 
     const groupMetaMain = {
+        originCompany: myCompany,
         kundenpreis: Math.round(kundenpreis * 100) / 100,
         mngrAbgabe: Math.round(mngrAbgabe * 100) / 100,
-        sisterSharesDetail: sisterSharesDetail,
+        allSharesDetail: allSharesDetail,
         snapshot: pdfSnapshot
     };
 
@@ -466,7 +460,7 @@ window.saveMNAUOrderToLog = async function() {
 
     recordsToCreate.push({
         fields: {
-            "Auftrag": orderTitle,
+            "Auftrag": orderTitle, // Behält ungestört z.B. "Kampagne Q3 (MNAU)"
             "Betrag_Automotive": userUmsatz,
             "Fremdkosten": Math.round(totalFremdkosten * 100) / 100,
             "Fremdkosten_Details": JSON.stringify({ suppliers: suppliers, groupMeta: groupMetaMain }),
@@ -478,16 +472,15 @@ window.saveMNAUOrderToLog = async function() {
     });
 
     // 3. PASSIV-AUFTRÄGE FÜR INVOLVIERTE SCHWESTERFIRMEN ERZEUGEN
-    Object.entries(sisterSharesDetail).forEach(([comp, amt]) => {
-        if (amt > 0) {
-            const shareTitle = `${projName} (${comp})`;
+    Object.entries(allSharesDetail).forEach(([comp, amt]) => {
+        if (comp !== myCompany && amt > 0) {
             const shareGroupMeta = {
                 isReadOnlyShare: true,
                 originCompany: myCompany,
                 originProject: projName,
                 kundenpreis: Math.round(kundenpreis * 100) / 100,
                 mngrAbgabe: Math.round(mngrAbgabe * 100) / 100,
-                sisterSharesDetail: sisterSharesDetail,
+                allSharesDetail: allSharesDetail,
                 snapshot: pdfSnapshot
             };
 
@@ -505,7 +498,7 @@ window.saveMNAUOrderToLog = async function() {
 
             recordsToCreate.push({
                 fields: {
-                    "Auftrag": shareTitle,
+                    "Auftrag": orderTitle, // DER NAME BLEIBT EXAKT DER ORIGINALE PROJEKTNAME INKL. (MNAU)!
                     "Betrag_Automotive": amt,
                     "Fremdkosten": 0,
                     "Fremdkosten_Details": JSON.stringify({ suppliers: [], groupMeta: shareGroupMeta }),

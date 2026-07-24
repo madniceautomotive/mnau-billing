@@ -1,5 +1,5 @@
 // ====================================================
-// ui.js: DOM RENDERING & STATS COMPILING (MULTI-TENANT & SCHWESTERFIRMEN-SUPPORT)
+// ui.js: DOM RENDERING & STATS COMPILING (MULTI-TENANT & DYNAMIC SHARE DISPLAY)
 // ====================================================
 
 window.UI = {
@@ -70,7 +70,10 @@ window.UI = {
 
                 const isReadOnlyShare = groupMeta && groupMeta.isReadOnlyShare === true;
 
-                // Echte Fremdkosten Breakdown (Checkboxen)
+                // Ersteller-Firma ermitteln (Zeigt immer die ERSTELLER-FIRMA an)
+                const creatorCompany = (groupMeta && groupMeta.originCompany) ? groupMeta.originCompany.toUpperCase() : (fields.Firma || "MNAU").toUpperCase();
+
+                // Echte Fremdkosten Breakdown
                 let breakdownHTML = '';
                 if (suppliers.length > 0) {
                     breakdownHTML = `<div class="breakdown-container">`;
@@ -88,16 +91,21 @@ window.UI = {
                     breakdownHTML += `</div>`;
                 }
 
-                // Group Erlös-Info Box
+                // Group Erlös-Info Box (ZEIGT DYNAMISCH DIE ANTEILE DER ANDERN FIRMEN AN)
                 let groupMetaHTML = '';
                 if (groupMeta) {
                     const kp = (parseFloat(groupMeta.kundenpreis)||0).toFixed(2);
                     const mngr = (parseFloat(groupMeta.mngrAbgabe)||0).toFixed(2);
 
                     let sistersHTML = '';
-                    if (groupMeta.sisterSharesDetail && Object.keys(groupMeta.sisterSharesDetail).length > 0) {
-                        Object.entries(groupMeta.sisterSharesDetail).forEach(([comp, amt]) => {
-                            sistersHTML += `<div class="group-info-row"><span>• Anteil ${comp}:</span><span>€ ${(parseFloat(amt)||0).toFixed(2)}</span></div>`;
+                    const sharesDict = groupMeta.allSharesDetail || groupMeta.sisterSharesDetail || {};
+
+                    if (sharesDict && Object.keys(sharesDict).length > 0) {
+                        Object.entries(sharesDict).forEach(([comp, amt]) => {
+                            // Filtert die eigene Firma aus der Unter-Aufschlüsselung heraus!
+                            if (comp.toUpperCase() !== myCompany) {
+                                sistersHTML += `<div class="group-info-row"><span>• Anteil ${comp}:</span><span>€ ${(parseFloat(amt)||0).toFixed(2)}</span></div>`;
+                            }
                         });
                     }
 
@@ -118,10 +126,10 @@ window.UI = {
                     `;
                 }
 
-                // Read-Only Hinweis Banner für passive Erlösanteile der Schwesterfirma
+                // Read-Only Hinweis Banner für passive Erlösanteile
                 const readOnlyBanner = isReadOnlyShare ? `
                     <div class="read-only-banner">
-                        🔒 Erlösanteil aus Projekt "${groupMeta.originProject || 'Kalkulator'}" (Hauptauftrag von ${groupMeta.originCompany || 'Group'})
+                        🔒 Erlösanteil aus Projekt "${groupMeta.originProject || 'Kalkulator'}" (Hauptauftrag von ${creatorCompany})
                     </div>
                 ` : '';
 
@@ -130,7 +138,6 @@ window.UI = {
                 else if(status === "An Group verrechnet") { cardStatusClass = "status-an-group-verrechnet"; }
                 else if(status === "Bezahlt") { cardStatusClass = "status-bezahlt"; }
 
-                // Aktions-Steuerung: Für schreibgeschützte Anteile werden Edit/Delete/Status deaktiviert
                 const actionControlsHTML = isReadOnlyShare ? `
                     <span class="read-only-badge">🔒 Schreibgeschützt</span>
                     <button class="changelog-btn" onclick="window.openChangelogModal('${id}')" title="Änderungshistorie anzeigen">
@@ -157,7 +164,7 @@ window.UI = {
                 const innerHTML = `
                     <div class="billing-info-block">
                         <div class="billing-row-title">${fields.Auftrag || "Unbenannt"} ${flagBadgeHTML}</div>
-                        <div class="billing-row-meta">Erstellt: ${new Date(record.createdTime).toLocaleDateString('de-DE')} • Firma: ${myCompany}</div>
+                        <div class="billing-row-meta">Erstellt: ${new Date(record.createdTime).toLocaleDateString('de-DE')} • Erstellt von: ${creatorCompany}</div>
                         ${readOnlyBanner}
                         ${groupMetaHTML}
                     </div>
