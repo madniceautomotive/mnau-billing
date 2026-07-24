@@ -152,7 +152,7 @@
 #view-calculator .entity-name.col-MNWB { background: var(--color-mnwb); color: #121212 !important; }
 #view-calculator .entity-name.col-MNAT { background: var(--color-mnat); }
 #view-calculator .entity-name.col-MNAU { background: var(--color-mnau); }
-#view-calculator .entity-name.col-MNGR { background: #222222; border: 1px solid rgba(255,255,255,0.2); color: #ffffff !important; }
+#view-calculator .entity-name.col-MNGR { background: #222222; border: 1px solid rgba(255,255,255,0.25); color: #ffffff !important; }
 
 /* Buttons */
 #view-calculator .actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }

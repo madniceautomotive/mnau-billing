@@ -28,21 +28,21 @@
     --shadow-card: 0 4px 20px rgba(0,0,0,0.4);
 }
 
-/* LIGHT THEME (EDLER DASHBOARD LOOK IN SLATE) */
+/* LIGHT THEME (EDLES SLATE-GRAU ALS BASIS) */
 [data-theme="light"] {
-    --bg-body: #f8fafc;
-    --bg-header: #ffffff;
-    --bg-card: #ffffff;
-    --bg-card-hover: #f1f5f9;
+    --bg-body: #e2e8f0;       /* Deutliches Hellgrau als Kontrast zu weißen Karten */
+    --bg-header: #f8fafc;     /* Sehr zartes Grau für den Header */
+    --bg-card: #ffffff;       /* Reinweiß für Karten */
+    --bg-card-hover: #f1f5f9; /* Zarter Hover-Effekt */
     --bg-input: #ffffff;
     --bg-panel: #f1f5f9;
     --bg-metrics: #f8fafc;
-    --border-color: #e2e8f0;
-    --border-color-strong: #cbd5e1;
+    --border-color: #cbd5e1;
+    --border-color-strong: #94a3b8;
     --text-main: #0f172a;
     --text-sub: #334155;
-    --text-muted: #64748b;
-    --text-dim: #475569;
+    --text-muted: #475569;
+    --text-dim: #64748b;
     --shadow-card: 0 4px 15px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.03);
 }
 
@@ -108,36 +108,46 @@ body, html {
     transition: background-color 0.25s, border-color 0.25s;
 }
 
-.database-header h1 {
-    color: var(--text-main) !important;
-}
+.database-header h1 { color: var(--text-main) !important; }
 
-/* NAVIGATION TABS */
+/* NAVIGATION TABS (HIGHLIGHT IN FIRMENFARBE) */
 .mnau-tabs {
     background: var(--bg-panel) !important;
     border: 1px solid var(--border-color) !important;
     border-radius: 8px;
-    padding: 3px;
+    padding: 4px;
+    display: flex;
+    gap: 4px;
 }
 .mnau-tab-btn {
     color: var(--text-muted) !important;
+    background: transparent;
+    border: none;
     border-radius: 6px;
-    transition: all 0.2s ease;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.mnau-tab-btn:hover {
+    color: var(--text-main) !important;
+    background: var(--bg-card-hover);
 }
 .mnau-tab-btn.active {
-    background: var(--bg-card) !important;
-    color: var(--text-main) !important;
-    box-shadow: var(--shadow-card);
+    background: var(--active-company-color) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     font-weight: 800;
 }
 
-/* SUBTIL FLATER THEME TOGGLE BUTTON */
+/* SUBTIL FLATER THEME TOGGLE BUTTON & ICONS */
 .theme-toggle-btn, .sort-icon-btn {
     display: inline-flex; align-items: center; justify-content: center;
     width: 34px; height: 34px; border-radius: 8px;
     background: var(--bg-panel) !important;
     border: 1px solid var(--border-color-strong) !important;
-    color: var(--text-sub) !important;
+    color: var(--text-sub) !important; box-sizing: border-box;
     cursor: pointer; transition: all 0.2s ease; padding: 0;
 }
 .theme-toggle-btn:hover, .sort-icon-btn:hover {
@@ -384,10 +394,11 @@ form label {
 [data-theme="dark"] .changelog-btn:hover { color: #00d2ff !important; border-color: #00d2ff !important; }
 [data-theme="dark"] .edit-btn:hover { color: #f6e05e !important; border-color: #f6e05e !important; }
 
-/* Status Dropdown in Karte */
+/* Status Dropdown (EXAKTE HÖHE FÜR HEADER) */
 .status-select {
     background-color: var(--bg-input) !important; color: var(--text-main) !important; border: 1px solid var(--active-company-color) !important;
-    padding: 5px 26px 5px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700;
+    height: 34px; line-height: 1.2; box-sizing: border-box; /* PERFEKTE AUSRICHTUNG ZU BUTTONS */
+    padding: 0 26px 0 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700;
     cursor: pointer; -webkit-appearance: none; -moz-appearance: none; appearance: none;
     background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
     background-repeat: no-repeat; background-position: right 8px center; background-size: 14px;
