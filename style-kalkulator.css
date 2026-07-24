@@ -271,11 +271,15 @@
 #view-calculator .rg-sum td { font-weight: 800; font-size: 0.88rem; border-top: 1px solid rgba(0, 255, 115, 0.3); border-bottom: 2px solid #00ff73; }
 #view-calculator .rg-stunden { background: rgba(246, 224, 94, 0.03); }
 
-/* Metriken & Notizen */
+/* Metriken Highlights */
 #view-calculator .metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:1.1rem; }
 #view-calculator .metric { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 14px; }
+#view-calculator .metric.highlight-main { border: 1px solid #00ff73; background: rgba(0, 255, 115, 0.05); }
+#view-calculator .metric.highlight-profit { border: 1px solid #00d2ff; background: rgba(0, 210, 255, 0.05); }
+#view-calculator .metric.highlight-profit .mv { color: #00d2ff; }
 #view-calculator .metric .ml { font-size:0.68rem; color:#a0aec0; text-transform:uppercase; font-weight:700; margin-bottom:4px; }
 #view-calculator .metric .mv { font-size:1.3rem; font-weight:800; color:#00ff73; }
+#view-calculator .metric .sub-info { font-size:0.65rem; color:#718096; margin-top:2px; }
 #view-calculator .hint { font-size:0.75rem; color:#a0aec0; margin-top:8px; }
 
 #view-calculator .notes-out { margin-top:16px; padding-top:14px; border-top:1px dashed rgba(255,255,255,0.1); }
