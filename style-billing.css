@@ -1,5 +1,5 @@
 /* ==================================================== */
-/* style-billing.css: MULTI-BRAND, THEME & HEADER FIX   */
+/* style-billing.css: MULTI-BRAND & HIGH-END THEME HUB  */
 /* ==================================================== */
 
 :root {
@@ -106,7 +106,7 @@ body, html {
 }
 @keyframes appSpin { to { transform: rotate(360deg); } }
 
-/* HEADER GRID (STABILES MITTIGES TAB-SWITCHING OHNE SPRINGEN) */
+/* HEADER GRID & LOGO CONTAINER */
 .database-header {
     background-color: var(--bg-header) !important;
     border-bottom: 1px solid var(--border-color) !important;
@@ -121,7 +121,23 @@ body, html {
     gap: 16px;
     width: 100%;
 }
-.header-main-row > h1 { justify-self: start; margin: 0; font-size: 1.3rem; color: var(--text-main) !important; }
+
+.header-logo-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    justify-self: start;
+}
+.header-company-logo {
+    height: 32px;
+    max-width: 160px;
+    object-fit: contain;
+}
+
+.header-main-row > h1, .header-logo-container h1 {
+    margin: 0; font-size: 1.3rem; color: var(--text-main) !important;
+}
 .header-main-row > .mnau-tabs { justify-self: center; }
 .header-main-row > div:last-child { justify-self: end; }
 
@@ -236,7 +252,7 @@ form label {
 .summary-label { font-size: 0.65rem; color: var(--text-muted) !important; text-transform: uppercase; font-weight: 700; }
 .summary-value { font-size: 1.2rem; font-weight: 800; color: var(--text-main) !important; }
 
-/* BEARBEITUNGS-BANNER IM KALKULATOR (SAUBER GESTYLT & ABSOLUT HIDDEN LOGIK) */
+/* BEARBEITUNGS-BANNER IM KALKULATOR */
 .kalk-edit-banner {
     background: rgba(234, 179, 8, 0.12) !important;
     border: 1px solid rgba(234, 179, 8, 0.4) !important;
@@ -546,7 +562,7 @@ form label {
         align-items: stretch;
         gap: 12px;
     }
-    .header-main-row h1 { font-size: 1.15rem; text-align: center; }
+    .header-logo-container { justify-content: center; }
     .mnau-tabs { width: 100%; justify-content: center; }
     .mnau-tab-btn { flex: 1; text-align: center; padding: 8px; font-size: 0.78rem; }
     .header-main-row > div:last-child { width: 100%; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; }

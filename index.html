@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MNAU Billing Terminal &amp; Kalkulator</title>
+    <title>MNGR HUB</title>
 
     <!-- Inline Favicon gegen 404 Fehler -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
@@ -17,7 +17,7 @@
 <!-- INITIALER LADE-BILDSCHIRM -->
 <div id="app-init-loader" class="app-init-loader">
     <div class="loader-spinner"></div>
-    <div class="loader-text">MNAU Hub wird geladen...</div>
+    <div class="loader-text">MNGR Hub wird geladen...</div>
 </div>
 
 <!-- DER SICHERHEITS-TRESOR (Login-Overlay) -->
@@ -47,7 +47,11 @@
 <div id="database-view">
     <header class="database-header">
         <div class="header-main-row">
-            <h1>MNAU <span>Hub</span></h1>
+            <!-- DYNAMISCHES FIRMEN-LOGO IM HEADER -->
+            <div class="header-logo-container">
+                <img id="header-company-logo" src="logos/mnau.svg" alt="Logo" class="header-company-logo" onerror="this.style.display='none'; document.getElementById('header-logo-text').style.display='inline-block';">
+                <h1 id="header-logo-text" style="display:none;"><span id="header-company-name">MNAU</span> <span>HUB</span></h1>
+            </div>
 
             <!-- TAB NAVIGATION -->
             <div class="mnau-tabs">
@@ -159,7 +163,6 @@
                         <div class="field"><label>Angebotsnummer</label><input type="text" id="proj-offer" class="mnau-input" placeholder="AN-2026-001"></div>
                         <div class="field"><label>Rechnungsnummer</label><input type="text" id="proj-invoice" class="mnau-input" placeholder="RE-2026-001"></div>
                     </div>
-                    <!-- ALLGEMEINES NOTIZFELD AUF 3 ZEILEN -->
                     <div class="field" style="margin-top:12px"><label>Allgemeine Notizen</label><textarea id="proj-notes" class="mnau-input" rows="3" placeholder="Übergreifende Anmerkungen zum gesamten Projekt …"></textarea></div>
                 </div>
 

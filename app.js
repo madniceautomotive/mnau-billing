@@ -1,5 +1,5 @@
 // ==================================================== 
-// app.js: USER ACTIONS, CONTROLLER HUB & THEME TOGGLE
+// app.js: USER ACTIONS, CONTROLLER HUB, DYNAMIC LOGO & THEME
 // ====================================================
 
 // SUBTILE FLAT VEKTOR-ICONS FÜR THEME TOGGLE
@@ -50,13 +50,27 @@ window.switchTab = function(tabName) {
     }
 };
 
-// FIRMEN WECHSELN VIA DROPDOWN (DYNAMIC COLOR UPDATES)
+// FIRMEN WECHSELN VIA DROPDOWN (DYNAMIC COLOR & LOGO UPDATES)
 window.switchCompany = function(newCompany) {
     if (!newCompany) return;
     const cleanComp = newCompany.toUpperCase();
     window.currentUserCompany = cleanComp;
 
     document.documentElement.setAttribute('data-company', cleanComp);
+
+    // Dynamic Logo im Header
+    const logoImg = document.getElementById('header-company-logo');
+    const logoText = document.getElementById('header-logo-text');
+    const compNameText = document.getElementById('header-company-name');
+
+    if (logoImg) {
+        logoImg.style.display = 'block';
+        if (logoText) logoText.style.display = 'none';
+        logoImg.src = `logos/${cleanComp.toLowerCase()}.svg`;
+    }
+    if (compNameText) {
+        compNameText.textContent = cleanComp;
+    }
 
     const compSelect = document.getElementById('company-select');
     if (compSelect) {
