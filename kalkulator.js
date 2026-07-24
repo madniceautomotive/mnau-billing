@@ -1,5 +1,5 @@
 // ====================================================
-// kalkulator.js: VERSIONED GROUP KALKULATOR & PDF EXPORT WITH ALL NOTES
+// kalkulator.js: VERSIONED GROUP KALKULATOR & REAL-TIME LOG SYNCHRONIZATION
 // ====================================================
 
 const ENTITIES = ['MNAG','MNMH','MNWB','MNAT','MNAU','MNGR'];
@@ -411,7 +411,6 @@ function exportKalkulatorInputs() {
     return inputs;
 }
 
-// HELPER: BUILD COMPLETE HTML FOR ALL NOTES & DETAILS IN PDF
 function buildPdfNotesSectionHtml(snap) {
     const kalkInputs = snap.kalkInputs;
     const generalNotes = snap.projNotes || (kalkInputs && kalkInputs.projNotes);
@@ -727,10 +726,15 @@ window.saveMNAUOrderToLog = async function() {
                 await window.API.batchUpdateOrders(batch);
             }
 
+            // DIREKTES INTEGRATION: NEU GENERIERTE FIRMEN-RECORDS IN SPEICHER UNSHIFTEN
             if (newCompanyRecordsToCreate.length > 0) {
-                await window.API.saveOrder({ records: newCompanyRecordsToCreate });
+                const createdData = await window.API.saveOrder({ records: newCompanyRecordsToCreate });
+                if (createdData && createdData.records && createdData.records.length > 0) {
+                    createdData.records.forEach(r => window.loadedRecords.unshift(r));
+                }
             }
 
+            window.UI.updateSupplierDatalist();
             window.cancelKalkulatorEdit();
             if (typeof window.applyFilters === 'function') window.applyFilters();
             alert(`Erfolg! Neue Version v${newVersionNum} für "${orderTitle}" wurde erfasst.`);
@@ -810,6 +814,9 @@ window.saveMNAUOrderToLog = async function() {
     }
 };
 
+// ====================================================
+// PDF DOWNLOAD DIREKT AUS DEM AUFTRAGS-LOG
+// ====================================================
 window.downloadKalkulatorPDFFromLog = function(recordId, snapshotIndex = null) {
     const record = (window.loadedRecords || []).find(r => r.id === recordId);
     if (!record || !record.fields.Fremdkosten_Details) { alert("Kein Kalkulator-Datensatz gefunden."); return; }
@@ -1013,6 +1020,7 @@ window.exportPDF = function(){
       table.kalk-results-table tr.rg-cost td { background: #f0f9ff; }
       table.kalk-results-table tr.rg-fulfill td { background: #dcfce7; font-weight: 800; color: #064e3b; }
       table.kalk-results-table tr.rg-sum td { background: #e6f4ea; border-top: 2px solid #10b981; border-bottom: 2px solid #10b981; font-weight: 800; font-size: 13px; color: #064e3b; }
+      .metric-grid { display: none; }
     </style>
     <div class="pdf-wrapper">
         <div class="pdf-header">
