@@ -1,9 +1,72 @@
 // ==================================================== 
-// app.js: USER ACTIONS, CONTROLLER HUB & EDIT LOCK LOGIC
+// app.js: USER ACTIONS, CONTROLLER HUB & CUSTOM MODAL DIALOGS
 // ====================================================
 
 const SUN_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
 const MOON_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
+
+// ====================================================
+// PROMISE-BASED CUSTOM MODAL DIALOG HELPER (REPLACES ALERT & CONFIRM)
+// ====================================================
+window.customAlert = function(message, title = "Hinweis") {
+    return new Promise((resolve) => {
+        const overlay = document.getElementById('custom-dialog-overlay');
+        const titleEl = document.getElementById('custom-dialog-title');
+        const bodyEl = document.getElementById('custom-dialog-body');
+        const btnOk = document.getElementById('custom-dialog-ok');
+        const btnCancel = document.getElementById('custom-dialog-cancel');
+
+        if (!overlay || !titleEl || !bodyEl || !btnOk) {
+            alert(message);
+            return resolve(true);
+        }
+
+        titleEl.textContent = title;
+        bodyEl.innerHTML = message;
+        if (btnCancel) btnCancel.classList.add('hidden');
+        overlay.classList.remove('hidden');
+
+        const handleOk = () => {
+            overlay.classList.add('hidden');
+            btnOk.removeEventListener('click', handleOk);
+            resolve(true);
+        };
+
+        btnOk.addEventListener('click', handleOk);
+    });
+};
+
+window.customConfirm = function(message, title = "Bestätigung erforderlich") {
+    return new Promise((resolve) => {
+        const overlay = document.getElementById('custom-dialog-overlay');
+        const titleEl = document.getElementById('custom-dialog-title');
+        const bodyEl = document.getElementById('custom-dialog-body');
+        const btnOk = document.getElementById('custom-dialog-ok');
+        const btnCancel = document.getElementById('custom-dialog-cancel');
+
+        if (!overlay || !titleEl || !bodyEl || !btnOk || !btnCancel) {
+            const res = confirm(message);
+            return resolve(res);
+        }
+
+        titleEl.textContent = title;
+        bodyEl.innerHTML = message;
+        btnCancel.classList.remove('hidden');
+        overlay.classList.remove('hidden');
+
+        const cleanup = () => {
+            overlay.classList.add('hidden');
+            btnOk.removeEventListener('click', handleOk);
+            btnCancel.removeEventListener('click', handleCancel);
+        };
+
+        const handleOk = () => { cleanup(); resolve(true); };
+        const handleCancel = () => { cleanup(); resolve(false); };
+
+        btnOk.addEventListener('click', handleOk);
+        btnCancel.addEventListener('click', handleCancel);
+    });
+};
 
 window.updateHeaderLogo = function() {
     const cleanComp = (window.currentUserCompany || 'MNAU').toLowerCase();
@@ -42,7 +105,6 @@ window.initTheme = function() {
     window.updateHeaderLogo();
 };
 
-// Globales Tab-Switching
 window.switchTab = function(tabName) {
     document.getElementById('view-billing').classList.add('hidden');
     document.getElementById('view-calculator').classList.add('hidden');
@@ -65,7 +127,6 @@ window.switchTab = function(tabName) {
     }
 };
 
-// FIRMEN WECHSELN VIA DROPDOWN
 window.switchCompany = function(newCompany) {
     if (!newCompany) return;
     const cleanComp = newCompany.toUpperCase();
@@ -106,7 +167,6 @@ window.switchCompany = function(newCompany) {
     }
 };
 
-// ZENTRALE FILTER LOGIK
 window.applyFilters = function() {
     if (!window.loadedRecords || !window.UI) return;
 
@@ -205,8 +265,7 @@ async function fetchOrders() {
     }
 }
 
-// AUFTRAG IM KALKULATOR LADEN
-window.openInKalkulator = function(recordId) {
+window.openInKalkulator = async function(recordId) {
     const record = window.loadedRecords.find(r => r.id === recordId);
     if (!record) return;
 
@@ -221,7 +280,7 @@ window.openInKalkulator = function(recordId) {
     }
 
     if (!groupMeta) {
-        alert("Dieser Auftrag besitzt keine Kalkulator-Eingabedaten.");
+        await window.customAlert("Dieser Auftrag besitzt keine gespeicherten Kalkulator-Eingabedaten.", "Hinweis");
         return;
     }
 
@@ -229,7 +288,7 @@ window.openInKalkulator = function(recordId) {
     const latestSnap = snapshots[snapshots.length - 1];
 
     if (!latestSnap || !latestSnap.kalkInputs) {
-        alert("Für diesen Auftrag ist keine gespeicherte Kalkulationsstruktur vorhanden.");
+        await window.customAlert("Für diesen Auftrag ist keine gespeicherte Kalkulationsstruktur vorhanden.", "Hinweis");
         return;
     }
 
@@ -245,7 +304,6 @@ window.openInKalkulator = function(recordId) {
         banner.classList.remove('hidden');
     }
 
-    // PROJEKTNAME SPERREN WÄHREND DER BEARBEITUNG
     const projNameInput = document.getElementById('proj-name');
     if (projNameInput) {
         projNameInput.disabled = true;
@@ -262,7 +320,6 @@ window.cancelKalkulatorEdit = function() {
     const banner = document.getElementById('kalk-edit-banner');
     if (banner) banner.classList.add('hidden');
 
-    // PROJEKTNAME WIEDER FREIGEBEN
     const projNameInput = document.getElementById('proj-name');
     if (projNameInput) {
         projNameInput.disabled = false;
@@ -374,7 +431,7 @@ window.changeOrderStatus = async function(recordId, newStatus) {
             await window.API.batchUpdateOrders(batch);
         }
     } catch (error) {
-        alert("Fehler beim Status-Update.");
+        await window.customAlert("Fehler beim Status-Update.", "Systemfehler");
         fetchOrders();
     }
 };
@@ -426,13 +483,14 @@ window.toggleSupplierPaid = async function(orderId, supplierIndex) {
             })
         });
     } catch (error) {
-        alert("Fehler beim Aktualisieren des Lieferanten-Zahlungsstatus.");
+        await window.customAlert("Fehler beim Aktualisieren des Lieferanten-Zahlungsstatus.", "Systemfehler");
         fetchOrders();
     }
 };
 
 window.bulkPaySupplier = async function(supplierName) {
-    if (!confirm(`Möchtest du wirklich alle offenen Rechnungen für "${supplierName}" auf einmal als erledigt markieren?`)) return;
+    const confirmed = await window.customConfirm(`Möchtest du wirklich alle offenen Rechnungen für "${supplierName}" auf einmal als erledigt markieren?`, "Massen-Abgeltung");
+    if (!confirmed) return;
 
     const updates = [];
 
@@ -483,13 +541,14 @@ window.bulkPaySupplier = async function(supplierName) {
             await window.API.batchUpdateOrders(batch);
         }
     } catch (error) {
-        alert("Massen-Update fehlgeschlagen.");
+        await window.customAlert("Massen-Update fehlgeschlagen.", "Systemfehler");
         fetchOrders();
     }
 };
 
 window.deleteSupplier = async function(supplierId, supplierName) {
-    if (!confirm(`Möchtest du "${supplierName}" dauerhaft aus der Lieferanten-Datenbank löschen?`)) return;
+    const confirmed = await window.customConfirm(`Möchtest du "${supplierName}" dauerhaft aus der Lieferanten-Datenbank löschen?`, "Lieferant löschen");
+    if (!confirmed) return;
 
     try {
         await window.API.deleteSupplierFromAirtable(supplierId);
@@ -498,7 +557,7 @@ window.deleteSupplier = async function(supplierId, supplierName) {
         window.UI.updateSupplierDatalist();
         window.applyFilters();
     } catch (error) {
-        alert("Lieferant konnte nicht gelöscht werden.");
+        await window.customAlert("Lieferant konnte nicht gelöscht werden.", "Systemfehler");
     }
 };
 
@@ -536,7 +595,8 @@ window.deleteOrder = async function(recordId) {
         ? `Achtung: Dieser Kalkulator-Auftrag ist auch bei ${count - 1} Schwesterfirma/Firmen hinterlegt. Möchtest du das GESAMTE Projekt inkl. aller Firmen-Einträge löschen?`
         : "Auftrag wirklich dauerhaft löschen?";
 
-    if (!confirm(confirmMsg)) return;
+    const confirmed = await window.customConfirm(confirmMsg, "Auftrag löschen");
+    if (!confirmed) return;
 
     linkedRecordIds.forEach(id => {
         const row = document.querySelector(`.billing-row[data-id="${id}"]`);
@@ -551,12 +611,11 @@ window.deleteOrder = async function(recordId) {
         window.loadedRecords = window.loadedRecords.filter(r => !linkedRecordIds.includes(r.id));
         window.applyFilters();
     } catch (error) {
-        alert("Fehler beim Löschen des Auftrags/der Aufträge.");
+        await window.customAlert("Fehler beim Löschen des Auftrags/der Aufträge.", "Systemfehler");
         fetchOrders();
     }
 };
 
-// FIREBASE TRIGGER
 window.initMNAUApp = function() {
     fetchOrders();
 };

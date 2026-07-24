@@ -1,5 +1,5 @@
 // ====================================================
-// kalkulator.js: LIVE AUTO-CALCULATION & NO AUTO-SCROLL
+// kalkulator.js: VERSIONED GROUP KALKULATOR WITH CUSTOM MODALS
 // ====================================================
 
 const ENTITIES = ['MNAG','MNMH','MNWB','MNAT','MNAU','MNGR'];
@@ -566,7 +566,10 @@ window.saveMNAUOrderToLog = async function() {
     };
 
     const userUmsatz = Math.round((summe[myCompany] || 0) * 100) / 100;
-    if (userUmsatz <= 0) { alert(`Der ${myCompany}-Umsatz beträgt 0.00 €. Es wurde kein Auftrag erfasst.`); return; }
+    if (userUmsatz <= 0) {
+        await window.customAlert(`Der ${myCompany}-Umsatz beträgt 0.00 €. Es wurde kein Auftrag erfasst.`, "Hinweis");
+        return;
+    }
 
     const mainSuppliers = getSuppliersForCompany(myCompany);
     const totalFremdkosten = mainSuppliers.reduce((s, item) => s + item.amount, 0);
@@ -736,7 +739,7 @@ window.saveMNAUOrderToLog = async function() {
             window.UI.updateSupplierDatalist();
             window.cancelKalkulatorEdit();
             if (typeof window.applyFilters === 'function') window.applyFilters();
-            alert(`Erfolg! Neue Version v${newVersionNum} für "${orderTitle}" wurde erfasst.`);
+            await window.customAlert(`Neue Version v${newVersionNum} für "${orderTitle}" wurde erfasst.`, "Erfolg");
 
         } else {
             if (btn) { btn.disabled = true; btn.textContent = "Speichere Version v1..."; }
@@ -802,20 +805,23 @@ window.saveMNAUOrderToLog = async function() {
                 window.UI.updateSupplierDatalist();
                 window.cancelKalkulatorEdit();
                 if (typeof window.applyFilters === 'function') window.applyFilters();
-                alert(`Erfolg! ${createdData.records.length} Auftrag/Aufträge (Version v1) im Log erfasst.`);
+                await window.customAlert(`${createdData.records.length} Auftrag/Aufträge (Version v1) im Log erfasst.`, "Erfolg");
             }
         }
 
     } catch (err) {
-        alert("Fehler beim Erfassen des Auftrags im Log: " + (err.message || err));
+        await window.customAlert("Fehler beim Erfassen des Auftrags im Log: " + (err.message || err), "Systemfehler");
     } finally {
         if (btn) { btn.disabled = false; btn.innerHTML = `<span class="ti">➔</span> ${myCompany} Auftrag im Log erfassen`; }
     }
 };
 
-window.downloadKalkulatorPDFFromLog = function(recordId, snapshotIndex = null) {
+window.downloadKalkulatorPDFFromLog = async function(recordId, snapshotIndex = null) {
     const record = (window.loadedRecords || []).find(r => r.id === recordId);
-    if (!record || !record.fields.Fremdkosten_Details) { alert("Kein Kalkulator-Datensatz gefunden."); return; }
+    if (!record || !record.fields.Fremdkosten_Details) {
+        await window.customAlert("Kein Kalkulator-Datensatz gefunden.", "Hinweis");
+        return;
+    }
 
     let groupMeta = null;
     try {
@@ -823,10 +829,16 @@ window.downloadKalkulatorPDFFromLog = function(recordId, snapshotIndex = null) {
         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) groupMeta = parsed.groupMeta;
     } catch(e) {}
 
-    if (!groupMeta) { alert("Kein Kalkulator-Snapshot gespeichert."); return; }
+    if (!groupMeta) {
+        await window.customAlert("Kein Kalkulator-Snapshot gespeichert.", "Hinweis");
+        return;
+    }
 
     const snapshots = groupMeta.snapshots || (groupMeta.snapshot ? [groupMeta.snapshot] : []);
-    if (snapshots.length === 0) { alert("Keine PDF-Snapshots gefunden."); return; }
+    if (snapshots.length === 0) {
+        await window.customAlert("Keine PDF-Snapshots gefunden.", "Hinweis");
+        return;
+    }
 
     const targetIndex = (snapshotIndex !== null && snapshotIndex >= 0 && snapshotIndex < snapshots.length)
         ? snapshotIndex
@@ -836,7 +848,10 @@ window.downloadKalkulatorPDFFromLog = function(recordId, snapshotIndex = null) {
     const versionTag = snap.version ? `v${snap.version}` : `v${targetIndex + 1}`;
 
     const jsPDF = window.jspdf && window.jspdf.jsPDF;
-    if (typeof html2canvas === 'undefined' || !jsPDF) { alert("PDF-Bibliotheken nicht geladen."); return; }
+    if (typeof html2canvas === 'undefined' || !jsPDF) {
+        await window.customAlert("PDF-Bibliotheken nicht geladen.", "Systemfehler");
+        return;
+    }
 
     const d = new Date(snap.timestamp || record.createdTime || Date.now()), p = n => String(n).padStart(2,'0');
     const ts = `${p(d.getDate())}.${p(d.getMonth()+1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
@@ -926,7 +941,7 @@ window.downloadKalkulatorPDFFromLog = function(recordId, snapshotIndex = null) {
                 const safeName = (snap.projName || record.fields.Auftrag || 'Group-Kalkulator').replace(/[^\wäöüÄÖÜ\- ]+/g,'').trim().replace(/\s+/g,'_');
                 pdf.save(`Group-Kalkulator_${safeName}_${versionTag}.pdf`);
                 cleanup();
-            }).catch(err => { cleanup(); alert('PDF-Fehler: ' + err.message); });
+            }).catch(async err => { cleanup(); await window.customAlert('PDF-Fehler: ' + err.message, "Systemfehler"); });
     }, 300);
 };
 
@@ -945,7 +960,6 @@ window.resetAll = function(){
     ['proj-name','proj-offer','proj-invoice','proj-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     const fm=document.getElementById('fkmngr'); if(fm) fm.value='';
 
-    // PROJEKTNAME WIEDER FREIGEBEN BEIM RESET
     const projNameInput = document.getElementById('proj-name');
     if (projNameInput) { projNameInput.disabled = false; }
 
@@ -964,11 +978,14 @@ window.resetAll = function(){
     window.calculate();
 };
 
-window.exportPDF = function(){
+window.exportPDF = async function(){
     window.calculate();
     const name=(getVal('proj-name')||'Group-Kalkulator').replace(/[^\wäöüÄÖÜ\- ]+/g,'').trim().replace(/\s+/g,'_')||'Group-Kalkulator';
     const jsPDF = window.jspdf && window.jspdf.jsPDF;
-    if(typeof html2canvas==='undefined' || !jsPDF){ alert('PDF-Bibliothek nicht geladen.'); return; }
+    if(typeof html2canvas==='undefined' || !jsPDF){
+        await window.customAlert('PDF-Bibliothek nicht geladen.', "Systemfehler");
+        return;
+    }
 
     const kalkInputs = exportKalkulatorInputs();
     const snap = {
@@ -1064,7 +1081,7 @@ window.exportPDF = function(){
                 pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', x, y, iw, ih);
                 pdf.save(`Group-Kalkulator_${name}.pdf`);
                 cleanup();
-            }).catch(err => { cleanup(); alert('PDF-Fehler: ' + err.message); });
+            }).catch(async err => { cleanup(); await window.customAlert('PDF-Fehler: ' + err.message, "Systemfehler"); });
     }, 300);
 };
 
@@ -1080,7 +1097,6 @@ document.addEventListener('DOMContentLoaded', () => {
     syncCostsToVolume();
     setMode('td');
 
-    // LIVE AUTOMATISCHE NEUBERECHNUNG BEI JEDER EINGABE
     const calcContainer = document.getElementById('view-calculator');
     if (calcContainer) {
         calcContainer.addEventListener('input', () => window.calculate());

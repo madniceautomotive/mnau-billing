@@ -256,6 +256,18 @@
     </div>
 </div>
 
+<!-- NEUES ZENTRALES DIALOG MODAL (ERSETZT BROWSER ALERTS & CONFIRMS) -->
+<div id="custom-dialog-overlay" class="modal-overlay hidden">
+    <div class="modal-card dialog-card">
+        <h2 id="custom-dialog-title">Hinweis</h2>
+        <div id="custom-dialog-body" class="dialog-body-text"></div>
+        <div class="modal-actions" style="margin-top: 22px;">
+            <button type="button" id="custom-dialog-cancel" class="btn-secondary hidden">Abbrechen</button>
+            <button type="button" id="custom-dialog-ok" class="btn-primary">OK</button>
+        </div>
+    </div>
+</div>
+
 <datalist id="supplier-list"></datalist>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
