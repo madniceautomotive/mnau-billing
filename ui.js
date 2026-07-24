@@ -79,20 +79,35 @@ window.UI = {
                     breakdownHTML += `</div>`;
                 }
 
-                // Group Erlös-Info Box (Transparenz über Gesamtprojekt & Schwesterfirmen)
+                // Group Erlös-Info Box (Transparenz über Gesamtprojekt & Einzelne Schwesterfirmen)
                 let groupMetaHTML = '';
                 if (groupMeta) {
                     const kp = (parseFloat(groupMeta.kundenpreis)||0).toFixed(2);
                     const mngr = (parseFloat(groupMeta.mngrAbgabe)||0).toFixed(2);
-                    const sisters = (parseFloat(groupMeta.sisterShares)||0).toFixed(2);
+
+                    let sistersHTML = '';
+                    if (groupMeta.sisterSharesDetail && Object.keys(groupMeta.sisterSharesDetail).length > 0) {
+                        Object.entries(groupMeta.sisterSharesDetail).forEach(([comp, amt]) => {
+                            sistersHTML += `<div class="group-info-row"><span>• Anteil ${comp}:</span><span>€ ${(parseFloat(amt)||0).toFixed(2)}</span></div>`;
+                        });
+                    } else if (groupMeta.sisterShares) {
+                        sistersHTML = `<div class="group-info-row"><span>• Anteile Schwesterfirmen:</span><span>€ ${(parseFloat(groupMeta.sisterShares)||0).toFixed(2)}</span></div>`;
+                    }
+
+                    const pdfBtn = groupMeta.snapshot ? `
+                        <button class="btn-secondary btn-small" onclick="window.downloadKalkulatorPDFFromLog('${id}')" style="margin-top:8px; display:inline-flex; align-items:center; gap:6px; font-size:0.7rem; padding:4px 10px; border-color:rgba(0,255,115,0.4); color:#00ff73; background:rgba(0,255,115,0.08);" title="Group Kalkulator PDF herunterladen">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> Kalkulator PDF Export
+                        </button>
+                    ` : '';
 
                     groupMetaHTML = `
                         <div class="group-info-box">
                             <div class="group-info-header">🌐 Group Erlösverteilung</div>
                             <div class="group-info-row"><span>Gesamt Projektvolumen:</span><strong>€ ${kp}</strong></div>
                             <div class="group-info-row"><span>Group-Abgabe (MNGR):</span><span>€ ${mngr}</span></div>
-                            <div class="group-info-row"><span>Anteile Schwesterfirmen:</span><span>€ ${sisters}</span></div>
-                            <div class="group-info-note">*(Direkt über Group abgewickelt – keine MNAU Fremdkosten)</div>
+                            ${sistersHTML}
+                            <div class="group-info-note">*(Direkt über Group abgewickelt)</div>
+                            ${pdfBtn}
                         </div>
                     `;
                 }
@@ -213,7 +228,7 @@ window.UI = {
             const orderName = fields.Auftrag || "Unbenanntes Projekt";
             if (fields.Fremdkosten_Details) {
                 try {
-                    const parsed = JSON.parse(fields.Fremdkosten_Details);
+                    const parsed = JSON.parse(record.fields.Fremdkosten_Details);
                     const details = Array.isArray(parsed) ? parsed : (parsed.suppliers || []);
 
                     details.forEach((d, dIdx) => {

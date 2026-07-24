@@ -72,7 +72,6 @@ function buildBaseCards(){
       <div class="field note-field note-sep"><label>✎ Notiz ${e}</label><textarea id="note-${e}" class="mnau-input" rows="1" placeholder="Anmerkung zu ${e} …"></textarea></div>
     </div>`).join('');
 
-    // Initialisiere jede Karte mit mindestens einer leeren Lieferantenzeile
     ENTITIES.forEach(e => {
         addKalkSupplierRow(e);
     });
@@ -264,7 +263,17 @@ window.calculate = function(){
     const mnauErtrag = mnauUmsatz - mnauEchteFremdkosten;
 
     const mngrAbgabe = summe['MNGR'] || 0;
-    const sisterShares = (summe['MNAG']||0) + (summe['MNMH']||0) + (summe['MNWB']||0) + (summe['MNAT']||0) + (summe['EXT']||0);
+
+    // Einzelne Schwesterfirmen Summe berechnen
+    const sisterSharesDetail = {};
+    let totalSisterShares = 0;
+    ['MNAG','MNMH','MNWB','MNAT','EXT'].forEach(comp => {
+        const amt = summe[comp] || 0;
+        if (amt > 0) {
+            sisterSharesDetail[comp] = Math.round(amt * 100) / 100;
+            totalSisterShares += amt;
+        }
+    });
 
     document.getElementById('metrics').innerHTML=`
     <div class="metric highlight-main">
@@ -289,7 +298,7 @@ window.calculate = function(){
     </div>
     <div class="metric">
       <div class="ml">Group &amp; Schwesterfirmen</div>
-      <div class="mv">${fmt(mngrAbgabe + sisterShares)}</div>
+      <div class="mv">${fmt(mngrAbgabe + totalSisterShares)}</div>
       <div class="sub-info">Direkt abgewickelt v. Group</div>
     </div>
   `;
@@ -317,7 +326,7 @@ window.calculate = function(){
 };
 
 // ====================================================
-// MNAU AUFTRAG IM LOG ERFASSEN
+// MNAU AUFTRAG IM LOG ERFASSEN (INKL. PDF SNAPSHOT)
 // ====================================================
 window.saveMNAUOrderToLog = async function() {
     const projNameRaw = getVal('proj-name');
@@ -354,7 +363,7 @@ window.saveMNAUOrderToLog = async function() {
     });
     summe['MNGR'] += fkMNGR;
 
-    // 1. MNAU Umsatz (Exakte MNAU Summe aus dem Kalkulator - Fremdkosten werden NICHT extra dazugezählt)
+    // 1. MNAU Umsatz
     const mnauUmsatz = Math.round((summe['MNAU'] || 0) * 100) / 100;
 
     if (mnauUmsatz <= 0) {
@@ -362,7 +371,7 @@ window.saveMNAUOrderToLog = async function() {
         return;
     }
 
-    // 2. Echte Fremdkosten aus allen eingegebenen MNAU-Lieferantenzeilen auslesen
+    // 2. Echte Fremdkosten NUR von MNAU selbst
     const suppliers = [];
     const containerMNAU = document.getElementById('suppliers-list-MNAU');
 
@@ -377,7 +386,6 @@ window.saveMNAUOrderToLog = async function() {
                     paid: false
                 });
 
-                // Falls ein neuer Lieferant eingegeben wurde, in Airtable speichern
                 if (sName !== '' && window.globalSuppliers && window.API && window.API.saveSuppliers) {
                     const exists = window.globalSuppliers.some(g => g.name.toLowerCase() === sName.toLowerCase());
                     if (!exists) {
@@ -394,7 +402,6 @@ window.saveMNAUOrderToLog = async function() {
         });
     }
 
-    // Spesen MNAU als eigener Lieferantenposten falls vorhanden
     const mnauSP = SP['MNAU'] || 0;
     if (mnauSP > 0) {
         suppliers.push({
@@ -406,14 +413,28 @@ window.saveMNAUOrderToLog = async function() {
 
     const totalFremdkosten = suppliers.reduce((s, item) => s + item.amount, 0);
 
-    // 3. Group Meta (für den Info-Block im Auftrags-Log)
+    // 3. Einzelne Schwesterfirmen Summen
     const mngrAbgabe = summe['MNGR'] || 0;
-    const sisterShares = (summe['MNAG']||0) + (summe['MNMH']||0) + (summe['MNWB']||0) + (summe['MNAT']||0) + (summe['EXT']||0);
+    const sisterSharesDetail = {};
+    ['MNAG','MNMH','MNWB','MNAT','EXT'].forEach(comp => {
+        const amt = summe[comp] || 0;
+        if (amt > 0) {
+            sisterSharesDetail[comp] = Math.round(amt * 100) / 100;
+        }
+    });
 
+    // Snapshot der gesamten Kalkulator-Berechnung für späten PDF-Download im Log
     const groupMeta = {
         kundenpreis: Math.round(kundenpreis * 100) / 100,
         mngrAbgabe: Math.round(mngrAbgabe * 100) / 100,
-        sisterShares: Math.round(sisterShares * 100) / 100
+        sisterSharesDetail: sisterSharesDetail,
+        snapshot: {
+            projName: getVal('proj-name'),
+            projOffer: getVal('proj-offer'),
+            projInvoice: getVal('proj-invoice'),
+            projNotes: getVal('proj-notes'),
+            resultsTableHtml: document.getElementById('results-table-wrap').innerHTML
+        }
     };
 
     const btn = document.getElementById('btn-save-to-log');
@@ -434,8 +455,7 @@ window.saveMNAUOrderToLog = async function() {
                 `• MNAU Echte Fremdkosten: € ${totalFremdkosten.toFixed(2)}`,
                 `• MNAU Deckungsbeitrag: € ${(mnauUmsatz - totalFremdkosten).toFixed(2)}`,
                 `• Gesamt-Projektvolumen (Group): € ${kundenpreis.toFixed(2)}`,
-                `• Group-Abgabe (MNGR): € ${mngrAbgabe.toFixed(2)}`,
-                `• Anteile Schwesterfirmen: € ${sisterShares.toFixed(2)}`
+                `• Group-Abgabe (MNGR): € ${mngrAbgabe.toFixed(2)}`
             ]
         }];
 
@@ -478,6 +498,91 @@ window.saveMNAUOrderToLog = async function() {
             btn.innerHTML = '<span class="ti">➔</span> MNAU Auftrag im Log erfassen';
         }
     }
+};
+
+// ====================================================
+// PDF DOWNLOAD DIREKT AUS DEM AUFTRAGS-LOG
+// ====================================================
+window.downloadKalkulatorPDFFromLog = function(recordId) {
+    const record = (window.loadedRecords || []).find(r => r.id === recordId);
+    if (!record || !record.fields.Fremdkosten_Details) {
+        alert("Kein Kalkulator-Datensatz für diesen Auftrag gefunden.");
+        return;
+    }
+
+    let groupMeta = null;
+    try {
+        const parsed = JSON.parse(record.fields.Fremdkosten_Details);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            groupMeta = parsed.groupMeta;
+        }
+    } catch(e) {}
+
+    if (!groupMeta || !groupMeta.snapshot) {
+        alert("Für diesen Auftrag ist kein Kalkulator-PDF-Snapshot gespeichert.");
+        return;
+    }
+
+    const snap = groupMeta.snapshot;
+    const jsPDF = window.jspdf && window.jspdf.jsPDF;
+    if (typeof html2canvas === 'undefined' || !jsPDF) {
+        alert("PDF-Bibliotheken nicht geladen.");
+        return;
+    }
+
+    const d = new Date(record.createdTime || Date.now()), p = n => String(n).padStart(2,'0');
+    const ts = `${p(d.getDate())}.${p(d.getMonth()+1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+    const logo = `<span style="font-weight:800;font-size:19px;letter-spacing:-.02em">MAD&nbsp;N/CE <span style="font-size:11px;letter-spacing:.12em">GROUP</span></span>`;
+    const field = (lbl,val) => val ? `<div style="margin-right:32px"><span style="color:#777">${lbl}:</span> <strong>${esc(val)}</strong></div>` : '';
+
+    const sheet = document.createElement('div');
+    sheet.style.cssText = 'width:1120px;background:#fff;color:#1a1a1a;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:26px;box-sizing:border-box';
+    sheet.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #1a1a1a;padding-bottom:9px;margin-bottom:16px;gap:24px">
+      <strong style="font-size:20px;font-weight:600;white-space:nowrap">Berechnung (Archiviert)</strong>
+      <div style="text-align:center;font-size:10px;color:#888;line-height:1.45">
+        <div>Erstellt: ${ts}</div>
+      </div>
+      <div style="display:flex;align-items:center;flex-shrink:0">${logo}</div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;font-size:13px;margin-bottom:6px">
+      ${field('Projektname', snap.projName)}
+      ${field('Angebotsnummer', snap.projOffer)}
+      ${field('Rechnungsnummer', snap.projInvoice)}
+    </div>
+    ${snap.projNotes ? `<div style="font-size:13px;margin-bottom:16px"><span style="color:#777">Notizen:</span> ${esc(snap.projNotes)}</div>` : '<div style="margin-bottom:10px"></div>'}
+    <div>${snap.resultsTableHtml}</div>
+  `;
+
+    sheet.style.position = 'absolute'; sheet.style.left = '0'; sheet.style.top = '0';
+    sheet.style.zIndex = '2147483647'; sheet.style.background = '#fff';
+    document.body.appendChild(sheet);
+
+    const tbl = sheet.querySelector('table.results');
+    if (tbl) { const need = tbl.offsetWidth + 54; if (need > sheet.offsetWidth) sheet.style.width = need + 'px'; }
+    const W = sheet.scrollWidth, H = sheet.scrollHeight;
+    const sx = window.scrollX, sy = window.scrollY;
+    window.scrollTo(0,0);
+
+    const cleanup = () => { sheet.remove(); window.scrollTo(sx, sy); };
+
+    setTimeout(() => {
+        html2canvas(sheet, { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0, x: 0, y: 0, width: W, height: H, windowWidth: W, windowHeight: H })
+            .then(canvas => {
+                const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
+                const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+                const m = 7, availW = pw - 2*m, availH = ph - 2*m;
+                const r = canvas.width / canvas.height;
+                let iw = availW, ih = iw / r;
+                if (ih > availH) { ih = availH; iw = ih * r; }
+                const x = (pw - iw) / 2, y = m;
+                pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', x, y, iw, ih);
+                const safeName = (snap.projName || record.fields.Auftrag || 'Group-Kalkulator').replace(/[^\wäöüÄÖÜ\- ]+/g,'').trim().replace(/\s+/g,'_');
+                pdf.save(`Group-Kalkulator_${safeName}.pdf`);
+                cleanup();
+            })
+            .catch(err => { cleanup(); console.error('PDF-Fehler:', err); alert('PDF-Fehler: ' + (err && err.message ? err.message : err)); });
+    }, 250);
 };
 
 window.resetAll = function(){
