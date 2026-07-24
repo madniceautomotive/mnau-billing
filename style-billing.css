@@ -224,13 +224,23 @@ body, html {
     border-color: var(--border-color) !important;
 }
 
+.btn-primary, .btn-secondary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 16px; font-weight: 700; font-size: 0.8rem; border-radius: 6px;
+    cursor: pointer; transition: all 0.2s ease;
+}
 .btn-primary {
     background: var(--active-company-color) !important;
     border-color: var(--active-company-color) !important;
     color: #ffffff !important;
-    transition: filter 0.2s ease, transform 0.1s ease;
 }
-.btn-primary:hover { filter: brightness(1.12); }
+.btn-primary:hover { filter: brightness(1.12); transform: translateY(-1px); }
+
+.btn-secondary {
+    background: var(--bg-panel); border: 1px solid var(--border-color-strong);
+    color: var(--text-main);
+}
+.btn-secondary:hover { background: var(--bg-card-hover); border-color: var(--text-main); }
 
 form label {
     display: block; margin-top: 18px; margin-bottom: 6px;
@@ -260,20 +270,21 @@ form label {
 
 /* STICKY BEARBEITUNGS-BANNER IM KALKULATOR */
 .kalk-edit-banner {
+    position: -webkit-sticky;
     position: sticky;
-    top: 0;
-    z-index: 100;
+    top: -20px; /* Gleicht Padding von manager-content aus */
+    margin: -20px -20px 24px -20px;
+    z-index: 999;
     background: #eab308 !important;
     color: #0f172a !important;
-    border: 1px solid #ca8a04 !important;
-    border-radius: 10px;
-    padding: 12px 18px;
-    margin-bottom: 16px;
+    border-bottom: 2px solid #ca8a04 !important;
+    border-radius: 0 0 12px 12px;
+    padding: 14px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
 }
 .kalk-edit-banner.hidden {
     display: none !important;
@@ -287,11 +298,11 @@ form label {
     background: rgba(15, 23, 42, 0.1) !important;
     border: 1px solid #0f172a !important;
     color: #0f172a !important;
-    padding: 6px 14px;
+    padding: 8px 16px;
     border-radius: 6px;
     cursor: pointer;
     font-weight: 800;
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     transition: all 0.2s;
     flex-shrink: 0;
 }
@@ -581,6 +592,15 @@ form label {
     .manager-content { padding: 10px; }
     .database-header { padding: 10px; }
     .billing-row { padding: 12px; }
+
+    .kalk-edit-banner {
+        top: -10px;
+        margin: -10px -10px 16px -10px;
+        padding: 12px 14px;
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
 
     .oc-compact-bar {
         display: grid;
