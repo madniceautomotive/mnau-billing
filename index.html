@@ -11,7 +11,7 @@
 <!-- DER SICHERHEITS-TRESOR (Login-Overlay) -->
 <div id="auth-overlay" class="auth-overlay">
     <div class="modal-card">
-        <h2 id="auth-title">MNAU Login</h2>
+        <h2>MNAU Login</h2>
         <form id="auth-form">
             <label>E-Mail Adresse</label>
             <input type="email" id="auth-email" class="mnau-input" required placeholder="team@mnau.com">
@@ -23,8 +23,6 @@
 
             <div class="modal-actions" style="flex-direction: column; gap: 10px;">
                 <button type="submit" id="btn-auth-submit" class="btn-primary" style="width:100%; justify-content:center; padding: 12px;">Anmelden</button>
-
-                <!-- NEU: Der Button für das eigene Passwort -->
                 <button type="button" id="btn-auth-reset" class="btn-secondary" style="width:100%; border:none; background:transparent; font-size:0.8rem; margin-top:4px;">
                     Passwort ändern / vergessen?
                 </button>
@@ -42,7 +40,6 @@
                 <button id="btn-manage-suppliers" class="sort-icon-btn" title="Lieferanten-Datenbank verwalten">
                     <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
                 </button>
-                <!-- NEU: Logout Button -->
                 <button id="btn-logout" class="sort-icon-btn" title="Abmelden" style="border-color: rgba(231, 76, 60, 0.4); color: #e74c3c;">
                     <svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
                 </button>
@@ -56,6 +53,7 @@
             </div>
         </div>
     </header>
+
     <main class="manager-content">
         <div id="loading" class="spinner hidden"></div>
         <div id="dashboard-summary" class="dashboard-summary"></div>
@@ -70,22 +68,29 @@
     </main>
 </div>
 
-<!-- Modals -->
+<!-- Modal: Neuer Auftrag / Bearbeiten -->
 <div id="modal-overlay" class="modal-overlay hidden">
     <div class="modal-card">
-        <h2>Neuen Auftrag erfassen</h2>
+        <h2 id="modal-main-title">Neuen Auftrag erfassen</h2>
         <form id="form-new-order">
+            <input type="hidden" id="edit-record-id" value="">
+
             <label>Auftragsname / Projekt</label>
             <input type="text" id="input-name" class="mnau-input" required placeholder="z.B. Porsche GW Shooting">
+
             <label>Betrag Automotive (Netto EUR)</label>
             <input type="number" step="0.01" id="input-betrag" class="mnau-input" required placeholder="0.00">
+
             <label>Fremdkosten & Lieferanten (EUR)</label>
             <div id="supplier-container" class="supplier-container"></div>
+
             <div class="supplier-actions">
                 <button type="button" id="btn-add-supplier" class="btn-secondary btn-small">+ Weiteren Lieferanten</button>
                 <div class="supplier-total">Summe: <br>€ <span id="display-total-fremdkosten">0.00</span></div>
             </div>
+
             <datalist id="supplier-list"></datalist>
+
             <div class="modal-actions">
                 <button type="button" id="btn-cancel" class="btn-secondary">Abbrechen</button>
                 <button type="submit" class="btn-primary">Speichern</button>
@@ -94,6 +99,7 @@
     </div>
 </div>
 
+<!-- Modal: Lieferanten-Datenbank Verwalten -->
 <div id="modal-suppliers-overlay" class="modal-overlay hidden">
     <div class="modal-card">
         <h2>Lieferanten-Datenbank</h2>
@@ -109,8 +115,6 @@
 <script src="api.js"></script>
 <script src="ui.js"></script>
 <script src="app.js"></script>
-
-<!-- NEU: Das Auth Modul (Muss als type="module" geladen werden!) -->
 <script type="module" src="auth.js"></script>
 </body>
 </html>

@@ -7,7 +7,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Neues Projekt anlegen Modal öffnen
     if (window.DOM.btnNewOrder) {
         window.DOM.btnNewOrder.addEventListener('click', () => {
+            document.getElementById('edit-record-id').value = '';
+            document.getElementById('modal-main-title').textContent = "Neuen Auftrag erfassen";
             document.getElementById('supplier-container').innerHTML = '';
+            window.DOM.formNewOrder.reset();
             window.UI.addSupplierRow();
             window.UI.calculateTotalFremdkosten();
             window.DOM.modal.classList.remove('hidden');
@@ -35,13 +38,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Formular: Neuen Auftrag an Airtable senden
+    // Formular: Neuen oder bearbeiteten Auftrag an Airtable senden
     if (window.DOM.formNewOrder) {
         window.DOM.formNewOrder.addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            const editId = document.getElementById('edit-record-id').value;
             const name = document.getElementById('input-name').value;
             const betrag = parseFloat(document.getElementById('input-betrag').value || 0);
+
+            let existingDetails = [];
+            if (editId) {
+                const existingRecord = window.loadedRecords.find(r => r.id === editId);
+                if (existingRecord && existingRecord.fields.Fremdkosten_Details) {
+                    try { existingDetails = JSON.parse(existingRecord.fields.Fremdkosten_Details); } catch(e) {}
+                }
+            }
 
             const suppliers = [];
             const rows = document.querySelectorAll('.supplier-row');
@@ -49,7 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const suppName = row.querySelector('.supplier-name').value.trim();
                 const suppAmount = parseFloat(row.querySelector('.supplier-amount').value) || 0;
                 if (suppName !== '' || suppAmount > 0) {
-                    suppliers.push({ name: suppName || "Unbekannt", amount: suppAmount, paid: false });
+                    const existing = existingDetails.find(d => d.name.toLowerCase() === suppName.toLowerCase());
+                    const isPaid = existing ? existing.paid : false;
+                    suppliers.push({ name: suppName || "Unbekannt", amount: suppAmount, paid: isPaid });
                 }
             });
 
@@ -66,44 +80,50 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     const resData = await window.API.saveSuppliers(newSuppliersToSave);
                     if (resData && resData.records) {
-                        resData.records.forEach(r => {
-                            window.globalSuppliers.push({ id: r.id, name: r.fields.Name });
-                        });
+                        resData.records.forEach(r => window.globalSuppliers.push({ id: r.id, name: r.fields.Name }));
                     }
-                } catch (err) {
-                    alert("Netzwerkfehler: Lieferanten konnten nicht gespeichert werden.");
-                    return;
-                }
+                } catch (err) {}
             }
 
             // 2. Auftragsobjekt vorbereiten
             const totalFremdkosten = window.UI.calculateTotalFremdkosten();
             const suppliersJSON = JSON.stringify(suppliers);
 
-            const payload = {
-                records: [{
-                    fields: {
-                        "Auftrag": name,
-                        "Betrag_Automotive": betrag,
-                        "Fremdkosten": totalFremdkosten,
-                        "Fremdkosten_Details": suppliersJSON,
-                        "Status": "Zu verrechnen"
+            if (editId) {
+                // -> UPDATE MODUS
+                const updatePayload = {
+                    fields: { "Auftrag": name, "Betrag_Automotive": betrag, "Fremdkosten": totalFremdkosten, "Fremdkosten_Details": suppliersJSON }
+                };
+                try {
+                    await window.API.updateOrder(editId, updatePayload);
+                    const idx = window.loadedRecords.findIndex(r => r.id === editId);
+                    if (idx > -1) {
+                        const currentStatus = window.loadedRecords[idx].fields.Status;
+                        window.loadedRecords[idx].fields = { ...window.loadedRecords[idx].fields, ...updatePayload.fields, Status: currentStatus };
                     }
-                }]
-            };
-
-            // 3. Speichern und DOM Update ohne Fetch (Zero-Refetch)
-            try {
-                const createdData = await window.API.saveOrder(payload);
-                if (createdData && createdData.records && createdData.records.length > 0) {
-                    window.loadedRecords.unshift(createdData.records[0]); // Oben ins Array schieben
                     window.UI.updateSupplierDatalist();
-                    window.UI.renderOrders(window.loadedRecords); // UI weich aktualisieren
-                }
-                window.DOM.modal.classList.add('hidden');
-                window.DOM.formNewOrder.reset();
-            } catch (error) {
-                alert("Fehler beim Erstellen des Auftrags.");
+                    window.UI.renderOrders(window.loadedRecords);
+
+                    window.DOM.modal.classList.add('hidden');
+                    window.DOM.formNewOrder.reset();
+                    document.getElementById('edit-record-id').value = '';
+                } catch (error) { alert("Fehler beim Aktualisieren."); }
+
+            } else {
+                // -> NEU ERSTELLEN MODUS
+                const payload = {
+                    records: [{ fields: { "Auftrag": name, "Betrag_Automotive": betrag, "Fremdkosten": totalFremdkosten, "Fremdkosten_Details": suppliersJSON, "Status": "Zu verrechnen" } }]
+                };
+                try {
+                    const createdData = await window.API.saveOrder(payload);
+                    if (createdData && createdData.records && createdData.records.length > 0) {
+                        window.loadedRecords.unshift(createdData.records[0]);
+                        window.UI.updateSupplierDatalist();
+                        window.UI.renderOrders(window.loadedRecords);
+                    }
+                    window.DOM.modal.classList.add('hidden');
+                    window.DOM.formNewOrder.reset();
+                } catch (error) { alert("Fehler beim Erstellen."); }
             }
         });
     }
@@ -138,21 +158,6 @@ document.addEventListener('DOMContentLoaded', () => {
             window.DOM.searchInput.focus();
         });
     }
-
-    // Airtable Keys zurücksetzen
-    const btnResetKeys = document.getElementById('btn-reset-keys');
-    if (btnResetKeys) {
-        btnResetKeys.addEventListener('click', () => {
-            if (confirm("Möchtest du die Airtable-Schlüssel zurücksetzen?")) {
-                localStorage.removeItem('MNAU_AIRTABLE_TOKEN');
-                localStorage.removeItem('MNAU_BASE_ID');
-                location.reload();
-            }
-        });
-    }
-
-    // HINWEIS: fetchOrders() fehlt hier absichtlich!
-    // Die App wartet stattdessen auf das grüne Licht von Firebase in auth.js.
 });
 
 // Haupt-Laderoutine: Zieht sich alle Daten aus Airtable
@@ -196,6 +201,35 @@ async function fetchOrders() {
     }
 }
 
+// Modal öffnen und mit bestehenden Daten befüllen
+window.openEditModal = function(recordId) {
+    const record = window.loadedRecords.find(r => r.id === recordId);
+    if (!record) return;
+
+    document.getElementById('edit-record-id').value = recordId;
+    document.getElementById('modal-main-title').textContent = "Auftrag bearbeiten";
+
+    document.getElementById('input-name').value = record.fields.Auftrag || "";
+    document.getElementById('input-betrag').value = record.fields.Betrag_Automotive || "";
+
+    const supplierContainer = document.getElementById('supplier-container');
+    supplierContainer.innerHTML = '';
+
+    if (record.fields.Fremdkosten_Details) {
+        try {
+            const details = JSON.parse(record.fields.Fremdkosten_Details);
+            details.forEach(d => {
+                window.UI.addSupplierRow(d.name, d.amount);
+            });
+        } catch(e) {}
+    }
+
+    if (supplierContainer.children.length === 0) window.UI.addSupplierRow();
+
+    window.UI.calculateTotalFremdkosten();
+    window.DOM.modal.classList.remove('hidden');
+};
+
 // Sparsames Status-Update: Genau 1 PATCH Call, 0 GET Calls
 window.changeOrderStatus = async function(recordId, newStatus) {
     const record = window.loadedRecords.find(r => r.id === recordId);
@@ -208,11 +242,11 @@ window.changeOrderStatus = async function(recordId, newStatus) {
         await window.API.updateOrderStatus(recordId, newStatus);
     } catch (error) {
         alert("Fehler beim Status-Update.");
-        fetchOrders(); // Im echten Fehlerfall als Fallback neu laden
+        fetchOrders();
     }
 };
 
-// Sparsamer Checkbox-Toggle: Genau 1 PATCH Call, 0 GET Calls
+// Sparsamer Checkbox-Toggle
 window.toggleSupplierPaid = async function(orderId, supplierIndex) {
     const record = window.loadedRecords.find(r => r.id === orderId);
     if (!record || !record.fields.Fremdkosten_Details) return;
@@ -235,7 +269,7 @@ window.toggleSupplierPaid = async function(orderId, supplierIndex) {
     }
 };
 
-// Effiziente Massen-Abgeltung: Bündelt Updates in 1 Call pro 10 Einträge
+// Effiziente Massen-Abgeltung
 window.bulkPaySupplier = async function(supplierName) {
     if (!confirm(`Möchtest du wirklich alle offenen Rechnungen für "${supplierName}" auf einmal als erledigt markieren?`)) return;
 
@@ -308,19 +342,7 @@ window.deleteOrder = async function(recordId) {
     }
 };
 
-// Airtable Setup-Prompt
-window.triggerSetup = function() {
-    const tokenInput = prompt("Einrichtung: Airtable Token (pat...):");
-    const baseIdInput = prompt("Einrichtung: Airtable Base-ID (app...):");
-    if (tokenInput && baseIdInput) {
-        localStorage.setItem('MNAU_AIRTABLE_TOKEN', tokenInput.trim());
-        localStorage.setItem('MNAU_BASE_ID', baseIdInput.trim());
-        location.reload();
-    }
-};
-
-// 🔐 FIREBASE TRIGGER:
-// Diese Funktion wird in der auth.js aufgerufen, sobald der Tresor erfolgreich entsperrt wurde.
+// 🔐 FIREBASE TRIGGER
 window.initMNAUApp = function() {
     fetchOrders();
 };

@@ -1,5 +1,5 @@
 /* ==================================================== */
-/* style-core.css: BASE STYLE & HUD KEYFRAMES           */
+/* style-core.css: BASE STYLE, BUTTONS & AUTH OVERLAY   */
 /* ==================================================== */
 body, html {
     margin: 0; padding: 0; width: 100%; height: 100%;
@@ -36,7 +36,6 @@ body, html {
     position: relative; flex: 1;
 }
 
-/* Suchleiste im Header */
 .search-input {
     width: 100%; background: #1c1c1c; color: white !important; border: 1px solid rgba(0, 102, 58, 0.5);
     padding: 11px 42px 11px 14px; border-radius: 10px; box-sizing: border-box;
@@ -56,12 +55,11 @@ body, html {
 .search-clear-btn svg { width: 13px; height: 13px; fill: #718096; }
 .search-clear-btn:hover svg { fill: #e74c3c; }
 
-/* REPARIERT: Formular-Eingabefelder im Modal (Garantiert weiße Schrift & gute Abstände) */
 .mnau-input {
     width: 100%; background: #1c1c1c; color: #ffffff !important; border: 1px solid rgba(0, 102, 58, 0.5);
     padding: 11px 14px; border-radius: 10px; box-sizing: border-box;
     outline: none; font-size: 0.9rem; font-weight: 500; font-family: inherit;
-    margin-top: 6px; /* Der korrekte Abstand zum Label */
+    margin-top: 6px;
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 .mnau-input:focus {
@@ -95,7 +93,22 @@ body, html {
 }
 .btn-secondary:hover { color: white; border-color: rgba(255, 255, 255, 0.25); background: #222222; }
 
-/* REPARIERT: Der knallrote Lösch-Button ist zurück! */
+/* Blauer Edit Button */
+.edit-btn {
+    background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(0, 210, 255, 0.25); color: #00d2ff;
+    width: 41px; height: 41px; border-radius: 10px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-sizing: border-box;
+}
+.edit-btn svg { width: 16px; height: 16px; fill: currentColor; }
+.edit-btn:hover {
+    background: #00d2ff; color: #121212; border-color: #00d2ff;
+    box-shadow: 0 0 15px rgba(0, 210, 255, 0.45);
+}
+.edit-btn:active { transform: scale(0.92); }
+
+/* Roter Lösch-Button */
 .delete-btn {
     background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(231, 76, 60, 0.25); color: #e74c3c;
     width: 41px; height: 41px; border-radius: 10px; cursor: pointer;
@@ -110,7 +123,6 @@ body, html {
 }
 .delete-btn:active { transform: scale(0.92); }
 
-/* Weiche Animations-Keyframes */
 @keyframes rowSlideIn {
     from { opacity: 0; transform: translateY(-12px) scale(0.98); max-height: 0; margin-bottom: 0; }
     to { opacity: 1; transform: translateY(0) scale(1); max-height: 250px; }
@@ -131,9 +143,6 @@ body, html {
 .spinner.hidden { display: none !important; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ==================================================== */
-/* 10. AUTHENTICATION SECURE OVERLAY                    */
-/* ==================================================== */
 .auth-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background-color: #121212; z-index: 9999;

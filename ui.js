@@ -7,11 +7,9 @@ window.UI = {
         UI.updateSummary(records);
         UI.updateSupplierBreakdown(records);
 
-        // Datensätze trennen in Aktiv und Bezahlt (Archiv)
         const activeRecords = records.filter(r => (r.fields.Status || "Zu verrechnen") !== "Bezahlt");
         const archivedRecords = records.filter(r => r.fields.Status === "Bezahlt");
 
-        // Geteilte Sub-Rendering-Engine für duale Listen-Pflege
         const renderContainer = (containerEl, listRecords, emptyMessage) => {
             if(!listRecords || listRecords.length === 0) {
                 containerEl.innerHTML = `<p style="color:#444; padding: 16px; font-size:0.8rem; text-align:center; border: 1px dashed rgba(255,255,255,0.02); border-radius:8px; letter-spacing:0.5px;">${emptyMessage}</p>`;
@@ -23,7 +21,6 @@ window.UI = {
 
             const incomingIds = new Set(listRecords.map(r => r.id));
 
-            // 1. Ausgeblendete oder in eine andere Liste verschobene Zeilen herausschrumpfen lassen
             const currentRows = Array.from(containerEl.querySelectorAll('.billing-row'));
             currentRows.forEach(row => {
                 const rowId = row.getAttribute('data-id');
@@ -33,7 +30,6 @@ window.UI = {
                 }
             });
 
-            // 2. Zeilen abgleichen, neu bauen oder updaten
             listRecords.forEach((record, index) => {
                 const fields = record.fields;
                 const id = record.id;
@@ -83,6 +79,9 @@ window.UI = {
                             <option value="An Group verrechnet" ${status === "An Group verrechnet" ? "selected" : ""}>An Group verrechnet</option>
                             <option value="Bezahlt" ${status === "Bezahlt" ? "selected" : ""}>Bezahlt</option>
                         </select>
+                        <button class="edit-btn" onclick="window.openEditModal('${id}')" title="Auftrag bearbeiten">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                        </button>
                         <button class="delete-btn" onclick="deleteOrder('${id}')" title="Auftrag löschen">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                         </button>
@@ -107,7 +106,6 @@ window.UI = {
             });
         };
 
-        // Beide Container unabhängig voneinander synchron zeichnen
         renderContainer(window.DOM.orderList, activeRecords, "Keine aktiven Aufträge im Log.");
         renderContainer(window.DOM.archiveList, archivedRecords, "Archiv-Log leer.");
     },
@@ -178,7 +176,6 @@ window.UI = {
 
         const supplierNames = Object.keys(openSuppliers);
 
-        // REPARIERT: Menschlicher, klar verständlicher Text ohne Unterstriche
         if (supplierNames.length === 0) {
             supplierContainer.innerHTML = `
                 <div class="no-debts-panel">
@@ -264,7 +261,7 @@ window.UI = {
         });
     },
 
-    addSupplierRow() {
+    addSupplierRow(defaultName = '', defaultAmount = '') {
         const container = document.getElementById('supplier-container');
         const row = document.createElement('div');
         row.className = 'supplier-row';
@@ -275,6 +272,9 @@ window.UI = {
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
             </button>
         `;
+        row.querySelector('.supplier-name').value = defaultName;
+        if (defaultAmount !== '') row.querySelector('.supplier-amount').value = defaultAmount;
+
         row.querySelector('.btn-remove-supplier').addEventListener('click', () => { row.remove(); UI.calculateTotalFremdkosten(); });
         row.querySelector('.supplier-amount').addEventListener('input', UI.calculateTotalFremdkosten);
         container.appendChild(row);

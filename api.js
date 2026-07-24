@@ -59,7 +59,16 @@ window.API = {
         return await response.json();
     },
 
-    // NEU: Bündelt bis zu 10 Updates in 1 einzigen API-Call!
+    async updateOrder(recordId, updatePayload) {
+        const response = await fetch(`${window.API_URL_ORDERS}/${recordId}`, {
+            method: 'PATCH',
+            headers: window.HEADERS,
+            body: JSON.stringify(updatePayload)
+        });
+        if (!response.ok) throw new Error("Auftrag-Update fehlgeschlagen.");
+        return await response.json();
+    },
+
     async batchUpdateOrders(recordsPayload) {
         const response = await fetch(window.API_URL_ORDERS, {
             method: 'PATCH',
