@@ -89,7 +89,7 @@ window.addKalkSupplierRow = function(entity, name = '', amount = '') {
     <input type="text" class="mnau-input kalk-supp-name" list="supplier-list" placeholder="Lieferant..." value="${name}" oninput="updateEntityFremdkosten('${entity}')">
     <input type="number" step="0.01" class="mnau-input kalk-supp-amount" placeholder="0.00" value="${amount}" oninput="updateEntityFremdkosten('${entity}')">
     <button type="button" class="btn-remove-supplier kalk-supp-remove" title="Entfernen" onclick="this.parentElement.remove(); updateEntityFremdkosten('${entity}');">
-      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 13.41 12z"/></svg>
+      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
     </button>
   `;
     container.appendChild(row);
@@ -273,7 +273,7 @@ window.calculate = function(){
 
     const btnSave = document.getElementById('btn-save-to-log');
     if (btnSave) {
-        const isEdit = !!window.activeEditingGroupId;
+        const isEdit = !!(window.activeEditingGroupId || window.activeEditingRecordId);
         btnSave.innerHTML = `<span class="ti">➔</span> ${myCompany} Auftrag ${isEdit ? 'überarbeiten (Neue Version)' : 'im Log erfassen'}`;
     }
 
@@ -318,23 +318,27 @@ window.loadKalkulatorInputs = function(inputs) {
 
     if (inputs.mode) setMode(inputs.mode);
 
-    ['proj-name','proj-offer','proj-invoice','proj-notes'].forEach(id => {
+    const setVal = (id, val) => {
         const el = document.getElementById(id);
-        if (el) el.value = inputs[id] || '';
-    });
+        if (el) el.value = val !== undefined && val !== null ? val : '';
+    };
 
-    const fm = document.getElementById('fkmngr');
-    if (fm) fm.value = inputs.fkmngr || 0;
+    // Unterstützt sowohl projName als auch proj-name Schlüssel!
+    setVal('proj-name', inputs.projName || inputs['proj-name']);
+    setVal('proj-offer', inputs.projOffer || inputs['proj-offer']);
+    setVal('proj-invoice', inputs.projInvoice || inputs['proj-invoice']);
+    setVal('proj-notes', inputs.projNotes || inputs['proj-notes']);
+    setVal('fkmngr', inputs.fkmngr);
 
     ENTITIES.forEach(e => {
         const baseEl = document.getElementById('base-' + e);
-        if (baseEl) baseEl.value = (inputs.base && inputs.base[e]) || 0;
+        if (baseEl) baseEl.value = (inputs.base && inputs.base[e] !== undefined) ? inputs.base[e] : 0;
 
         const spEl = document.getElementById('sp-' + e);
-        if (spEl) spEl.value = (inputs.sp && inputs.sp[e]) || 0;
+        if (spEl) spEl.value = (inputs.sp && inputs.sp[e] !== undefined) ? inputs.sp[e] : 0;
 
         const hpEl = document.getElementById('hp-' + e);
-        if (hpEl) hpEl.value = (inputs.hp && inputs.hp[e]) || 150;
+        if (hpEl) hpEl.value = (inputs.hp && inputs.hp[e] !== undefined) ? inputs.hp[e] : 150;
 
         const noteEl = document.getElementById('note-' + e);
         if (noteEl) noteEl.value = (inputs.notes && inputs.notes[e]) || '';
@@ -367,8 +371,8 @@ window.loadKalkulatorInputs = function(inputs) {
             if (roleDef) {
                 const entEl = document.getElementById(`role-${roleDef.id}-entity`);
                 const pctEl = document.getElementById(`role-${roleDef.id}-pct`);
-                if (entEl) entEl.value = r.entity;
-                if (pctEl) pctEl.value = r.pct;
+                if (entEl && r.entity) entEl.value = r.entity;
+                if (pctEl && r.pct !== undefined) pctEl.value = r.pct;
             }
         });
     }
@@ -376,7 +380,6 @@ window.loadKalkulatorInputs = function(inputs) {
     window.syncCostsToVolume();
 };
 
-// Extrahiert den kompletten aktuellen Kalkulator-Eingabezustand für die Speicherung im Snapshot
 function exportKalkulatorInputs() {
     const inputs = {
         projName: getVal('proj-name'),
@@ -425,11 +428,11 @@ window.saveMNAUOrderToLog = async function() {
     const projName = projNameRaw ? projNameRaw : "Unbenanntes Projekt";
     const orderTitle = `${projName} (${myCompany})`;
 
-    // Verwende bestehende groupId beim Bearbeiten oder erstelle neue ID
-    const isEditing = !!window.activeEditingGroupId;
-    const calcGroupId = isEditing
-        ? window.activeEditingGroupId
-        : ("grp_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7));
+    const isEditing = !!(window.activeEditingGroupId || window.activeEditingRecordId);
+    let calcGroupId = window.activeEditingGroupId;
+    if (!calcGroupId) {
+        calcGroupId = "grp_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+    }
 
     const roles = getRoles();
     const OTHER = COSTS.filter(c => c.key !== FUL_KEY);
@@ -502,59 +505,62 @@ window.saveMNAUOrderToLog = async function() {
         if (amt > 0) allSharesDetail[comp] = Math.round(amt * 100) / 100;
     });
 
-    // Erzeuge Input-Snapshot für die spätere Re-Kalkulation
     const kalkInputs = exportKalkulatorInputs();
 
-    // Bisherige Snapshots ermitteln (für Versionierung)
-    let existingSnapshots = [];
-    if (isEditing) {
-        const existingRec = window.loadedRecords.find(r => {
-            try {
-                const p = JSON.parse(r.fields.Fremdkosten_Details);
-                return p && p.groupMeta && p.groupMeta.groupId === calcGroupId;
-            } catch(e) { return false; }
-        });
-        if (existingRec && existingRec.fields.Fremdkosten_Details) {
-            try {
-                const parsed = JSON.parse(existingRec.fields.Fremdkosten_Details);
-                if (parsed.groupMeta) {
-                    existingSnapshots = parsed.groupMeta.snapshots || (parsed.groupMeta.snapshot ? [parsed.groupMeta.snapshot] : []);
-                }
-            } catch(e) {}
-        }
-    }
-
-    const newVersionNum = existingSnapshots.length + 1;
-    const newSnapshot = {
-        version: newVersionNum,
-        timestamp: new Date().toISOString(),
-        user: window.currentUserEmail || "Unbekannt",
-        kalkInputs: kalkInputs,
-        projName: getVal('proj-name'),
-        projOffer: getVal('proj-offer'),
-        projInvoice: getVal('proj-invoice'),
-        projNotes: getVal('proj-notes'),
-        resultsTableHtml: document.getElementById('results-table-wrap').innerHTML
-    };
-
-    const updatedSnapshots = [...existingSnapshots, newSnapshot];
-
     const btn = document.getElementById('btn-save-to-log');
-    if (btn) { btn.disabled = true; btn.textContent = "Speichere Version v" + newVersionNum + "..."; }
 
     try {
         if (isEditing) {
-            // ===== 1. UPDATE MODUS: AKTUALISIERE BESTEHENDE RECORDS IN AIRTABLE =====
-            const linkedRecords = window.loadedRecords.filter(r => {
+            // ===== 1. UPDATE MODUS =====
+            let linkedRecords = [];
+            if (window.activeEditingGroupId) {
+                linkedRecords = window.loadedRecords.filter(r => {
+                    try {
+                        const p = JSON.parse(r.fields.Fremdkosten_Details);
+                        return p && p.groupMeta && p.groupMeta.groupId === window.activeEditingGroupId;
+                    } catch(e) { return false; }
+                });
+            }
+
+            // Fallback falls Datensatz älter ist und keine groupId besaß
+            if (linkedRecords.length === 0 && window.activeEditingRecordId) {
+                const targetRec = window.loadedRecords.find(r => r.id === window.activeEditingRecordId);
+                if (targetRec) {
+                    const targetName = targetRec.fields.Auftrag;
+                    linkedRecords = window.loadedRecords.filter(r => r.fields.Auftrag === targetName || r.id === window.activeEditingRecordId);
+                }
+            }
+
+            let existingSnapshots = [];
+            for (const r of linkedRecords) {
                 try {
                     const p = JSON.parse(r.fields.Fremdkosten_Details);
-                    return p && p.groupMeta && p.groupMeta.groupId === calcGroupId;
-                } catch(e) { return false; }
-            });
+                    if (p && p.groupMeta) {
+                        const sn = p.groupMeta.snapshots || (p.groupMeta.snapshot ? [p.groupMeta.snapshot] : []);
+                        if (sn.length > existingSnapshots.length) {
+                            existingSnapshots = sn;
+                        }
+                    }
+                } catch(e) {}
+            }
 
+            const newVersionNum = existingSnapshots.length + 1;
+            if (btn) { btn.disabled = true; btn.textContent = "Speichere Version v" + newVersionNum + "..."; }
+
+            const newSnapshot = {
+                version: newVersionNum,
+                timestamp: new Date().toISOString(),
+                user: window.currentUserEmail || "Unbekannt",
+                kalkInputs: kalkInputs,
+                projName: projName,
+                projOffer: getVal('proj-offer'),
+                projInvoice: getVal('proj-invoice'),
+                projNotes: getVal('proj-notes'),
+                resultsTableHtml: document.getElementById('results-table-wrap').innerHTML
+            };
+
+            const updatedSnapshots = [...existingSnapshots, newSnapshot];
             const updates = [];
-
-            // Update für die beteiligten Firmen durchführen
             const handledCompanies = new Set();
 
             for (const rec of linkedRecords) {
@@ -581,7 +587,7 @@ window.saveMNAUOrderToLog = async function() {
                     ]
                 });
 
-                const isMain = comp === myCompany;
+                const isMain = (comp === myCompany);
                 const groupMeta = {
                     groupId: calcGroupId,
                     isReadOnlyShare: !isMain,
@@ -595,6 +601,14 @@ window.saveMNAUOrderToLog = async function() {
 
                 const updatedDetails = JSON.stringify({ suppliers: compSuppliers, groupMeta: groupMeta });
 
+                // SOFORT IM LOKALEN SPEICHER UPDATEN
+                rec.fields.Auftrag = orderTitle;
+                rec.fields.Betrag_Automotive = compUmsatz;
+                rec.fields.Fremdkosten = Math.round(compFremdkosten * 100) / 100;
+                rec.fields.Fremdkosten_Details = updatedDetails;
+                rec.fields.Flagged = true;
+                rec.fields.Changelog = JSON.stringify(existingChangelog);
+
                 updates.push({
                     id: rec.id,
                     fields: {
@@ -603,12 +617,12 @@ window.saveMNAUOrderToLog = async function() {
                         "Fremdkosten": Math.round(compFremdkosten * 100) / 100,
                         "Fremdkosten_Details": updatedDetails,
                         "Flagged": true,
-                        "Changelog": JSON.stringify(existingChangelog)
+                        "Changelog": rec.fields.Changelog
                     }
                 });
             }
 
-            // Falls eine Schwesterfirma durch die Neuberechnung neu hinzugekommen ist: POST
+            // Falls Firmen neu hinzugekommen sind
             const newCompanyRecordsToCreate = [];
             Object.entries(allSharesDetail).forEach(([comp, amt]) => {
                 if (!handledCompanies.has(comp) && amt > 0) {
@@ -630,7 +644,7 @@ window.saveMNAUOrderToLog = async function() {
                 }
             });
 
-            // Updates absenden
+            // Airtable Batch Updates durchführen
             for (let i = 0; i < updates.length; i += 10) {
                 const batch = updates.slice(i, i + 10);
                 await window.API.batchUpdateOrders(batch);
@@ -640,19 +654,32 @@ window.saveMNAUOrderToLog = async function() {
                 await window.API.saveOrder({ records: newCompanyRecordsToCreate });
             }
 
-            // Lokalen state nachladen und aufräumen
             window.cancelKalkulatorEdit();
-            await fetchOrders(); // Lädt die frischen Daten komplett aus Airtable
-            alert(`Erfolg! Neue Version v${newVersionNum} für "${orderTitle}" wurde im Log erfasst.`);
+            if (typeof window.applyFilters === 'function') window.applyFilters();
+            alert(`Erfolg! Neue Version v${newVersionNum} für "${orderTitle}" wurde erfasst.`);
 
         } else {
-            // ===== 2. ERSTSTELLUNG MODUS: NEUES PROJEKT ANLEGEN =====
+            // ===== 2. ERSTSTELLUNG MODUS =====
+            if (btn) { btn.disabled = true; btn.textContent = "Speichere Version v1..."; }
+
+            const newSnapshot = {
+                version: 1,
+                timestamp: new Date().toISOString(),
+                user: window.currentUserEmail || "Unbekannt",
+                kalkInputs: kalkInputs,
+                projName: projName,
+                projOffer: getVal('proj-offer'),
+                projInvoice: getVal('proj-invoice'),
+                projNotes: getVal('proj-notes'),
+                resultsTableHtml: document.getElementById('results-table-wrap').innerHTML
+            };
+
             const recordsToCreate = [];
             const INITIAL_STATUS = "In Bearbeitung";
 
             const groupMetaMain = {
                 groupId: calcGroupId, originCompany: myCompany, kundenpreis: Math.round(kundenpreis * 100) / 100,
-                mngrAbgabe: Math.round(mngrAbgabe * 100) / 100, allSharesDetail: allSharesDetail, snapshots: updatedSnapshots
+                mngrAbgabe: Math.round(mngrAbgabe * 100) / 100, allSharesDetail: allSharesDetail, snapshots: [newSnapshot]
             };
 
             const initialChangelog = [{
@@ -668,7 +695,7 @@ window.saveMNAUOrderToLog = async function() {
                 if (comp !== myCompany && amt > 0) {
                     const compSuppliers = getSuppliersForCompany(comp);
                     const compFremdkosten = compSuppliers.reduce((s, item) => s + item.amount, 0);
-                    const shareGroupMeta = { groupId: calcGroupId, isReadOnlyShare: true, originCompany: myCompany, originProject: projName, kundenpreis: Math.round(kundenpreis * 100) / 100, mngrAbgabe: Math.round(mngrAbgabe * 100) / 100, allSharesDetail: allSharesDetail, snapshots: updatedSnapshots };
+                    const shareGroupMeta = { groupId: calcGroupId, isReadOnlyShare: true, originCompany: myCompany, originProject: projName, kundenpreis: Math.round(kundenpreis * 100) / 100, mngrAbgabe: Math.round(mngrAbgabe * 100) / 100, allSharesDetail: allSharesDetail, snapshots: [newSnapshot] };
                     const shareChangelog = [{
                         user: window.currentUserEmail || "Unbekannt", timestamp: new Date().toISOString(), action: "Erlösanteil aus Group Kalkulator erfasst", comment: `Automatisch von ${myCompany} für ${comp} angelegt`,
                         details: [`Erlösanteil für ${comp} aus Projekt "${projName}" (${myCompany}):`, `• Anteil ${comp}: € ${amt.toFixed(2)}`]
@@ -683,11 +710,8 @@ window.saveMNAUOrderToLog = async function() {
             if (createdData && createdData.records && createdData.records.length > 0) {
                 createdData.records.forEach(r => window.loadedRecords.unshift(r));
                 window.UI.updateSupplierDatalist();
-
                 window.cancelKalkulatorEdit();
                 if (typeof window.applyFilters === 'function') window.applyFilters();
-                else window.UI.renderOrders(window.loadedRecords);
-
                 alert(`Erfolg! ${createdData.records.length} Auftrag/Aufträge (Version v1) im Log erfasst.`);
             }
         }
@@ -717,7 +741,6 @@ window.downloadKalkulatorPDFFromLog = function(recordId, snapshotIndex = null) {
     const snapshots = groupMeta.snapshots || (groupMeta.snapshot ? [groupMeta.snapshot] : []);
     if (snapshots.length === 0) { alert("Keine PDF-Snapshots gefunden."); return; }
 
-    // Verwende angefragten Index oder standardmäßig die neueste Version
     const targetIndex = (snapshotIndex !== null && snapshotIndex >= 0 && snapshotIndex < snapshots.length)
         ? snapshotIndex
         : (snapshots.length - 1);
@@ -775,7 +798,7 @@ window.downloadKalkulatorPDFFromLog = function(recordId, snapshotIndex = null) {
         </div>
         
         <div class="pdf-meta">
-            ${field('Projekt', snap.projName || 'Nicht angegeben')}
+            ${field('Projekt', snap.projName || record.fields.Auftrag || 'Nicht angegeben')}
             ${field('Angebot', snap.projOffer)}
             ${field('Rechnung', snap.projInvoice)}
             ${field('Version', versionTag)}
@@ -831,12 +854,11 @@ window.resetAll = function(){
     const resultsSec = document.getElementById('results-section');
     if(resultsSec) resultsSec.style.display='none';
 
-    // HARTES ZURÜCKSETZEN DES BEARBEITUNGS-MODUS AUCH BEIM "RESET"-KLICK
     window.activeEditingGroupId = null;
+    window.activeEditingRecordId = null;
     const banner = document.getElementById('kalk-edit-banner');
     if (banner) banner.classList.add('hidden');
 
-    // Button Status resetten falls abgebrochen
     const btnSave = document.getElementById('btn-save-to-log');
     if (btnSave) {
         const myCompany = window.currentUserCompany || "MNAU";

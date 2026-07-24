@@ -179,8 +179,9 @@ window.openInKalkulator = function(recordId) {
     // Lade Saved Inputs in den Kalkulator
     window.loadKalkulatorInputs(latestSnap.kalkInputs);
 
-    // Setze globale Bearbeitungs-ID
-    window.activeEditingGroupId = groupMeta.groupId || ("legacy_" + recordId);
+    // Setze globale Bearbeitungs-IDs
+    window.activeEditingGroupId = groupMeta.groupId || null;
+    window.activeEditingRecordId = recordId;
 
     // Zeige Bearbeitungs-Banner im Kalkulator
     const banner = document.getElementById('kalk-edit-banner');
@@ -190,7 +191,6 @@ window.openInKalkulator = function(recordId) {
         banner.classList.remove('hidden');
     }
 
-    // Tab wechseln
     window.switchTab('calculator');
     window.calculate();
 };
@@ -199,16 +199,16 @@ window.openInKalkulator = function(recordId) {
 // BEARBEITUNG ABBRECHEN
 // ====================================================
 window.cancelKalkulatorEdit = function() {
-    window.activeEditingGroupId = null; // Status zurücksetzen
+    window.activeEditingGroupId = null;
+    window.activeEditingRecordId = null;
 
     const banner = document.getElementById('kalk-edit-banner');
     if (banner) banner.classList.add('hidden');
 
     if (typeof window.resetAll === 'function') {
-        window.resetAll(); // Leert den Kalkulator
+        window.resetAll();
     }
 
-    // Springt zurück ins Auftrags-Log
     window.switchTab('billing');
 };
 
@@ -433,7 +433,7 @@ window.deleteSupplier = async function(supplierId, supplierName) {
     }
 };
 
-// AUFTRAG LÖSCHEN (INKL. KASKADIERENDEM LÖSCHEN ALLER SCHWESTERFIRMEN-EINTRÄGE)
+// AUFTRAG LÖSCHEN
 window.deleteOrder = async function(recordId) {
     const targetRecord = window.loadedRecords.find(r => r.id === recordId);
     if (!targetRecord) return;

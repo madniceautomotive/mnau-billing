@@ -26,7 +26,10 @@ window.globalSuppliers = [];
 window.currentUserEmail = "Unbekannt";
 window.currentUserCompanies = ["MNAU"];
 window.currentUserCompany = "MNAU";
-window.activeEditingGroupId = null; // Verfolgt aktives Projekt im Kalkulator
+
+// Verfolgung des aktiven Projekts im Edit-Modus
+window.activeEditingGroupId = null;
+window.activeEditingRecordId = null;
 
 // Globale DOM-Schnittstellen
 window.DOM = {
