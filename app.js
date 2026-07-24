@@ -4,6 +4,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
 
+    // Neues Projekt anlegen Modal öffnen
     if (window.DOM.btnNewOrder) {
         window.DOM.btnNewOrder.addEventListener('click', () => {
             document.getElementById('supplier-container').innerHTML = '';
@@ -13,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Neues Projekt Modal abbrechen
     if (window.DOM.btnCancel) {
         window.DOM.btnCancel.addEventListener('click', () => {
             window.DOM.modal.classList.add('hidden');
@@ -20,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Lieferanten-Verwaltung Modal
     if (window.DOM.btnManageSuppliers) {
         window.DOM.btnManageSuppliers.addEventListener('click', () => {
             window.UI.renderSuppliersManager();
@@ -27,9 +30,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     if (window.DOM.btnCloseSuppliers) {
-        window.DOM.btnCloseSuppliers.addEventListener('click', () => window.DOM.modalSuppliers.classList.add('hidden'));
+        window.DOM.btnCloseSuppliers.addEventListener('click', () => {
+            window.DOM.modalSuppliers.classList.add('hidden');
+        });
     }
 
+    // Formular: Neuen Auftrag an Airtable senden
     if (window.DOM.formNewOrder) {
         window.DOM.formNewOrder.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -47,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
+            // 1. Unbekannte Lieferanten in Datenbank speichern
             const newSuppliersToSave = [];
             suppliers.forEach(s => {
                 const alreadyExists = window.globalSuppliers.some(g => g.name.toLowerCase() === s.name.toLowerCase());
@@ -69,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            // 2. Auftragsobjekt vorbereiten
             const totalFremdkosten = window.UI.calculateTotalFremdkosten();
             const suppliersJSON = JSON.stringify(suppliers);
 
@@ -84,13 +92,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }]
             };
 
+            // 3. Speichern und DOM Update ohne Fetch (Zero-Refetch)
             try {
-                // Senden & Antwort direkt lokal verwenden (KEIN neuer GET-Call!)
                 const createdData = await window.API.saveOrder(payload);
                 if (createdData && createdData.records && createdData.records.length > 0) {
-                    window.loadedRecords.unshift(createdData.records[0]); // An den Anfang der Liste schieben
+                    window.loadedRecords.unshift(createdData.records[0]); // Oben ins Array schieben
                     window.UI.updateSupplierDatalist();
-                    window.UI.renderOrders(window.loadedRecords);
+                    window.UI.renderOrders(window.loadedRecords); // UI weich aktualisieren
                 }
                 window.DOM.modal.classList.add('hidden');
                 window.DOM.formNewOrder.reset();
@@ -100,9 +108,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Neuer Lieferanten-Reihe hinzufügen (im Modal)
     const btnAddSupplier = document.getElementById('btn-add-supplier');
-    if (btnAddSupplier) btnAddSupplier.addEventListener('click', () => window.UI.addSupplierRow());
+    if (btnAddSupplier) {
+        btnAddSupplier.addEventListener('click', () => window.UI.addSupplierRow());
+    }
 
+    // Live-Suche
     if (window.DOM.searchInput) {
         window.DOM.searchInput.addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase().trim();
@@ -117,6 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Suche löschen
     if (window.DOM.searchClearBtn) {
         window.DOM.searchClearBtn.addEventListener('click', () => {
             window.DOM.searchInput.value = '';
@@ -126,6 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Airtable Keys zurücksetzen
     const btnResetKeys = document.getElementById('btn-reset-keys');
     if (btnResetKeys) {
         btnResetKeys.addEventListener('click', () => {
@@ -137,10 +151,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    fetchOrders();
+    // HINWEIS: fetchOrders() fehlt hier absichtlich!
+    // Die App wartet stattdessen auf das grüne Licht von Firebase in auth.js.
 });
 
-// Nur beim allerersten Öffnen der App aufrufen!
+// Haupt-Laderoutine: Zieht sich alle Daten aus Airtable
 async function fetchOrders() {
     if (!window.AIRTABLE_TOKEN || !window.BASE_ID) {
         window.UI.showSetupRequired();
@@ -191,10 +206,9 @@ window.changeOrderStatus = async function(recordId, newStatus) {
 
     try {
         await window.API.updateOrderStatus(recordId, newStatus);
-        // Kein Re-Fetch notwendig! Der lokale Speicher ist bereits korrekt.
     } catch (error) {
         alert("Fehler beim Status-Update.");
-        fetchOrders(); // Nur im echten Fehlerfall als Fallback neu laden
+        fetchOrders(); // Im echten Fehlerfall als Fallback neu laden
     }
 };
 
@@ -215,7 +229,6 @@ window.toggleSupplierPaid = async function(orderId, supplierIndex) {
             headers: window.HEADERS,
             body: JSON.stringify({ fields: { "Fremdkosten_Details": record.fields.Fremdkosten_Details } })
         });
-        // Kein Re-Fetch notwendig!
     } catch (error) {
         alert("Fehler beim Aktualisieren des Lieferanten-Zahlungsstatus.");
         fetchOrders();
@@ -253,18 +266,17 @@ window.bulkPaySupplier = async function(supplierName) {
     window.UI.renderOrders(window.loadedRecords);
 
     try {
-        // Updates in 10er-Blöcke teilen und per Batch-PATCH schicken
         for (let i = 0; i < updates.length; i += 10) {
             const batch = updates.slice(i, i + 10);
             await window.API.batchUpdateOrders(batch);
         }
-        // Kein Re-Fetch notwendig!
     } catch (error) {
         alert("Massen-Update fehlgeschlagen.");
         fetchOrders();
     }
 };
 
+// Lieferant dauerhaft löschen
 window.deleteSupplier = async function(supplierId, supplierName) {
     if (!confirm(`Möchtest du "${supplierName}" dauerhaft aus der Lieferanten-Datenbank löschen?`)) return;
 
@@ -279,6 +291,7 @@ window.deleteSupplier = async function(supplierId, supplierName) {
     }
 };
 
+// Auftrag dauerhaft löschen
 window.deleteOrder = async function(recordId) {
     if (!confirm("Auftrag wirklich dauerhaft löschen?")) return;
 
@@ -295,6 +308,7 @@ window.deleteOrder = async function(recordId) {
     }
 };
 
+// Airtable Setup-Prompt
 window.triggerSetup = function() {
     const tokenInput = prompt("Einrichtung: Airtable Token (pat...):");
     const baseIdInput = prompt("Einrichtung: Airtable Base-ID (app...):");
@@ -303,4 +317,10 @@ window.triggerSetup = function() {
         localStorage.setItem('MNAU_BASE_ID', baseIdInput.trim());
         location.reload();
     }
+};
+
+// 🔐 FIREBASE TRIGGER:
+// Diese Funktion wird in der auth.js aufgerufen, sobald der Tresor erfolgreich entsperrt wurde.
+window.initMNAUApp = function() {
+    fetchOrders();
 };

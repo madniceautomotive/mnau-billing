@@ -4,84 +4,87 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MNAU Billing Terminal</title>
-    <!-- CSS-Module -->
     <link rel="stylesheet" href="style-core.css">
     <link rel="stylesheet" href="style-billing.css">
 </head>
 <body>
-<div id="database-view">
+<!-- DER SICHERHEITS-TRESOR (Login-Overlay) -->
+<div id="auth-overlay" class="auth-overlay">
+    <div class="modal-card">
+        <h2 id="auth-title">MNAU Login</h2>
+        <form id="auth-form">
+            <label>E-Mail Adresse</label>
+            <input type="email" id="auth-email" class="mnau-input" required placeholder="team@mnau.com">
 
+            <label>Passwort</label>
+            <input type="password" id="auth-password" class="mnau-input" required placeholder="••••••••">
+
+            <div id="auth-error" style="color:#e74c3c; font-size:0.8rem; margin-top:12px; display:none; font-weight:600;"></div>
+
+            <div class="modal-actions" style="flex-direction: column; gap: 10px;">
+                <button type="submit" id="btn-auth-submit" class="btn-primary" style="width:100%; justify-content:center; padding: 12px;">Anmelden</button>
+                <button type="button" id="btn-auth-toggle" class="btn-secondary" style="width:100%; border:none; background:transparent;">Noch keinen Account? Registrieren</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- DIE EIGENTLICHE APP -->
+<div id="database-view">
     <header class="database-header">
         <div class="header-main-row">
             <h1>MNAU <span>Billing</span></h1>
             <div style="display: flex; gap: 10px; align-items: center;">
-                <!-- Lieferanten verwalten -->
                 <button id="btn-manage-suppliers" class="sort-icon-btn" title="Lieferanten-Datenbank verwalten">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
                 </button>
-                <!-- Key Reset -->
-                <button id="btn-reset-keys" class="sort-icon-btn" title="Zugangsdaten zurücksetzen">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M12.65 10A5.99 5.99 0 0 0 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6a5.99 5.99 0 0 0 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
-                    </svg>
+                <button id="btn-reset-keys" class="sort-icon-btn" title="Airtable-Keys zurücksetzen">
+                    <svg viewBox="0 0 24 24"><path d="M12.65 10A5.99 5.99 0 0 0 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6a5.99 5.99 0 0 0 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
+                </button>
+                <!-- NEU: Logout Button -->
+                <button id="btn-logout" class="sort-icon-btn" title="Abmelden" style="border-color: rgba(231, 76, 60, 0.4); color: #e74c3c;">
+                    <svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
                 </button>
                 <button id="btn-new-order" class="btn-primary">+ Neuer Auftrag</button>
             </div>
         </div>
-
         <div class="header-controls-row">
             <div class="search-group">
                 <input type="text" id="search-input" class="search-input" placeholder="Nach Auftrag, Betrag oder Lieferant suchen...">
-                <button id="search-clear-btn" class="search-clear-btn">
-                    <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-                </button>
+                <button id="search-clear-btn" class="search-clear-btn"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
             </div>
         </div>
     </header>
-
     <main class="manager-content">
         <div id="loading" class="spinner hidden"></div>
-
         <div id="dashboard-summary" class="dashboard-summary"></div>
-
         <div class="section-divider mnau-divider">AUFTRAGS_LOG</div>
         <div id="order-list"></div>
-
         <div class="section-divider red-divider">OFFENE_LIEFERANTEN_POSTEN</div>
         <div id="supplier-summary-details" class="supplier-summary-details"></div>
-
-        <!-- NEU: Einklappbarer Archiv Block für bezahlte Projekte -->
         <details class="archive-details">
             <summary class="section-divider archive-divider">ARCHIV_LOG (BEZAHLT)</summary>
             <div id="archive-list"></div>
         </details>
     </main>
-
 </div>
 
-<!-- Modal: Neuer Auftrag -->
+<!-- Modals -->
 <div id="modal-overlay" class="modal-overlay hidden">
     <div class="modal-card">
         <h2>Neuen Auftrag erfassen</h2>
         <form id="form-new-order">
             <label>Auftragsname / Projekt</label>
             <input type="text" id="input-name" class="mnau-input" required placeholder="z.B. Porsche GW Shooting">
-
             <label>Betrag Automotive (Netto EUR)</label>
             <input type="number" step="0.01" id="input-betrag" class="mnau-input" required placeholder="0.00">
-
             <label>Fremdkosten & Lieferanten (EUR)</label>
             <div id="supplier-container" class="supplier-container"></div>
-
             <div class="supplier-actions">
                 <button type="button" id="btn-add-supplier" class="btn-secondary btn-small">+ Weiteren Lieferanten</button>
                 <div class="supplier-total">Summe: <br>€ <span id="display-total-fremdkosten">0.00</span></div>
             </div>
-
             <datalist id="supplier-list"></datalist>
-
             <div class="modal-actions">
                 <button type="button" id="btn-cancel" class="btn-secondary">Abbrechen</button>
                 <button type="submit" class="btn-primary">Speichern</button>
@@ -90,7 +93,6 @@
     </div>
 </div>
 
-<!-- Modal: Lieferanten-Datenbank Verwalten -->
 <div id="modal-suppliers-overlay" class="modal-overlay hidden">
     <div class="modal-card">
         <h2>Lieferanten-Datenbank</h2>
@@ -106,5 +108,8 @@
 <script src="api.js"></script>
 <script src="ui.js"></script>
 <script src="app.js"></script>
+
+<!-- NEU: Das Auth Modul (Muss als type="module" geladen werden!) -->
+<script type="module" src="auth.js"></script>
 </body>
 </html>
