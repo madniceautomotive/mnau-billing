@@ -34,33 +34,67 @@ window.UI = {
                 const fields = record.fields;
                 const id = record.id;
                 const status = fields.Status || "Zu verrechnen";
-                const betrag = fields.Betrag_Automotive ? fields.Betrag_Automotive.toFixed(2) : "0.00";
-                const fremdkosten = fields.Fremdkosten ? fields.Fremdkosten.toFixed(2) : "0.00";
+                const betragVal = parseFloat(fields.Betrag_Automotive) || 0;
+                const fremdkostenVal = parseFloat(fields.Fremdkosten) || 0;
+                const deckungsbeitragVal = betragVal - fremdkostenVal;
+
+                const betrag = betragVal.toFixed(2);
+                const fremdkosten = fremdkostenVal.toFixed(2);
+                const deckungsbeitrag = deckungsbeitragVal.toFixed(2);
 
                 // Flagged Badge
                 const isFlagged = fields.Flagged === true;
                 const flagBadgeHTML = isFlagged ? `<span class="flag-badge">🚩 Geändert</span>` : '';
 
-                let breakdownHTML = '';
+                let suppliers = [];
+                let groupMeta = null;
+
                 if (fields.Fremdkosten_Details) {
                     try {
-                        const details = JSON.parse(fields.Fremdkosten_Details);
-                        if (details.length > 0) {
-                            breakdownHTML = `<div class="breakdown-container">`;
-                            details.forEach((d, dIdx) => {
-                                const isPaid = d.paid === true;
-                                breakdownHTML += `
-                                    <div class="breakdown-row ${isPaid ? 'supplier-paid' : ''}" 
-                                         onclick="window.toggleSupplierPaid('${id}', ${dIdx})" 
-                                         title="Klicken zum Umschalten (Bezahlt / Offen)">
-                                        <span>↳ ${d.name} ${isPaid ? '✓' : '◯'}</span>
-                                        <span>€ ${d.amount.toFixed(2)}</span>
-                                    </div>
-                                `;
-                            });
-                            breakdownHTML += `</div>`;
+                        const parsed = JSON.parse(fields.Fremdkosten_Details);
+                        if (Array.isArray(parsed)) {
+                            suppliers = parsed;
+                        } else if (parsed && typeof parsed === 'object') {
+                            suppliers = parsed.suppliers || [];
+                            groupMeta = parsed.groupMeta || null;
                         }
                     } catch(e) {}
+                }
+
+                // Echte MNAU Fremdkosten Breakdown (Checkboxen)
+                let breakdownHTML = '';
+                if (suppliers.length > 0) {
+                    breakdownHTML = `<div class="breakdown-container">`;
+                    suppliers.forEach((d, dIdx) => {
+                        const isPaid = d.paid === true;
+                        breakdownHTML += `
+                            <div class="breakdown-row ${isPaid ? 'supplier-paid' : ''}" 
+                                 onclick="window.toggleSupplierPaid('${id}', ${dIdx})" 
+                                 title="Klicken zum Umschalten (Bezahlt / Offen)">
+                                <span>↳ ${d.name} ${isPaid ? '✓' : '◯'}</span>
+                                <span>€ ${(parseFloat(d.amount)||0).toFixed(2)}</span>
+                            </div>
+                        `;
+                    });
+                    breakdownHTML += `</div>`;
+                }
+
+                // Group Erlös-Info Box (Transparenz über Gesamtprojekt & Schwesterfirmen)
+                let groupMetaHTML = '';
+                if (groupMeta) {
+                    const kp = (parseFloat(groupMeta.kundenpreis)||0).toFixed(2);
+                    const mngr = (parseFloat(groupMeta.mngrAbgabe)||0).toFixed(2);
+                    const sisters = (parseFloat(groupMeta.sisterShares)||0).toFixed(2);
+
+                    groupMetaHTML = `
+                        <div class="group-info-box">
+                            <div class="group-info-header">🌐 Group Erlösverteilung</div>
+                            <div class="group-info-row"><span>Gesamt Projektvolumen:</span><strong>€ ${kp}</strong></div>
+                            <div class="group-info-row"><span>Group-Abgabe (MNGR):</span><span>€ ${mngr}</span></div>
+                            <div class="group-info-row"><span>Anteile Schwesterfirmen:</span><span>€ ${sisters}</span></div>
+                            <div class="group-info-note">*(Direkt über Group abgewickelt – keine MNAU Fremdkosten)</div>
+                        </div>
+                    `;
                 }
 
                 let cardStatusClass = "status-zu-verrechnen";
@@ -71,11 +105,17 @@ window.UI = {
                     <div class="billing-info-block">
                         <div class="billing-row-title">${fields.Auftrag || "Unbenannt"} ${flagBadgeHTML}</div>
                         <div class="billing-row-meta">Erstellt: ${new Date(record.createdTime).toLocaleDateString('de-DE')}</div>
+                        ${groupMetaHTML}
                     </div>
                     
                     <div class="billing-financials">
-                        <div class="amount-main">€ ${betrag}</div>
-                        <div class="amount-fremdkosten">Gesamt Fremdkosten: € ${fremdkosten}</div>
+                        <div class="amount-main" title="MNAU Umsatz (Abrechnung an Group)">
+                            <span class="amount-title-label">MNAU Umsatz:</span> € ${betrag}
+                        </div>
+                        <div class="amount-deckungsbeitrag" title="Netto-Ertrag für MNAU nach echten Fremdkosten">
+                            <span class="amount-title-label">Deckungsbeitrag:</span> € ${deckungsbeitrag}
+                        </div>
+                        ${fremdkostenVal > 0 ? `<div class="amount-fremdkosten">MNAU Fremdkosten: € ${fremdkosten}</div>` : ''}
                         ${breakdownHTML}
                     </div>
                     
@@ -134,6 +174,8 @@ window.UI = {
             if (status === "An Group verrechnet") sumAnGroup += betrag;
         });
 
+        const sumDeckungsbeitrag = sumAutomotiveGesamt - sumFremdkosten;
+
         const summaryContainer = document.getElementById('dashboard-summary');
         if(!summaryContainer) return;
 
@@ -141,6 +183,10 @@ window.UI = {
             <div class="summary-card green">
                 <span class="summary-label">MNAU Umsatz Gesamt</span>
                 <span class="summary-value">€ ${sumAutomotiveGesamt.toFixed(2)}</span>
+            </div>
+            <div class="summary-card blue">
+                <span class="summary-label">MNAU Deckungsbeitrag</span>
+                <span class="summary-value">€ ${sumDeckungsbeitrag.toFixed(2)}</span>
             </div>
             <div class="summary-card red">
                 <span class="summary-label">Zu verrechnen</span>
@@ -151,7 +197,7 @@ window.UI = {
                 <span class="summary-value">€ ${sumAnGroup.toFixed(2)}</span>
             </div>
             <div class="summary-card orange">
-                <span class="summary-label">Fremdkosten Gesamt</span>
+                <span class="summary-label">Echte Fremdkosten</span>
                 <span class="summary-value">€ ${sumFremdkosten.toFixed(2)}</span>
             </div>
         `;
@@ -167,7 +213,9 @@ window.UI = {
             const orderName = fields.Auftrag || "Unbenanntes Projekt";
             if (fields.Fremdkosten_Details) {
                 try {
-                    const details = JSON.parse(fields.Fremdkosten_Details);
+                    const parsed = JSON.parse(fields.Fremdkosten_Details);
+                    const details = Array.isArray(parsed) ? parsed : (parsed.suppliers || []);
+
                     details.forEach((d, dIdx) => {
                         const name = (d.name || "Unbekannt").trim();
                         const amount = parseFloat(d.amount) || 0;
@@ -191,7 +239,7 @@ window.UI = {
                     <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
                     <div class="no-debts-text">
                         <h3>Keine offenen Posten</h3>
-                        <p>Alle Lieferantenkosten wurden vollständig beglichen.</p>
+                        <p>Alle MNAU-Lieferantenkosten wurden vollständig beglichen.</p>
                     </div>
                 </div>
             `;
@@ -237,7 +285,8 @@ window.UI = {
         window.loadedRecords.forEach(record => {
             if (record.fields.Fremdkosten_Details) {
                 try {
-                    const details = JSON.parse(record.fields.Fremdkosten_Details);
+                    const parsed = JSON.parse(record.fields.Fremdkosten_Details);
+                    const details = Array.isArray(parsed) ? parsed : (parsed.suppliers || []);
                     details.forEach(d => { if (d.name && d.name.trim() !== '') uniqueSuppliers.add(d.name.trim()); });
                 } catch (e) {}
             }

@@ -94,13 +94,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let existingRecord = null;
             let existingDetails = [];
+            let existingGroupMeta = null;
             let existingChangelog = [];
 
             if (editId) {
                 existingRecord = window.loadedRecords.find(r => r.id === editId);
                 if (existingRecord) {
                     if (existingRecord.fields.Fremdkosten_Details) {
-                        try { existingDetails = JSON.parse(existingRecord.fields.Fremdkosten_Details); } catch(e) {}
+                        try {
+                            const parsed = JSON.parse(existingRecord.fields.Fremdkosten_Details);
+                            if (Array.isArray(parsed)) {
+                                existingDetails = parsed;
+                            } else if (parsed && typeof parsed === 'object') {
+                                existingDetails = parsed.suppliers || [];
+                                existingGroupMeta = parsed.groupMeta || null;
+                            }
+                        } catch(e) {}
                     }
                     if (existingRecord.fields.Changelog) {
                         try { existingChangelog = JSON.parse(existingRecord.fields.Changelog); } catch(e) {}
@@ -140,7 +149,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 2. Auftragsobjekt vorbereiten
             const totalFremdkosten = window.UI.calculateTotalFremdkosten();
-            const suppliersJSON = JSON.stringify(suppliers);
+
+            // Behält bestehende GroupMeta bei, falls vorhanden
+            const suppliersPayload = existingGroupMeta ? { suppliers: suppliers, groupMeta: existingGroupMeta } : suppliers;
+            const suppliersJSON = JSON.stringify(suppliersPayload);
 
             if (editId) {
                 // -> UPDATE MODUS
@@ -306,7 +318,8 @@ window.openEditModal = function(recordId) {
 
     if (record.fields.Fremdkosten_Details) {
         try {
-            const details = JSON.parse(record.fields.Fremdkosten_Details);
+            const parsed = JSON.parse(record.fields.Fremdkosten_Details);
+            const details = Array.isArray(parsed) ? parsed : (parsed.suppliers || []);
             details.forEach(d => {
                 window.UI.addSupplierRow(d.name, d.amount);
             });
@@ -384,7 +397,10 @@ window.toggleSupplierPaid = async function(orderId, supplierIndex) {
     if (!record || !record.fields.Fremdkosten_Details) return;
 
     try {
-        const details = JSON.parse(record.fields.Fremdkosten_Details);
+        const parsed = JSON.parse(record.fields.Fremdkosten_Details);
+        const isObjectFormat = !Array.isArray(parsed) && parsed.suppliers;
+        const details = isObjectFormat ? parsed.suppliers : parsed;
+
         const newState = !details[supplierIndex].paid;
         details[supplierIndex].paid = newState;
 
@@ -401,7 +417,11 @@ window.toggleSupplierPaid = async function(orderId, supplierIndex) {
             details: [`Betrag: € ${details[supplierIndex].amount.toFixed(2)}`]
         });
 
-        record.fields.Fremdkosten_Details = JSON.stringify(details);
+        const updatedDetailsPayload = isObjectFormat
+            ? JSON.stringify({ ...parsed, suppliers: details })
+            : JSON.stringify(details);
+
+        record.fields.Fremdkosten_Details = updatedDetailsPayload;
         record.fields.Flagged = true;
         record.fields.Changelog = JSON.stringify(changelog);
 
@@ -433,7 +453,10 @@ window.bulkPaySupplier = async function(supplierName) {
     window.loadedRecords.forEach(record => {
         if (record.fields.Fremdkosten_Details) {
             try {
-                const details = JSON.parse(record.fields.Fremdkosten_Details);
+                const parsed = JSON.parse(record.fields.Fremdkosten_Details);
+                const isObjectFormat = !Array.isArray(parsed) && parsed.suppliers;
+                const details = isObjectFormat ? parsed.suppliers : parsed;
+
                 let mutated = false;
 
                 details.forEach(d => {
@@ -454,7 +477,7 @@ window.bulkPaySupplier = async function(supplierName) {
                         details: []
                     });
 
-                    const jsonStr = JSON.stringify(details);
+                    const jsonStr = isObjectFormat ? JSON.stringify({ ...parsed, suppliers: details }) : JSON.stringify(details);
                     const logStr = JSON.stringify(changelog);
                     updates.push({ id: record.id, fields: { "Fremdkosten_Details": jsonStr, "Flagged": true, "Changelog": logStr } });
 

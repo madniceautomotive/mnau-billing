@@ -211,23 +211,25 @@ window.calculate = function(){
             const rate=getNum('hp-'+c);
             const hrs=rate>0?D[c]/rate:0;
             const pre=rate>0?`<span class="pct-badge">${vn(rate)} €</span>`:'';
-            return `<td class="val-zero">${pre}<span class="num-val">${vn(hrs)}</span></td>`;
+            return `<td class="val-zero">${pre}<span class="num-val">${vn(hrs)}</span></div></td>`;
         }).join('')+`</tr>`;
 
     h+='</tbody></table>';
     document.getElementById('results-table-wrap').innerHTML=h;
 
-    // NEUE MNAU KENNZAHLEN LOGIK
+    // MNAU PERSPKETIVE KENNZAHLEN
     const mnauUmsatz = summe['MNAU'] || 0;
     const mnauEchteFremdkosten = (FK['MNAU'] || 0) + (SP['MNAU'] || 0);
     const mnauErtrag = mnauUmsatz - mnauEchteFremdkosten;
-    const groupAndSisterShares = kundenpreis - mnauUmsatz;
+
+    const mngrAbgabe = summe['MNGR'] || 0;
+    const sisterShares = (summe['MNAG']||0) + (summe['MNMH']||0) + (summe['MNWB']||0) + (summe['MNAT']||0) + (summe['EXT']||0);
 
     document.getElementById('metrics').innerHTML=`
     <div class="metric highlight-main">
       <div class="ml">MNAU Umsatz (Zufluss)</div>
       <div class="mv">${fmt(mnauUmsatz)}</div>
-      <div class="sub-info">Abrechnung an Group</div>
+      <div class="sub-info">Verrechnung an Group</div>
     </div>
     <div class="metric highlight-profit">
       <div class="ml">MNAU Deckungsbeitrag</div>
@@ -246,7 +248,7 @@ window.calculate = function(){
     </div>
     <div class="metric">
       <div class="ml">Group &amp; Schwesterfirmen</div>
-      <div class="mv">${fmt(groupAndSisterShares)}</div>
+      <div class="mv">${fmt(mngrAbgabe + sisterShares)}</div>
       <div class="sub-info">Direkt abgewickelt v. Group</div>
     </div>
   `;
@@ -311,15 +313,15 @@ window.saveMNAUOrderToLog = async function() {
     });
     summe['MNGR'] += fkMNGR;
 
-    // MNAU Eigenanteil (das, was MNAU an die Group verrechnet)
-    const mnauBetrag = Math.round((summe['MNAU'] || 0) * 100) / 100;
+    // 1. MNAU Eigenanteil (das, was MNAU an die Group verrechnet)
+    const mnauUmsatz = Math.round((summe['MNAU'] || 0) * 100) / 100;
 
-    if (mnauBetrag <= 0) {
+    if (mnauUmsatz <= 0) {
         alert("Der MNAU-Umsatz beträgt 0.00 €. Es wurde kein Auftrag erfasst.");
         return;
     }
 
-    // Echte Fremdkosten nur von MNAU selbst (Lieferanten & Spesen)
+    // 2. Echte Fremdkosten NUR von MNAU selbst (Lieferanten & Spesen)
     const suppliers = [];
     const mnauFK = FK['MNAU'] || 0;
     const mnauSP = SP['MNAU'] || 0;
@@ -342,6 +344,16 @@ window.saveMNAUOrderToLog = async function() {
 
     const totalFremdkosten = suppliers.reduce((s, item) => s + item.amount, 0);
 
+    // 3. Group Meta (für den Info-Block im Auftrags-Log)
+    const mngrAbgabe = summe['MNGR'] || 0;
+    const sisterShares = (summe['MNAG']||0) + (summe['MNMH']||0) + (summe['MNWB']||0) + (summe['MNAT']||0) + (summe['EXT']||0);
+
+    const groupMeta = {
+        kundenpreis: Math.round(kundenpreis * 100) / 100,
+        mngrAbgabe: Math.round(mngrAbgabe * 100) / 100,
+        sisterShares: Math.round(sisterShares * 100) / 100
+    };
+
     const btn = document.getElementById('btn-save-to-log');
     if (btn) {
         btn.disabled = true;
@@ -353,23 +365,31 @@ window.saveMNAUOrderToLog = async function() {
             user: window.currentUserEmail || "Unbekannt",
             timestamp: new Date().toISOString(),
             action: "Auftrag aus Group Kalkulator erfasst",
-            comment: `Aus Group Kalkulator erfasst (Gesamt-Projektvolumen: € ${kundenpreis.toFixed(2)})`,
+            comment: `Aus Group Kalkulator erfasst`,
             details: [
                 `Auftrag "${orderTitle}" angelegt:`,
-                `• MNAU Umsatz (Abrechnung an Group): € ${mnauBetrag.toFixed(2)}`,
-                `• MNAU Echte Fremdkosten/Spesen: € ${totalFremdkosten.toFixed(2)}`,
-                `• MNAU Deckungsbeitrag: € ${(mnauBetrag - totalFremdkosten).toFixed(2)}`,
-                `• Total-Projektvolumen (Group): € ${kundenpreis.toFixed(2)}`
+                `• MNAU Umsatz (Verrechnung an Group): € ${mnauUmsatz.toFixed(2)}`,
+                `• MNAU Echte Fremdkosten: € ${totalFremdkosten.toFixed(2)}`,
+                `• MNAU Deckungsbeitrag: € ${(mnauUmsatz - totalFremdkosten).toFixed(2)}`,
+                `• Gesamt-Projektvolumen (Group): € ${kundenpreis.toFixed(2)}`,
+                `• Group-Abgabe (MNGR): € ${mngrAbgabe.toFixed(2)}`,
+                `• Anteile Schwesterfirmen: € ${sisterShares.toFixed(2)}`
             ]
         }];
+
+        // Paketiert Fremdkosten & Group Meta sauber in JSON
+        const detailsPayload = JSON.stringify({
+            suppliers: suppliers,
+            groupMeta: groupMeta
+        });
 
         const payload = {
             records: [{
                 fields: {
                     "Auftrag": orderTitle,
-                    "Betrag_Automotive": mnauBetrag,
+                    "Betrag_Automotive": mnauUmsatz,
                     "Fremdkosten": Math.round(totalFremdkosten * 100) / 100,
-                    "Fremdkosten_Details": JSON.stringify(suppliers),
+                    "Fremdkosten_Details": detailsPayload,
                     "Status": "An Group verrechnet",
                     "Flagged": false,
                     "Changelog": JSON.stringify(initialChangelog)
@@ -382,7 +402,7 @@ window.saveMNAUOrderToLog = async function() {
             window.loadedRecords.unshift(createdData.records[0]);
             window.UI.updateSupplierDatalist();
             window.UI.renderOrders(window.loadedRecords);
-            alert(`Erfolg! MNAU-Auftrag "${orderTitle}" über € ${mnauBetrag.toFixed(2)} wurde im Log erfasst.`);
+            alert(`Erfolg! MNAU-Auftrag "${orderTitle}" über € ${mnauUmsatz.toFixed(2)} wurde im Log erfasst.`);
 
             if (typeof window.switchTab === 'function') {
                 window.switchTab('billing');

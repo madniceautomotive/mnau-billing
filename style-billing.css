@@ -11,10 +11,11 @@
 .summary-card.yellow { border-bottom: 3px solid #f6e05e; }
 .summary-card.orange { border-bottom: 3px solid #ff7b00; }
 .summary-card.green { border-bottom: 3px solid #00ff73; }
+.summary-card.blue { border-bottom: 3px solid #00d2ff; }
 .summary-label { font-size: 0.65rem; color: #a0aec0; text-transform: uppercase; font-weight: 700; }
 .summary-value { font-size: 1.3rem; font-weight: 800; color: white; text-shadow: 0 0 10px rgba(255,255,255,0.1); }
 
-/* Billing Reihen (REPARIERT: Feste max-height entfernt, damit Mobile nicht abschneidet) */
+/* Billing Reihen */
 .billing-row {
     background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 16px; margin-bottom: 14px;
     display: flex; justify-content: space-between; align-items: center; gap: 16px;
@@ -29,9 +30,46 @@
 .billing-info-block { flex: 1; min-width: 0; }
 .billing-row-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 5px; color: white; }
 .billing-row-meta { font-size: 0.88rem; color: #a0aec0; }
+
 .billing-financials { text-align: right; }
-.amount-main { font-size: 1.2rem; font-weight: 800; color: #00ff73; }
+.amount-main { font-size: 1.25rem; font-weight: 800; color: #00ff73; }
+.amount-deckungsbeitrag { font-size: 0.92rem; font-weight: 700; color: #00d2ff; margin-top: 2px; }
+.amount-title-label { font-size: 0.72rem; color: #a0aec0; font-weight: 600; text-transform: uppercase; margin-right: 4px; }
 .amount-fremdkosten { font-size: 0.82rem; color: #e74c3c; margin-top: 2px; font-weight: 500; }
+
+/* Group Erlös-Info Badge/Box auf der Karte */
+.group-info-box {
+    margin-top: 10px;
+    background: rgba(0, 210, 255, 0.04);
+    border: 1px solid rgba(0, 210, 255, 0.2);
+    border-radius: 8px;
+    padding: 8px 12px;
+    max-width: 320px;
+    font-size: 0.75rem;
+}
+.group-info-header {
+    font-weight: 800;
+    color: #00d2ff;
+    text-transform: uppercase;
+    font-size: 0.68rem;
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+}
+.group-info-row {
+    display: flex;
+    justify-content: space-between;
+    color: #a0aec0;
+    margin-bottom: 2px;
+}
+.group-info-row strong {
+    color: #ffffff;
+}
+.group-info-note {
+    font-size: 0.65rem;
+    color: #666666;
+    font-style: italic;
+    margin-top: 4px;
+}
 
 .action-group { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 .alloc-row-badge { color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; text-transform: uppercase; font-weight: 800; text-align: center; }
