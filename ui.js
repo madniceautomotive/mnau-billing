@@ -1,11 +1,10 @@
 // ====================================================
-// ui.js: DOM RENDERING WITH MINIFIED / EXPANDABLE CARDS
+// ui.js: DOM RENDERING WITH SMOOTH EXPANDABLE ACCORDION CARDS
 // ====================================================
 
-// Globaler Toggle für das Aufklappen der Karten
 window.toggleCardExpand = function(recordId, event) {
     if (event && event.target.closest('.status-select, button, input, a, label')) {
-        return; // Verhindert Aufklappen, wenn man Status-Dropdowns oder Checkboxen anklickt
+        return;
     }
     const card = document.querySelector(`.billing-row[data-id="${recordId}"]`);
     if (card) {
@@ -207,9 +206,8 @@ window.UI = {
                     </button>
                 `;
 
-                // ERSTELLUNG DER AUFKLAPPBAREN MINI-KARTE
+                // WRAPPER FÜR NAHTLOSE CSS-GRID ANIMATION
                 const innerHTML = `
-                    <!-- 1. KOMPAKTE ZEILE (IMMER SICHTBAR) -->
                     <div class="oc-compact-bar" onclick="window.toggleCardExpand('${id}', event)">
                         <div class="oc-title-col">
                             <div class="oc-title">${fields.Auftrag || "Unbenannt"} ${flagBadgeHTML}</div>
@@ -232,42 +230,43 @@ window.UI = {
                         <div class="oc-toggle-icon" title="Details auf- / zuklappen">▼</div>
                     </div>
                     
-                    <!-- 2. EXPANDABLE CONTENT (NUR BEIM AUFKLAPPEN SICHTBAR) -->
-                    <div class="oc-expandable-content">
-                        ${readOnlyBanner}
-                        
-                        <div class="oc-metrics-bar">
-                            <div class="oc-metric-box">
-                                <span class="oc-metric-lbl">Umsatz (${myCompany})</span>
-                                <span class="oc-metric-val" style="color:var(--active-company-color);">€ ${betrag}</span>
+                    <div class="oc-expandable-wrapper">
+                        <div class="oc-expandable-content">
+                            ${readOnlyBanner}
+                            
+                            <div class="oc-metrics-bar">
+                                <div class="oc-metric-box">
+                                    <span class="oc-metric-lbl">Umsatz (${myCompany})</span>
+                                    <span class="oc-metric-val" style="color:var(--active-company-color);">€ ${betrag}</span>
+                                </div>
+                                <div class="oc-metric-box">
+                                    <span class="oc-metric-lbl">Deckungsbeitrag</span>
+                                    <span class="oc-metric-val" style="color:#00d2ff;">€ ${deckungsbeitrag}</span>
+                                </div>
+                                <div class="oc-metric-box">
+                                    <span class="oc-metric-lbl">Echte Fremdkosten</span>
+                                    <span class="oc-metric-val" style="color:#e74c3c;">€ ${fremdkosten}</span>
+                                </div>
                             </div>
-                            <div class="oc-metric-box">
-                                <span class="oc-metric-lbl">Deckungsbeitrag</span>
-                                <span class="oc-metric-val" style="color:#00d2ff;">€ ${deckungsbeitrag}</span>
-                            </div>
-                            <div class="oc-metric-box">
-                                <span class="oc-metric-lbl">Echte Fremdkosten</span>
-                                <span class="oc-metric-val" style="color:#e74c3c;">€ ${fremdkosten}</span>
-                            </div>
-                        </div>
 
-                        <div class="oc-details-grid">
-                            <div class="oc-detail-panel">
-                                <h5>Lieferanten & Spesen</h5>
-                                ${suppliersHTML}
+                            <div class="oc-details-grid">
+                                <div class="oc-detail-panel">
+                                    <h5>Lieferanten & Spesen</h5>
+                                    ${suppliersHTML}
+                                </div>
+                                <div class="oc-detail-panel">
+                                    <h5>Erlösverteilung (Kundenpreis: € ${kp})</h5>
+                                    ${groupMetaHTML}
+                                </div>
                             </div>
-                            <div class="oc-detail-panel">
-                                <h5>Erlösverteilung (Kundenpreis: € ${kp})</h5>
-                                ${groupMetaHTML}
-                            </div>
-                        </div>
-                        
-                        <div class="oc-footer">
-                            <div class="oc-footer-pdfs">
-                                ${pdfVersionsHTML ? `<span style="font-size:0.7rem; color:#64748b; font-weight:700; margin-right:4px;">PDFs:</span> ${pdfVersionsHTML}` : `<span style="font-size:0.7rem; color:#64748b;">Kein PDF generiert.</span>`}
-                            </div>
-                            <div class="oc-footer-actions" onclick="event.stopPropagation()">
-                                ${actionControlsHTML}
+                            
+                            <div class="oc-footer">
+                                <div class="oc-footer-pdfs">
+                                    ${pdfVersionsHTML ? `<span style="font-size:0.7rem; color:#64748b; font-weight:700; margin-right:4px;">PDFs:</span> ${pdfVersionsHTML}` : `<span style="font-size:0.7rem; color:#64748b;">Kein PDF generiert.</span>`}
+                                </div>
+                                <div class="oc-footer-actions" onclick="event.stopPropagation()">
+                                    ${actionControlsHTML}
+                                </div>
                             </div>
                         </div>
                     </div>

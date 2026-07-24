@@ -12,6 +12,43 @@
     --active-company-color: #00663a;
 }
 
+/* APP INIT LOADER (VERHINDERT DAS LOGIN-FLACKERN) */
+.app-init-loader {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: #0d0d0d;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+.app-init-loader.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+.loader-spinner {
+    width: 44px;
+    height: 44px;
+    border: 4px solid rgba(255, 255, 255, 0.08);
+    border-top-color: var(--active-company-color, #00ff73);
+    border-radius: 50%;
+    animation: appSpin 0.8s linear infinite;
+}
+.loader-text {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #a0aec0;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+@keyframes appSpin {
+    to { transform: rotate(360deg); }
+}
+
 /* FIRMEN-SPEZIFISCHE THEME-ADAPTION */
 [data-company="MNAG"] { --active-company-color: #ed694b; }
 [data-company="MNMH"] { --active-company-color: #d42168; }
@@ -93,7 +130,7 @@ form label {
 .summary-value { font-size: 1.2rem; font-weight: 800; color: white; text-shadow: 0 0 10px rgba(255,255,255,0.1); }
 
 /* ==================================================== */
-/* AUFTRAGS-KARTEN (MINIFIZIERT & ACCORDION EXPANDABLE) */
+/* AUFTRAGS-KARTEN ACCORDION ANIMATION                 */
 /* ==================================================== */
 .billing-row {
     background: #141414;
@@ -104,7 +141,7 @@ form label {
     display: flex;
     flex-direction: column;
     border-left: 5px solid var(--active-company-color);
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: background 0.2s, border-color 0.2s, opacity 0.3s;
     box-shadow: 0 4px 15px rgba(0,0,0,0.15);
 }
 .billing-row:hover {
@@ -118,7 +155,7 @@ form label {
 .billing-row.status-bezahlt { border-left-color: #00ff73; opacity: 0.65; }
 .billing-row.status-bezahlt:hover { opacity: 0.85; }
 
-/* Kompakte Kopfzeile (Klickbar für Expand) */
+/* Kompakte Kopfzeile */
 .oc-compact-bar {
     display: flex;
     align-items: center;
@@ -138,7 +175,6 @@ form label {
     display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
 }
 
-/* Kompakte Finanz-Anzeige in der Kopfzeile */
 .oc-compact-financials {
     display: flex;
     flex-direction: column;
@@ -151,16 +187,16 @@ form label {
 
 .oc-status-col { flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
 
-/* Aufklapp Pfeil */
+/* Rotierendes Pfeil Icon */
 .oc-toggle-icon {
     font-size: 0.7rem; color: #a0aec0; width: 28px; height: 28px;
     border-radius: 6px; background: rgba(255, 255, 255, 0.04);
     display: flex; align-items: center; justify-content: center;
-    transition: transform 0.25s ease, background 0.2s, color 0.2s;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s, color 0.2s;
     flex-shrink: 0;
 }
 .oc-compact-bar:hover .oc-toggle-icon {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.12);
     color: #ffffff;
 }
 .billing-row.is-expanded .oc-toggle-icon {
@@ -169,21 +205,29 @@ form label {
     color: #ffffff;
 }
 
-/* VERSTECKTER INHALT (WIRD NUR BEIM AUFKLAPPEN SICHTBAR) */
-.oc-expandable-content {
-    display: none;
-    margin-top: 14px;
-    padding-top: 14px;
-    border-top: 1px dashed rgba(255, 255, 255, 0.08);
-    animation: fadeIn 0.2s ease-in-out;
+/* CSS GRID ANIMATIONS-WRAPPER FÜR REIN WEICHES AUFKLAPPEN */
+.oc-expandable-wrapper {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
 }
-.billing-row.is-expanded .oc-expandable-content {
-    display: block;
+.billing-row.is-expanded .oc-expandable-wrapper {
+    grid-template-rows: 1fr;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-4px); }
-    to { opacity: 1; transform: translateY(0); }
+.oc-expandable-content {
+    min-height: 0;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    opacity: 0;
+    transform: translateY(-6px);
+}
+.billing-row.is-expanded .oc-expandable-content {
+    opacity: 1;
+    transform: translateY(0);
+    padding-top: 14px;
+    margin-top: 12px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.08);
 }
 
 /* Read-Only Banner in der Karte */
@@ -207,7 +251,7 @@ form label {
 .oc-metric-lbl { font-size: 0.65rem; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
 .oc-metric-val { font-size: 1.1rem; font-weight: 800; }
 
-/* Detail Panels (Lieferanten & Erlösverteilung) */
+/* Detail Panels */
 .oc-details-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -244,7 +288,7 @@ form label {
 .group-info-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #a0aec0; padding: 4px 6px; }
 .group-info-row strong { color: #ffffff; }
 
-/* Footer der Karte (PDFs Links, Aktionen Rechts) */
+/* Footer der Karte */
 .oc-footer {
     display: flex;
     justify-content: space-between;

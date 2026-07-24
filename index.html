@@ -13,8 +13,15 @@
     <link rel="stylesheet" href="style-kalkulator.css">
 </head>
 <body>
-<!-- DER SICHERHEITS-TRESOR (Login-Overlay) -->
-<div id="auth-overlay" class="auth-overlay">
+
+<!-- INITIALER LADE-BILDSCHIRM (VERHINDERT LOGIN-FLACKERN) -->
+<div id="app-init-loader" class="app-init-loader">
+    <div class="loader-spinner"></div>
+    <div class="loader-text">MNAU Hub wird geladen...</div>
+</div>
+
+<!-- DER SICHERHEITS-TRESOR (Login-Overlay, standardmäßig versteckt) -->
+<div id="auth-overlay" class="auth-overlay hidden">
     <div class="modal-card">
         <h2>MNAU Login</h2>
         <form id="auth-form">

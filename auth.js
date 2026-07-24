@@ -1,11 +1,10 @@
 // ====================================================
-// auth.js: SECURE LOGIN ONLY & PASSWORD RESET
+// auth.js: SECURE LOGIN & NO-FLASH SESSION VERIFICATION
 // ====================================================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-// 🚀 DEINE FIREBASE CONFIG:
 const firebaseConfig = {
     apiKey: "AIzaSyD8OZrn6RFNtljaAtWoBi0VEHMiSaAholo",
     authDomain: "mnau-billing.firebaseapp.com",
@@ -18,12 +17,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// Globale Variablen
 window.currentUserEmail = "Unbekannt";
 window.currentUserCompanies = ["MNAU"];
 window.currentUserCompany = "MNAU";
 
-// DOM Elemente
 const authOverlay = document.getElementById('auth-overlay');
 const authForm = document.getElementById('auth-form');
 const authEmail = document.getElementById('auth-email');
@@ -33,7 +30,7 @@ const btnAuthReset = document.getElementById('btn-auth-reset');
 const authError = document.getElementById('auth-error');
 const btnLogout = document.getElementById('btn-logout');
 
-// Login durchführen
+// Login Form Submit
 authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     authError.style.display = 'none';
@@ -55,7 +52,7 @@ authForm.addEventListener('submit', async (e) => {
     }
 });
 
-// Passwort-Reset E-Mail senden
+// Passwort-Reset
 if (btnAuthReset) {
     btnAuthReset.addEventListener('click', async () => {
         const email = authEmail.value.trim();
@@ -80,29 +77,28 @@ if (btnAuthReset) {
     });
 }
 
-// Logout Button oben rechts
+// Logout
 if (btnLogout) {
     btnLogout.addEventListener('click', () => {
         signOut(auth);
     });
 }
 
-// 🔐 Der Wächter: Prüft permanent den Login-Status
+// 🔐 SESSION WÄCHTER (VERHINDERT FLACKERN MIT APP-INIT-LOADER)
 onAuthStateChanged(auth, async (user) => {
+    const initLoader = document.getElementById('app-init-loader');
+
     if (user) {
         window.currentUserEmail = user.email || "Unbekannt";
 
-        // Fragt alle zugewiesenen Firmen des Users aus Airtable ab
         if (window.API && typeof window.API.fetchUserCompanies === "function") {
             window.currentUserCompanies = await window.API.fetchUserCompanies(user.email);
         } else {
             window.currentUserCompanies = ["MNAU"];
         }
 
-        // Standardmäßig die erste Firma wählen
         window.currentUserCompany = window.currentUserCompanies[0] || "MNAU";
 
-        // Befülle Firmen-Dropdown im Header
         const companySelect = document.getElementById('company-select');
         if (companySelect) {
             companySelect.innerHTML = '';
@@ -114,9 +110,15 @@ onAuthStateChanged(auth, async (user) => {
             });
             companySelect.value = window.currentUserCompany;
             companySelect.style.display = window.currentUserCompanies.length > 0 ? 'inline-block' : 'none';
+            if (typeof window.switchCompany === 'function') {
+                window.switchCompany(window.currentUserCompany);
+            }
         }
 
+        // Eingeloggt: Verstecke Login & Loader
         authOverlay.classList.add('hidden');
+        if (initLoader) initLoader.classList.add('hidden');
+
         if (typeof window.initMNAUApp === "function") {
             window.initMNAUApp();
         }
@@ -124,7 +126,11 @@ onAuthStateChanged(auth, async (user) => {
         window.currentUserEmail = "Unbekannt";
         window.currentUserCompanies = ["MNAU"];
         window.currentUserCompany = "MNAU";
+
+        // Nicht eingeloggt: Zeige Login & Verstecke Loader
         authOverlay.classList.remove('hidden');
+        if (initLoader) initLoader.classList.add('hidden');
+
         btnAuthSubmit.disabled = false;
         btnAuthSubmit.textContent = "Anmelden";
 
