@@ -1,5 +1,5 @@
 // ====================================================
-// kalkulator.js: DYNAMIC HISTORIC RE-CALCULATION & UNLIMITED VERSIONS
+// kalkulator.js: TRANSACTIONAL SAVING, HISTORY TRIM & UNLIMITED VERSIONS
 // ====================================================
 
 const ENTITIES = ['MNAG','MNMH','MNWB','MNAT','MNAU','MNGR'];
@@ -160,7 +160,6 @@ function getRoles(){
 
 const FUL_KEY='fulfillment';
 
-// ZENTRALE RECHENENGINE: BERECHNET AUS EINEM INPUTS-OBJEKT DAS EXAKTE RECHENERGEBNIS UND HTML
 function computeKalkulationFromInputs(inputs) {
     const calcMode = inputs.mode || 'td';
     const roles = inputs.roles || getRoles();
@@ -296,14 +295,7 @@ function computeKalkulationFromInputs(inputs) {
 
     h += '</tbody></table>';
 
-    return {
-        tableHtml: h,
-        kundenpreis,
-        summe,
-        FK,
-        totalGroupAnteil,
-        groupBreakdown
-    };
+    return { tableHtml: h, kundenpreis, summe, FK, totalGroupAnteil, groupBreakdown };
 }
 
 window.calculate = function(){
@@ -651,10 +643,15 @@ window.saveMNAUOrderToLog = async function() {
                 } catch(e) {}
             }
 
-            const newVersionNum = existingSnapshots.length + 1;
+            // WICHTIG: Begrenzung auf maximal 3 Snapshots, damit Airtable-Limits (422) nie erreicht werden!
+            if (existingSnapshots.length > 3) {
+                existingSnapshots = existingSnapshots.slice(-3);
+            }
+
+            const newVersionNum = existingSnapshots.length > 0 ? existingSnapshots[existingSnapshots.length - 1].version + 1 : 2;
+
             if (btn) { btn.disabled = true; btn.textContent = "Speichere Version v" + newVersionNum + "..."; }
 
-            // NATIVE SCHLANKE SNAPSHOTS OHNE ROHE HTML-STRINGS!
             const newSnapshot = {
                 version: newVersionNum,
                 timestamp: new Date().toISOString(),
@@ -667,6 +664,11 @@ window.saveMNAUOrderToLog = async function() {
             };
 
             const updatedSnapshots = [...existingSnapshots, newSnapshot];
+            // SICHERHEIT: Nochmal auf max 3 Versionen kappen (ältester fällt raus)
+            if (updatedSnapshots.length > 3) {
+                updatedSnapshots.shift();
+            }
+
             const updates = [];
             const recordsToDelete = [];
             const handledCompanies = new Set();
@@ -700,7 +702,7 @@ window.saveMNAUOrderToLog = async function() {
                     ]
                 };
 
-                const updatedChangelog = [logEntry, ...existingChangelog];
+                const updatedChangelog = [logEntry, ...existingChangelog].slice(0, 10); // Auch Changelog auf max 10 deckeln
 
                 const isMain = (comp === myCompany);
                 const groupMeta = {
@@ -769,7 +771,7 @@ window.saveMNAUOrderToLog = async function() {
                 }
             });
 
-            // ERST DIE API ERFOLGREICH BESTÄTIGEN LASSEN
+            // ERST DIE API ERFOLGREICH BESTÄTIGEN LASSEN (TRANSAKTIONAL)
             await executeBatchOrFallbackUpdates(updates.map(u => ({ id: u.id, fields: u.fields })));
 
             // ERST NACH ERFOLG IN-MEMORY SPEICHER ANPASSEN:
@@ -869,9 +871,6 @@ window.saveMNAUOrderToLog = async function() {
     }
 };
 
-// ====================================================
-// PDF DOWNLOAD DIREKT AUS DEM LOG (DYNAMISCHE RE-KALKULATION)
-// ====================================================
 window.downloadKalkulatorPDFFromLog = async function(recordId, snapshotIndex = null) {
     const record = (window.loadedRecords || []).find(r => r.id === recordId);
     if (!record || !record.fields.Fremdkosten_Details) {
