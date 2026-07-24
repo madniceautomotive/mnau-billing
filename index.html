@@ -74,10 +74,20 @@
         <div id="view-billing" class="tab-content active">
             <div id="loading" class="spinner hidden"></div>
             <div id="dashboard-summary" class="dashboard-summary"></div>
+
             <div class="section-divider mnau-divider">AUFTRAGS_LOG</div>
             <div id="order-list"></div>
+
             <div class="section-divider red-divider">OFFENE_LIEFERANTEN_POSTEN</div>
             <div id="supplier-summary-details" class="supplier-summary-details"></div>
+
+            <!-- NEU: EIGENE KATEGORIE FÜR PASSIVE SCHWESTERFIRMEN-AUFTRÄGE -->
+            <details class="archive-details external-details" open>
+                <summary class="section-divider archive-divider external-divider">PASSIVE_PARTNER_AUFTRÄGE</summary>
+                <div id="external-order-list" style="margin-top: 16px; padding: 2px 0;"></div>
+            </details>
+
+            <!-- ARCHIV -->
             <details class="archive-details">
                 <summary class="section-divider archive-divider">ARCHIV_LOG (BEZAHLT)</summary>
                 <div id="archive-list"></div>
@@ -181,7 +191,6 @@
                     <div class="metric-grid" id="metrics"></div>
                     <div class="results-wrap" id="results-table-wrap"></div>
 
-                    <!-- BUTTON ZUM ERFASSEN DES AUFTRAGS IM LOG -->
                     <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
                         <button class="btn-primary" id="btn-save-to-log" onclick="saveMNAUOrderToLog()" style="background: #00663a; padding: 12px 22px; font-size: 0.9rem; font-weight: bold; border-radius: 8px;">
                             <span class="ti">➔</span> Auftrag im Log erfassen
@@ -257,7 +266,6 @@
     </div>
 </div>
 
-<!-- JS-Module (CDN Links gegen 404 Fehler) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="config.js"></script>

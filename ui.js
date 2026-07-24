@@ -14,10 +14,21 @@ window.UI = {
         UI.updateSummary(companyRecords);
         UI.updateSupplierBreakdown(companyRecords);
 
-        const activeRecords = companyRecords.filter(r => (r.fields.Status || "Zu verrechnen") !== "Bezahlt");
+        // Filterlogik für Eigene vs. Passive/Firmenfremde Aufträge
+        const isExternal = (r) => {
+            try {
+                if (!r.fields.Fremdkosten_Details) return false;
+                const parsed = JSON.parse(r.fields.Fremdkosten_Details);
+                return parsed && parsed.groupMeta && parsed.groupMeta.isReadOnlyShare === true;
+            } catch(e) { return false; }
+        };
+
+        const activeOwnRecords = companyRecords.filter(r => (r.fields.Status || "Zu verrechnen") !== "Bezahlt" && !isExternal(r));
+        const activeExternalRecords = companyRecords.filter(r => (r.fields.Status || "Zu verrechnen") !== "Bezahlt" && isExternal(r));
         const archivedRecords = companyRecords.filter(r => r.fields.Status === "Bezahlt");
 
         const renderContainer = (containerEl, listRecords, emptyMessage) => {
+            if (!containerEl) return;
             if(!listRecords || listRecords.length === 0) {
                 containerEl.innerHTML = `<p style="color:#444; padding: 16px; font-size:0.8rem; text-align:center; border: 1px dashed rgba(255,255,255,0.02); border-radius:8px; letter-spacing:0.5px;">${emptyMessage}</p>`;
                 return;
@@ -204,7 +215,8 @@ window.UI = {
             });
         };
 
-        renderContainer(window.DOM.orderList, activeRecords, "Keine aktiven Aufträge im Log.");
+        renderContainer(window.DOM.orderList, activeOwnRecords, "Keine aktiven eigenen Aufträge im Log.");
+        renderContainer(window.DOM.externalOrderList, activeExternalRecords, "Keine passiven Partner-Aufträge vorhanden.");
         renderContainer(window.DOM.archiveList, archivedRecords, "Archiv-Log leer.");
     },
 

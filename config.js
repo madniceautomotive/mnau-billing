@@ -27,9 +27,10 @@ window.currentUserEmail = "Unbekannt";
 window.currentUserCompanies = ["MNAU"];
 window.currentUserCompany = "MNAU";
 
-// Globale DOM-Schnittstellen
+// Globale DOM-Schnittstellen (aktualisiert mit externalOrderList)
 window.DOM = {
     orderList: document.getElementById('order-list'),
+    externalOrderList: document.getElementById('external-order-list'),
     archiveList: document.getElementById('archive-list'),
     loading: document.getElementById('loading'),
     modal: document.getElementById('modal-overlay'),

@@ -130,6 +130,7 @@ onAuthStateChanged(auth, async (user) => {
 
         if (window.DOM && window.DOM.orderList) {
             window.DOM.orderList.innerHTML = '';
+            if (window.DOM.externalOrderList) window.DOM.externalOrderList.innerHTML = '';
             window.DOM.archiveList.innerHTML = '';
         }
     }

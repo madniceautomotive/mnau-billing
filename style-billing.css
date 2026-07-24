@@ -202,6 +202,13 @@ form label { display: block; margin-top: 14px; font-size: 0.8rem; color: #a0aec0
 #archive-list .billing-row { background: rgba(255, 255, 255, 0.01); border-left-color: #00663a; opacity: 0.4; }
 #archive-list .billing-row:hover { opacity: 0.85; background: rgba(255, 255, 255, 0.025); }
 
+/* External Orders Collapsible */
+.external-details { margin-top: 30px; }
+.external-divider { color: #00d2ff; }
+.external-divider:hover { color: #ffffff; }
+.external-details[open] summary { color: #00d2ff; }
+.external-details[open] summary::before { color: #00d2ff; }
+
 @media (max-width: 768px) {
     .billing-row { flex-direction: column; align-items: stretch; gap: 14px; }
     .billing-financials { text-align: left; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 10px; }
