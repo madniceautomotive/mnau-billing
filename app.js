@@ -1,5 +1,5 @@
 // ==================================================== 
-// app.js: USER ACTIONS & CONTROLLER HUB (WITH GLOBAL FILTERS & CASCADING STATUS UPDATE)
+// app.js: USER ACTIONS & CONTROLLER HUB
 // ====================================================
 
 // Globales Tab-Switching
@@ -10,20 +10,17 @@ window.switchTab = function(tabName) {
     document.getElementById('tab-btn-calculator').classList.remove('active');
 
     const searchRow = document.getElementById('billing-search-row');
-    const newOrderBtn = document.getElementById('btn-new-order');
     const manageSuppliersBtn = document.getElementById('btn-manage-suppliers');
 
     if (tabName === 'billing') {
         document.getElementById('view-billing').classList.remove('hidden');
         document.getElementById('tab-btn-billing').classList.add('active');
         if (searchRow) searchRow.style.display = 'flex';
-        if (newOrderBtn) newOrderBtn.style.display = 'flex';
         if (manageSuppliersBtn) manageSuppliersBtn.style.display = 'flex';
     } else if (tabName === 'calculator') {
         document.getElementById('view-calculator').classList.remove('hidden');
         document.getElementById('tab-btn-calculator').classList.add('active');
         if (searchRow) searchRow.style.display = 'none';
-        if (newOrderBtn) newOrderBtn.style.display = 'none';
         if (manageSuppliersBtn) manageSuppliersBtn.style.display = 'none';
     }
 };
@@ -72,30 +69,6 @@ window.applyFilters = function() {
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // Neues Projekt anlegen Modal öffnen
-    if (window.DOM.btnNewOrder) {
-        window.DOM.btnNewOrder.addEventListener('click', () => {
-            document.getElementById('edit-record-id').value = '';
-            document.getElementById('modal-main-title').textContent = "Neuen Auftrag erfassen";
-            document.getElementById('supplier-container').innerHTML = '';
-            document.getElementById('change-reason-group').style.display = 'none';
-            document.getElementById('input-change-reason').value = '';
-
-            window.DOM.formNewOrder.reset();
-            window.UI.addSupplierRow();
-            window.UI.calculateTotalFremdkosten();
-            window.DOM.modal.classList.remove('hidden');
-        });
-    }
-
-    // Modal abbrechen
-    if (window.DOM.btnCancel) {
-        window.DOM.btnCancel.addEventListener('click', () => {
-            window.DOM.modal.classList.add('hidden');
-            window.DOM.formNewOrder.reset();
-        });
-    }
-
     // Modal Changelog schließen
     const btnCloseChangelog = document.getElementById('btn-close-changelog');
     if (btnCloseChangelog) {
@@ -117,177 +90,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Formular: Neuen oder bearbeiteten Auftrag an Airtable senden
-    if (window.DOM.formNewOrder) {
-        window.DOM.formNewOrder.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const editId = document.getElementById('edit-record-id').value;
-            const name = document.getElementById('input-name').value;
-            const betrag = parseFloat(document.getElementById('input-betrag').value || 0);
-            const changeReason = document.getElementById('input-change-reason').value.trim();
-
-            if (editId && !changeReason) {
-                alert("Bitte gib einen kurzen Grund / Kommentar für die Änderung an.");
-                document.getElementById('input-change-reason').focus();
-                return;
-            }
-
-            let existingRecord = null;
-            let existingDetails = [];
-            let existingGroupMeta = null;
-            let existingChangelog = [];
-
-            if (editId) {
-                existingRecord = window.loadedRecords.find(r => r.id === editId);
-                if (existingRecord) {
-                    if (existingRecord.fields.Fremdkosten_Details) {
-                        try {
-                            const parsed = JSON.parse(existingRecord.fields.Fremdkosten_Details);
-                            if (Array.isArray(parsed)) {
-                                existingDetails = parsed;
-                            } else if (parsed && typeof parsed === 'object') {
-                                existingDetails = parsed.suppliers || [];
-                                existingGroupMeta = parsed.groupMeta || null;
-                            }
-                        } catch(e) {}
-                    }
-                    if (existingRecord.fields.Changelog) {
-                        try { existingChangelog = JSON.parse(existingRecord.fields.Changelog); } catch(e) {}
-                    }
-                }
-            }
-
-            const suppliers = [];
-            const rows = document.querySelectorAll('.supplier-row');
-            rows.forEach(row => {
-                const suppName = row.querySelector('.supplier-name').value.trim();
-                const suppAmount = parseFloat(row.querySelector('.supplier-amount').value) || 0;
-                if (suppName !== '' || suppAmount > 0) {
-                    const existing = existingDetails.find(d => d.name.toLowerCase() === suppName.toLowerCase());
-                    const isPaid = existing ? existing.paid : false;
-                    suppliers.push({ name: suppName || "Unbekannt", amount: suppAmount, paid: isPaid });
-                }
-            });
-
-            // 1. Unbekannte Lieferanten in Datenbank speichern
-            const newSuppliersToSave = [];
-            suppliers.forEach(s => {
-                const alreadyExists = window.globalSuppliers.some(g => g.name.toLowerCase() === s.name.toLowerCase());
-                if (s.name !== "Unbekannt" && s.name.trim() !== "" && !alreadyExists) {
-                    newSuppliersToSave.push({ fields: { "Name": s.name } });
-                }
-            });
-
-            if (newSuppliersToSave.length > 0) {
-                try {
-                    const resData = await window.API.saveSuppliers(newSuppliersToSave);
-                    if (resData && resData.records) {
-                        resData.records.forEach(r => window.globalSuppliers.push({ id: r.id, name: r.fields.Name }));
-                    }
-                } catch (err) {}
-            }
-
-            // 2. Auftragsobjekt vorbereiten
-            const totalFremdkosten = window.UI.calculateTotalFremdkosten();
-            const myCompany = window.currentUserCompany || "MNAU";
-
-            const suppliersPayload = existingGroupMeta ? { suppliers: suppliers, groupMeta: existingGroupMeta } : suppliers;
-            const suppliersJSON = JSON.stringify(suppliersPayload);
-
-            if (editId) {
-                // -> UPDATE MODUS
-                const changes = [];
-                if (existingRecord.fields.Auftrag !== name) changes.push(`Name: "${existingRecord.fields.Auftrag}" ➔ "${name}"`);
-                if (parseFloat(existingRecord.fields.Betrag_Automotive || 0) !== betrag) changes.push(`Betrag: € ${existingRecord.fields.Betrag_Automotive || 0} ➔ € ${betrag}`);
-                if (parseFloat(existingRecord.fields.Fremdkosten || 0) !== totalFremdkosten) changes.push(`Fremdkosten: € ${existingRecord.fields.Fremdkosten || 0} ➔ € ${totalFremdkosten}`);
-
-                const newLogEntry = {
-                    user: window.currentUserEmail,
-                    timestamp: new Date().toISOString(),
-                    action: "Auftrag bearbeitet",
-                    comment: changeReason,
-                    details: changes.length > 0 ? changes : ["Lieferanten-Details angepasst"]
-                };
-
-                existingChangelog.unshift(newLogEntry);
-
-                const updatePayload = {
-                    fields: {
-                        "Auftrag": name,
-                        "Betrag_Automotive": betrag,
-                        "Fremdkosten": totalFremdkosten,
-                        "Fremdkosten_Details": suppliersJSON,
-                        "Flagged": true,
-                        "Changelog": JSON.stringify(existingChangelog)
-                    }
-                };
-
-                try {
-                    await window.API.updateOrder(editId, updatePayload);
-                    const idx = window.loadedRecords.findIndex(r => r.id === editId);
-                    if (idx > -1) {
-                        const currentStatus = window.loadedRecords[idx].fields.Status;
-                        window.loadedRecords[idx].fields = { ...window.loadedRecords[idx].fields, ...updatePayload.fields, Status: currentStatus };
-                    }
-                    window.UI.updateSupplierDatalist();
-                    window.applyFilters(); // Filter beibehalten statt nur renderOrders
-
-                    window.DOM.modal.classList.add('hidden');
-                    window.DOM.formNewOrder.reset();
-                    document.getElementById('edit-record-id').value = '';
-                } catch (error) { alert("Fehler beim Aktualisieren."); }
-
-            } else {
-                // -> NEU ERSTELLEN MODUS
-                const initialChangelog = [{
-                    user: window.currentUserEmail,
-                    timestamp: new Date().toISOString(),
-                    action: "Auftrag erstellt",
-                    comment: "Erstansetzung des Auftrags",
-                    details: [`Auftrag "${name}" für € ${betrag.toFixed(2)} angelegt`]
-                }];
-
-                const payload = {
-                    records: [{
-                        fields: {
-                            "Auftrag": name,
-                            "Betrag_Automotive": betrag,
-                            "Fremdkosten": totalFremdkosten,
-                            "Fremdkosten_Details": suppliersJSON,
-                            "Status": "Zu verrechnen",
-                            "Firma": myCompany,
-                            "Flagged": false,
-                            "Changelog": JSON.stringify(initialChangelog)
-                        }
-                    }]
-                };
-                try {
-                    const createdData = await window.API.saveOrder(payload);
-                    if (createdData && createdData.records && createdData.records.length > 0) {
-                        window.loadedRecords.unshift(createdData.records[0]);
-                        window.UI.updateSupplierDatalist();
-                        window.applyFilters();
-                    }
-                    window.DOM.modal.classList.add('hidden');
-                    window.DOM.formNewOrder.reset();
-                } catch (error) { alert("Fehler beim Erstellen."); }
-            }
-        });
-    }
-
-    // Neuer Lieferanten-Reihe hinzufügen (im Modal)
-    const btnAddSupplier = document.getElementById('btn-add-supplier');
-    if (btnAddSupplier) {
-        btnAddSupplier.addEventListener('click', () => window.UI.addSupplierRow());
-    }
-
-    // Live-Suche (Nutzt jetzt applyFilters)
+    // Live-Suche
     if (window.DOM.searchInput) {
         window.DOM.searchInput.addEventListener('input', window.applyFilters);
     }
 
-    // Status Filter (Nutzt applyFilters)
+    // Status Filter
     const statusFilterElement = document.getElementById('status-filter');
     if (statusFilterElement) {
         statusFilterElement.addEventListener('change', window.applyFilters);
@@ -337,36 +145,61 @@ async function fetchOrders() {
     }
 }
 
-// Modal öffnen und mit bestehenden Daten befüllen
-window.openEditModal = function(recordId) {
+// ====================================================
+// AUFTRAG IM KALKULATOR FÜR RE-KALKULATION / NEUE VERSION LADEN
+// ====================================================
+window.openInKalkulator = function(recordId) {
     const record = window.loadedRecords.find(r => r.id === recordId);
     if (!record) return;
 
-    document.getElementById('edit-record-id').value = recordId;
-    document.getElementById('modal-main-title').textContent = "Auftrag bearbeiten";
-    document.getElementById('change-reason-group').style.display = 'block';
-    document.getElementById('input-change-reason').value = '';
-
-    document.getElementById('input-name').value = record.fields.Auftrag || "";
-    document.getElementById('input-betrag').value = record.fields.Betrag_Automotive || "";
-
-    const supplierContainer = document.getElementById('supplier-container');
-    supplierContainer.innerHTML = '';
-
+    let groupMeta = null;
     if (record.fields.Fremdkosten_Details) {
         try {
             const parsed = JSON.parse(record.fields.Fremdkosten_Details);
-            const details = Array.isArray(parsed) ? parsed : (parsed.suppliers || []);
-            details.forEach(d => {
-                window.UI.addSupplierRow(d.name, d.amount);
-            });
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                groupMeta = parsed.groupMeta;
+            }
         } catch(e) {}
     }
 
-    if (supplierContainer.children.length === 0) window.UI.addSupplierRow();
+    if (!groupMeta) {
+        alert("Dieser Auftrag besitzt keine Kalkulator-Eingabedaten.");
+        return;
+    }
 
-    window.UI.calculateTotalFremdkosten();
-    window.DOM.modal.classList.remove('hidden');
+    // Neuesten Input-Snapshot ermitteln
+    const snapshots = groupMeta.snapshots || (groupMeta.snapshot ? [groupMeta.snapshot] : []);
+    const latestSnap = snapshots[snapshots.length - 1];
+
+    if (!latestSnap || !latestSnap.kalkInputs) {
+        alert("Für diesen Auftrag ist keine gespeicherte Kalkulationsstruktur vorhanden.");
+        return;
+    }
+
+    // Lade Saved Inputs in den Kalkulator
+    window.loadKalkulatorInputs(latestSnap.kalkInputs);
+
+    // Setze globale Bearbeitungs-ID
+    window.activeEditingGroupId = groupMeta.groupId || ("legacy_" + recordId);
+
+    // Zeige Bearbeitungs-Banner im Kalkulator
+    const banner = document.getElementById('kalk-edit-banner');
+    const titleEl = document.getElementById('kalk-edit-title');
+    if (banner && titleEl) {
+        titleEl.textContent = record.fields.Auftrag || "Unbenannt";
+        banner.classList.remove('hidden');
+    }
+
+    // Tab wechseln
+    window.switchTab('calculator');
+    window.calculate();
+};
+
+window.cancelKalkulatorEdit = function() {
+    window.activeEditingGroupId = null;
+    const banner = document.getElementById('kalk-edit-banner');
+    if (banner) banner.classList.add('hidden');
+    window.resetAll();
 };
 
 // Modal öffnen für Changelog-Verlauf
@@ -412,9 +245,7 @@ window.openChangelogModal = function(recordId) {
     document.getElementById('modal-changelog-overlay').classList.remove('hidden');
 };
 
-// ====================================================
-// STATUS UPDATE (INKL. KASKADIERENDEM UPDATE FÜR ALLE SCHWESTERFIRMEN)
-// ====================================================
+// STATUS UPDATE (INKL. KASKADIERENDEM UPDATE)
 window.changeOrderStatus = async function(recordId, newStatus) {
     const targetRecord = window.loadedRecords.find(r => r.id === recordId);
     if (!targetRecord) return;
@@ -423,7 +254,6 @@ window.changeOrderStatus = async function(recordId, newStatus) {
     let groupId = null;
     const auftragName = targetRecord.fields.Auftrag;
 
-    // Versuche, die Group-ID (Kalkulator-Verbindung) zu ermitteln
     if (targetRecord.fields.Fremdkosten_Details) {
         try {
             const parsed = JSON.parse(targetRecord.fields.Fremdkosten_Details);
@@ -433,7 +263,6 @@ window.changeOrderStatus = async function(recordId, newStatus) {
         } catch(e) {}
     }
 
-    // Sammle alle Aufträge mit derselben ID oder demselben Namen
     if (groupId) {
         linkedRecordIds = window.loadedRecords.filter(r => {
             if (!r.fields.Fremdkosten_Details) return false;
@@ -443,11 +272,9 @@ window.changeOrderStatus = async function(recordId, newStatus) {
             } catch(e) { return false; }
         }).map(r => r.id);
     } else if (auftragName) {
-        // Fallback für alte Einträge ohne groupId
         linkedRecordIds = window.loadedRecords.filter(r => r.fields.Auftrag === auftragName).map(r => r.id);
     }
 
-    // 1. Lokales Update für SOFORTIGES UI Feedback
     const updates = [];
     linkedRecordIds.forEach(id => {
         const r = window.loadedRecords.find(rec => rec.id === id);
@@ -459,7 +286,6 @@ window.changeOrderStatus = async function(recordId, newStatus) {
 
     window.applyFilters();
 
-    // 2. Airtable API Update (Batch für Performance)
     try {
         for (let i = 0; i < updates.length; i += 10) {
             const batch = updates.slice(i, i + 10);

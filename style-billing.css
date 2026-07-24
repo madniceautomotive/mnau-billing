@@ -1,8 +1,7 @@
 /* ==================================================== */
-/* style-billing.css: DASHBOARD, CARDS & GLOBAL FORMS   */
+/* style-billing.css: DASHBOARD, CARDS & VERSIONING UI   */
 /* ==================================================== */
 
-/* GLOBALE INPUTS (Login, Modals, etc. - Garantiert immer weiße Schrift!) */
 .mnau-input {
     width: 100%;
     padding: 12px 14px;
@@ -20,11 +19,8 @@
     box-shadow: 0 0 0 2px rgba(0, 255, 115, 0.15);
     outline: none;
 }
-.mnau-input::placeholder {
-    color: #64748b;
-}
+.mnau-input::placeholder { color: #64748b; }
 
-/* Modals Label Formatting */
 form label {
     display: block;
     margin-top: 18px;
@@ -36,7 +32,6 @@ form label {
     letter-spacing: 0.5px;
 }
 
-/* Container & Layout */
 .manager-content {
     flex: 1;
     overflow-y: auto;
@@ -95,15 +90,62 @@ form label {
     font-weight: 600;
 }
 
-.read-only-badge {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+/* Versionierte PDF Buttons auf den Karten */
+.pdf-version-list-box {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+.pdf-version-label {
+    display: block;
+    font-size: 0.68rem;
     color: #a0aec0;
-    padding: 6px 10px;
-    border-radius: 8px;
-    font-size: 0.75rem;
+    text-transform: uppercase;
     font-weight: 700;
-    white-space: nowrap;
+    margin-bottom: 6px;
+}
+.pdf-version-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.pdf-v-btn {
+    padding: 4px 8px !important;
+    font-size: 0.68rem !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    color: #cbd5e1 !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.pdf-v-btn:hover {
+    border-color: #00ff73 !important;
+    color: #00ff73 !important;
+    background: rgba(0, 255, 115, 0.08) !important;
+}
+.pdf-v-btn.active-v {
+    border-color: rgba(0, 255, 115, 0.5) !important;
+    color: #00ff73 !important;
+    background: rgba(0, 255, 115, 0.1) !important;
+    font-weight: 800;
+}
+
+/* Bearbeitungs-Banner im Kalkulator Tab */
+.kalk-edit-banner {
+    background: rgba(246, 224, 94, 0.08);
+    border: 1px solid rgba(246, 224, 94, 0.4);
+    border-radius: 10px;
+    padding: 12px 18px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+.kalk-edit-text {
+    color: #f6e05e;
+    font-size: 0.85rem;
 }
 
 /* Group Erlös-Info Box auf der Karte */
@@ -140,13 +182,13 @@ form label {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: #cbd5e1;
-    width: 32px; height: 32px;
+    width: 34px; height: 34px;
     border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
-    cursor: pointer; transition: all 0.2s; padding: 0;
+    cursor: pointer; transition: all 0.2s; padding: 0; font-size: 0.9rem;
 }
 .changelog-btn:hover { background: rgba(0, 210, 255, 0.1); color: #00d2ff; border-color: #00d2ff; }
-.edit-btn:hover { background: rgba(246, 224, 94, 0.1); color: #f6e05e; border-color: #f6e05e; }
+.edit-btn:hover { background: rgba(246, 224, 94, 0.15); color: #f6e05e; border-color: #f6e05e; }
 .delete-btn:hover { background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: #ef4444; }
 
 /* Status Dropdown */
@@ -190,16 +232,6 @@ form label {
 .modal-actions { display: flex; justify-content: space-between; margin-top: 22px; gap: 10px; }
 .modal-actions button { flex: 1; justify-content: center; }
 
-.supplier-actions { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 14px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 14px; }
-.btn-small { padding: 8px 10px; font-size: 0.72rem; }
-
-.supplier-total { font-size: 0.72rem; color: #a0aec0; text-align: right; text-transform: uppercase; }
-.supplier-total span { color: #e74c3c; font-weight: bold; font-size: 1rem; }
-
-.supplier-container { max-height: 160px; overflow-y: auto; margin-top: 8px; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
-.supplier-row { display: flex; gap: 6px; align-items: center; }
-
-/* Entfern-Button Lieferanten (einheitlich rot) */
 .btn-remove-supplier {
     background: rgba(239, 68, 68, 0.1);
     border: 1px solid rgba(239, 68, 68, 0.25);
@@ -226,7 +258,7 @@ form label {
 .external-details[open] summary::before { color: #00d2ff; }
 
 /* ==================================================== */
-/* MOBILE RESPONSIVE ADAPTATIONS (HEADER & CARDS)      */
+/* MOBILE RESPONSIVE ADAPTATIONS                       */
 /* ==================================================== */
 @media (max-width: 850px) {
     .manager-content { padding: 12px; }
@@ -243,7 +275,6 @@ form label {
     }
 
     #company-select { flex: 1; min-width: 100px; }
-    #btn-new-order { flex: 2; min-width: 120px; justify-content: center; }
 
     .header-controls-row#billing-search-row { flex-direction: column; align-items: stretch; gap: 8px; margin-top: 8px; }
     #status-filter { max-width: 100% !important; width: 100%; }
@@ -252,4 +283,6 @@ form label {
     .billing-financials { text-align: left; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; }
     .action-group { justify-content: space-between; width: 100%; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; }
     .action-group .status-select { flex: 1; }
+
+    .kalk-edit-banner { flex-direction: column; align-items: stretch; text-align: center; }
 }

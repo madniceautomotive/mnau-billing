@@ -1,5 +1,5 @@
 // ====================================================
-// kalkulator.js: GROUP KALKULATOR LOGIC & MULTI-TENANT LOG INTEGRATION
+// kalkulator.js: VERSIONED GROUP KALKULATOR & LOG INTEGRATION
 // ====================================================
 
 const ENTITIES = ['MNAG','MNMH','MNWB','MNAT','MNAU','MNGR'];
@@ -89,7 +89,7 @@ window.addKalkSupplierRow = function(entity, name = '', amount = '') {
     <input type="text" class="mnau-input kalk-supp-name" list="supplier-list" placeholder="Lieferant..." value="${name}" oninput="updateEntityFremdkosten('${entity}')">
     <input type="number" step="0.01" class="mnau-input kalk-supp-amount" placeholder="0.00" value="${amount}" oninput="updateEntityFremdkosten('${entity}')">
     <button type="button" class="btn-remove-supplier kalk-supp-remove" title="Entfernen" onclick="this.parentElement.remove(); updateEntityFremdkosten('${entity}');">
-      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 13.41 12z"/></svg>
+      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
     </button>
   `;
     container.appendChild(row);
@@ -273,7 +273,8 @@ window.calculate = function(){
 
     const btnSave = document.getElementById('btn-save-to-log');
     if (btnSave) {
-        btnSave.innerHTML = `<span class="ti">➔</span> ${myCompany} Auftrag im Log erfassen`;
+        const isEdit = !!window.activeEditingGroupId;
+        btnSave.innerHTML = `<span class="ti">➔</span> ${myCompany} Auftrag ${isEdit ? 'überarbeiten (Neue Version)' : 'im Log erfassen'}`;
     }
 
     document.getElementById('metrics').innerHTML=`
@@ -309,12 +310,127 @@ window.calculate = function(){
     document.getElementById('results-section').scrollIntoView({behavior:'smooth',block:'nearest'});
 };
 
+// ====================================================
+// ZUSTAND DES KALKULATORS ZURÜCKLADEN (FÜR EDIT-MODUS)
+// ====================================================
+window.loadKalkulatorInputs = function(inputs) {
+    if (!inputs) return;
+
+    if (inputs.mode) setMode(inputs.mode);
+
+    ['proj-name','proj-offer','proj-invoice','proj-notes'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = inputs[id] || '';
+    });
+
+    const fm = document.getElementById('fkmngr');
+    if (fm) fm.value = inputs.fkmngr || 0;
+
+    ENTITIES.forEach(e => {
+        const baseEl = document.getElementById('base-' + e);
+        if (baseEl) baseEl.value = (inputs.base && inputs.base[e]) || 0;
+
+        const spEl = document.getElementById('sp-' + e);
+        if (spEl) spEl.value = (inputs.sp && inputs.sp[e]) || 0;
+
+        const hpEl = document.getElementById('hp-' + e);
+        if (hpEl) hpEl.value = (inputs.hp && inputs.hp[e]) || 150;
+
+        const noteEl = document.getElementById('note-' + e);
+        if (noteEl) noteEl.value = (inputs.notes && inputs.notes[e]) || '';
+
+        // Lieferanten wiederherstellen
+        const container = document.getElementById(`suppliers-list-${e}`);
+        if (container) {
+            container.innerHTML = '';
+            const list = (inputs.suppliers && inputs.suppliers[e]) || [];
+            if (list.length > 0) {
+                list.forEach(s => window.addKalkSupplierRow(e, s.name, s.amount));
+            } else {
+                window.addKalkSupplierRow(e);
+            }
+        }
+
+        // Kostenanteile
+        COSTS.forEach(c => {
+            const cEl = document.getElementById(`cost-${e}-${c.key}`);
+            if (cEl && inputs.costs && inputs.costs[e] && inputs.costs[e][c.key] !== undefined) {
+                cEl.value = inputs.costs[e][c.key];
+            }
+        });
+    });
+
+    // Rollen & Provisionen
+    if (inputs.roles && Array.isArray(inputs.roles)) {
+        inputs.roles.forEach((r, idx) => {
+            const roleDef = ROLES[idx];
+            if (roleDef) {
+                const entEl = document.getElementById(`role-${roleDef.id}-entity`);
+                const pctEl = document.getElementById(`role-${roleDef.id}-pct`);
+                if (entEl) entEl.value = r.entity;
+                if (pctEl) pctEl.value = r.pct;
+            }
+        });
+    }
+
+    window.syncCostsToVolume();
+};
+
+// Extrahiert den kompletten aktuellen Kalkulator-Eingabezustand für die Speicherung im Snapshot
+function exportKalkulatorInputs() {
+    const inputs = {
+        projName: getVal('proj-name'),
+        projOffer: getVal('proj-offer'),
+        projInvoice: getVal('proj-invoice'),
+        projNotes: getVal('proj-notes'),
+        fkmngr: getNum('fkmngr'),
+        mode: MODE,
+        base: {}, sp: {}, hp: {}, notes: {}, costs: {}, suppliers: {},
+        roles: getRoles()
+    };
+
+    ENTITIES.forEach(e => {
+        inputs.base[e] = getNum('base-' + e);
+        inputs.sp[e] = getNum('sp-' + e);
+        inputs.hp[e] = getNum('hp-' + e);
+        inputs.notes[e] = getVal('note-' + e);
+
+        inputs.costs[e] = {};
+        COSTS.forEach(c => {
+            inputs.costs[e][c.key] = getNum(`cost-${e}-${c.key}`);
+        });
+
+        inputs.suppliers[e] = [];
+        const container = document.getElementById(`suppliers-list-${e}`);
+        if (container) {
+            container.querySelectorAll('.kalk-supplier-row').forEach(row => {
+                const sName = (row.querySelector('.kalk-supp-name').value || '').trim();
+                const sAmount = parseFloat(row.querySelector('.kalk-supp-amount').value) || 0;
+                if (sName || sAmount > 0) {
+                    inputs.suppliers[e].push({ name: sName, amount: sAmount });
+                }
+            });
+        }
+    });
+
+    return inputs;
+}
+
+// ====================================================
+// AUFTRAG IM LOG ERFASSEN / AKTUALISIEREN (MIT VERSIONIERUNG)
+// ====================================================
 window.saveMNAUOrderToLog = async function() {
     const myCompany = window.currentUserCompany || "MNAU";
     const projNameRaw = getVal('proj-name');
     const projName = projNameRaw ? projNameRaw : "Unbenanntes Projekt";
     const orderTitle = `${projName} (${myCompany})`;
-    const calcGroupId = "grp_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+
+    // Verwende bestehende groupId beim Bearbeiten oder erstelle neue ID
+    const isEditing = !!window.activeEditingGroupId;
+    const calcGroupId = isEditing
+        ? window.activeEditingGroupId
+        : ("grp_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7));
+
     const roles = getRoles();
     const OTHER = COSTS.filter(c => c.key !== FUL_KEY);
     const COLS = ['MNAG','MNMH','MNWB','MNAT','MNAU','EXT','MNGR','OVERHEAD'];
@@ -386,7 +502,34 @@ window.saveMNAUOrderToLog = async function() {
         if (amt > 0) allSharesDetail[comp] = Math.round(amt * 100) / 100;
     });
 
-    const pdfSnapshot = {
+    // Erzeuge Input-Snapshot für die spätere Re-Kalkulation
+    const kalkInputs = exportKalkulatorInputs();
+
+    // Bisherige Snapshots ermitteln (für Versionierung)
+    let existingSnapshots = [];
+    if (isEditing) {
+        const existingRec = window.loadedRecords.find(r => {
+            try {
+                const p = JSON.parse(r.fields.Fremdkosten_Details);
+                return p && p.groupMeta && p.groupMeta.groupId === calcGroupId;
+            } catch(e) { return false; }
+        });
+        if (existingRec && existingRec.fields.Fremdkosten_Details) {
+            try {
+                const parsed = JSON.parse(existingRec.fields.Fremdkosten_Details);
+                if (parsed.groupMeta) {
+                    existingSnapshots = parsed.groupMeta.snapshots || (parsed.groupMeta.snapshot ? [parsed.groupMeta.snapshot] : []);
+                }
+            } catch(e) {}
+        }
+    }
+
+    const newVersionNum = existingSnapshots.length + 1;
+    const newSnapshot = {
+        version: newVersionNum,
+        timestamp: new Date().toISOString(),
+        user: window.currentUserEmail || "Unbekannt",
+        kalkInputs: kalkInputs,
         projName: getVal('proj-name'),
         projOffer: getVal('proj-offer'),
         projInvoice: getVal('proj-invoice'),
@@ -394,55 +537,160 @@ window.saveMNAUOrderToLog = async function() {
         resultsTableHtml: document.getElementById('results-table-wrap').innerHTML
     };
 
-    const groupMetaMain = {
-        groupId: calcGroupId,
-        originCompany: myCompany,
-        kundenpreis: Math.round(kundenpreis * 100) / 100,
-        mngrAbgabe: Math.round(mngrAbgabe * 100) / 100,
-        allSharesDetail: allSharesDetail,
-        snapshot: pdfSnapshot
-    };
-
-    const recordsToCreate = [];
-    const INITIAL_STATUS = "In Bearbeitung";
-
-    const initialChangelog = [{
-        user: window.currentUserEmail || "Unbekannt", timestamp: new Date().toISOString(), action: "Hauptauftrag aus Group Kalkulator erfasst", comment: `Aus Group Kalkulator erfasst (Status: ${INITIAL_STATUS})`,
-        details: [`Auftrag "${orderTitle}" angelegt:`, `• ${myCompany} Umsatz: € ${userUmsatz.toFixed(2)}`, `• ${myCompany} Echte Fremdkosten: € ${totalFremdkosten.toFixed(2)}`, `• Gesamt-Projektvolumen: € ${kundenpreis.toFixed(2)}`]
-    }];
-
-    recordsToCreate.push({
-        fields: { "Auftrag": orderTitle, "Betrag_Automotive": userUmsatz, "Fremdkosten": Math.round(totalFremdkosten * 100) / 100, "Fremdkosten_Details": JSON.stringify({ suppliers: mainSuppliers, groupMeta: groupMetaMain }), "Status": INITIAL_STATUS, "Firma": myCompany, "Flagged": false, "Changelog": JSON.stringify(initialChangelog) }
-    });
-
-    Object.entries(allSharesDetail).forEach(([comp, amt]) => {
-        if (comp !== myCompany && amt > 0) {
-            const compSuppliers = getSuppliersForCompany(comp);
-            const compFremdkosten = compSuppliers.reduce((s, item) => s + item.amount, 0);
-            const shareGroupMeta = { groupId: calcGroupId, isReadOnlyShare: true, originCompany: myCompany, originProject: projName, kundenpreis: Math.round(kundenpreis * 100) / 100, mngrAbgabe: Math.round(mngrAbgabe * 100) / 100, allSharesDetail: allSharesDetail, snapshot: pdfSnapshot };
-            const shareChangelog = [{
-                user: window.currentUserEmail || "Unbekannt", timestamp: new Date().toISOString(), action: "Erlösanteil aus Group Kalkulator erfasst", comment: `Automatisch von ${myCompany} für ${comp} angelegt`,
-                details: [`Erlösanteil für ${comp} aus Projekt "${projName}" (${myCompany}):`, `• Anteil ${comp}: € ${amt.toFixed(2)}`, `• ${comp} Echte Fremdkosten: € ${compFremdkosten.toFixed(2)}`, `• Gesamt-Projektvolumen: € ${kundenpreis.toFixed(2)}`]
-            }];
-            recordsToCreate.push({
-                fields: { "Auftrag": orderTitle, "Betrag_Automotive": amt, "Fremdkosten": Math.round(compFremdkosten * 100) / 100, "Fremdkosten_Details": JSON.stringify({ suppliers: compSuppliers, groupMeta: shareGroupMeta }), "Status": INITIAL_STATUS, "Firma": comp, "Flagged": false, "Changelog": JSON.stringify(shareChangelog) }
-            });
-        }
-    });
+    const updatedSnapshots = [...existingSnapshots, newSnapshot];
 
     const btn = document.getElementById('btn-save-to-log');
-    if (btn) { btn.disabled = true; btn.textContent = "Speichere Aufträge..."; }
+    if (btn) { btn.disabled = true; btn.textContent = "Speichere Version v" + newVersionNum + "..."; }
 
     try {
-        const createdData = await window.API.saveOrder({ records: recordsToCreate });
-        if (createdData && createdData.records && createdData.records.length > 0) {
-            createdData.records.forEach(r => window.loadedRecords.unshift(r));
-            window.UI.updateSupplierDatalist();
-            if (typeof window.applyFilters === 'function') window.applyFilters();
-            else window.UI.renderOrders(window.loadedRecords);
-            alert(`Erfolg! ${createdData.records.length} Auftrag/Aufträge für ${myCompany} und beteiligte Schwesterfirmen im Log erfasst.`);
-            if (typeof window.switchTab === 'function') window.switchTab('billing');
+        if (isEditing) {
+            // ===== 1. UPDATE MODUS: AKTUALISIERE BESTEHENDE RECORDS IN AIRTABLE =====
+            const linkedRecords = window.loadedRecords.filter(r => {
+                try {
+                    const p = JSON.parse(r.fields.Fremdkosten_Details);
+                    return p && p.groupMeta && p.groupMeta.groupId === calcGroupId;
+                } catch(e) { return false; }
+            });
+
+            const updates = [];
+
+            // Update für die beteiligten Firmen durchführen
+            const handledCompanies = new Set();
+
+            for (const rec of linkedRecords) {
+                const comp = rec.fields.Firma;
+                handledCompanies.add(comp);
+                const compSuppliers = getSuppliersForCompany(comp);
+                const compFremdkosten = compSuppliers.reduce((s, item) => s + item.amount, 0);
+                const compUmsatz = Math.round((summe[comp] || 0) * 100) / 100;
+
+                let existingChangelog = [];
+                if (rec.fields.Changelog) {
+                    try { existingChangelog = JSON.parse(rec.fields.Changelog); } catch(e) {}
+                }
+
+                existingChangelog.unshift({
+                    user: window.currentUserEmail,
+                    timestamp: new Date().toISOString(),
+                    action: `Kalkulator Version v${newVersionNum} erstellt`,
+                    comment: `Neukalkulation aus Group Kalkulator gespeichert`,
+                    details: [
+                        `Neue Version v${newVersionNum}:`,
+                        `• ${comp} Umsatz: € ${compUmsatz.toFixed(2)}`,
+                        `• Fremdkosten: € ${compFremdkosten.toFixed(2)}`
+                    ]
+                });
+
+                const isMain = comp === myCompany;
+                const groupMeta = {
+                    groupId: calcGroupId,
+                    isReadOnlyShare: !isMain,
+                    originCompany: myCompany,
+                    originProject: projName,
+                    kundenpreis: Math.round(kundenpreis * 100) / 100,
+                    mngrAbgabe: Math.round(mngrAbgabe * 100) / 100,
+                    allSharesDetail: allSharesDetail,
+                    snapshots: updatedSnapshots
+                };
+
+                const updatedDetails = JSON.stringify({ suppliers: compSuppliers, groupMeta: groupMeta });
+
+                updates.push({
+                    id: rec.id,
+                    fields: {
+                        "Auftrag": orderTitle,
+                        "Betrag_Automotive": compUmsatz,
+                        "Fremdkosten": Math.round(compFremdkosten * 100) / 100,
+                        "Fremdkosten_Details": updatedDetails,
+                        "Flagged": true,
+                        "Changelog": JSON.stringify(existingChangelog)
+                    }
+                });
+            }
+
+            // Falls eine Schwesterfirma durch die Neuberechnung neu hinzugekommen ist: POST
+            const newCompanyRecordsToCreate = [];
+            Object.entries(allSharesDetail).forEach(([comp, amt]) => {
+                if (!handledCompanies.has(comp) && amt > 0) {
+                    const compSuppliers = getSuppliersForCompany(comp);
+                    const compFremdkosten = compSuppliers.reduce((s, item) => s + item.amount, 0);
+                    const groupMeta = {
+                        groupId: calcGroupId, isReadOnlyShare: (comp !== myCompany), originCompany: myCompany, originProject: projName,
+                        kundenpreis: Math.round(kundenpreis * 100) / 100, mngrAbgabe: Math.round(mngrAbgabe * 100) / 100,
+                        allSharesDetail: allSharesDetail, snapshots: updatedSnapshots
+                    };
+                    newCompanyRecordsToCreate.push({
+                        fields: {
+                            "Auftrag": orderTitle, "Betrag_Automotive": amt, "Fremdkosten": Math.round(compFremdkosten * 100) / 100,
+                            "Fremdkosten_Details": JSON.stringify({ suppliers: compSuppliers, groupMeta: groupMeta }),
+                            "Status": "In Bearbeitung", "Firma": comp, "Flagged": false,
+                            "Changelog": JSON.stringify([{ user: window.currentUserEmail, timestamp: new Date().toISOString(), action: "Projektupdate", comment: "Neu hinzugekommen in v" + newVersionNum, details: [] }])
+                        }
+                    });
+                }
+            });
+
+            // Updates absenden
+            for (let i = 0; i < updates.length; i += 10) {
+                const batch = updates.slice(i, i + 10);
+                await window.API.batchUpdateOrders(batch);
+            }
+
+            if (newCompanyRecordsToCreate.length > 0) {
+                await window.API.saveOrder({ records: newCompanyRecordsToCreate });
+            }
+
+            // Lokalen state nachladen
+            window.cancelKalkulatorEdit();
+            await fetchOrders();
+            alert(`Erfolg! Neue Version v${newVersionNum} für "${orderTitle}" wurde im Log erfasst.`);
+
+        } else {
+            // ===== 2. ERSTSTELLUNG MODUS: NEUES PROJEKT ANLEGEN =====
+            const recordsToCreate = [];
+            const INITIAL_STATUS = "In Bearbeitung";
+
+            const groupMetaMain = {
+                groupId: calcGroupId, originCompany: myCompany, kundenpreis: Math.round(kundenpreis * 100) / 100,
+                mngrAbgabe: Math.round(mngrAbgabe * 100) / 100, allSharesDetail: allSharesDetail, snapshots: updatedSnapshots
+            };
+
+            const initialChangelog = [{
+                user: window.currentUserEmail || "Unbekannt", timestamp: new Date().toISOString(), action: "Hauptauftrag aus Group Kalkulator erfasst", comment: `Ersterstellung (Version v1)`,
+                details: [`Auftrag "${orderTitle}" angelegt:`, `• ${myCompany} Umsatz: € ${userUmsatz.toFixed(2)}`, `• ${myCompany} Fremdkosten: € ${totalFremdkosten.toFixed(2)}`, `• Gesamt-Projektvolumen: € ${kundenpreis.toFixed(2)}`]
+            }];
+
+            recordsToCreate.push({
+                fields: { "Auftrag": orderTitle, "Betrag_Automotive": userUmsatz, "Fremdkosten": Math.round(totalFremdkosten * 100) / 100, "Fremdkosten_Details": JSON.stringify({ suppliers: mainSuppliers, groupMeta: groupMetaMain }), "Status": INITIAL_STATUS, "Firma": myCompany, "Flagged": false, "Changelog": JSON.stringify(initialChangelog) }
+            });
+
+            Object.entries(allSharesDetail).forEach(([comp, amt]) => {
+                if (comp !== myCompany && amt > 0) {
+                    const compSuppliers = getSuppliersForCompany(comp);
+                    const compFremdkosten = compSuppliers.reduce((s, item) => s + item.amount, 0);
+                    const shareGroupMeta = { groupId: calcGroupId, isReadOnlyShare: true, originCompany: myCompany, originProject: projName, kundenpreis: Math.round(kundenpreis * 100) / 100, mngrAbgabe: Math.round(mngrAbgabe * 100) / 100, allSharesDetail: allSharesDetail, snapshots: updatedSnapshots };
+                    const shareChangelog = [{
+                        user: window.currentUserEmail || "Unbekannt", timestamp: new Date().toISOString(), action: "Erlösanteil aus Group Kalkulator erfasst", comment: `Automatisch von ${myCompany} für ${comp} angelegt`,
+                        details: [`Erlösanteil für ${comp} aus Projekt "${projName}" (${myCompany}):`, `• Anteil ${comp}: € ${amt.toFixed(2)}`]
+                    }];
+                    recordsToCreate.push({
+                        fields: { "Auftrag": orderTitle, "Betrag_Automotive": amt, "Fremdkosten": Math.round(compFremdkosten * 100) / 100, "Fremdkosten_Details": JSON.stringify({ suppliers: compSuppliers, groupMeta: shareGroupMeta }), "Status": INITIAL_STATUS, "Firma": comp, "Flagged": false, "Changelog": JSON.stringify(shareChangelog) }
+                    });
+                }
+            });
+
+            const createdData = await window.API.saveOrder({ records: recordsToCreate });
+            if (createdData && createdData.records && createdData.records.length > 0) {
+                createdData.records.forEach(r => window.loadedRecords.unshift(r));
+                window.UI.updateSupplierDatalist();
+                if (typeof window.applyFilters === 'function') window.applyFilters();
+                else window.UI.renderOrders(window.loadedRecords);
+                alert(`Erfolg! ${createdData.records.length} Auftrag/Aufträge (Version v1) im Log erfasst.`);
+            }
         }
+
+        if (typeof window.switchTab === 'function') window.switchTab('billing');
+
     } catch (err) {
         alert("Fehler beim Erfassen des Auftrags im Log: " + (err.message || err));
     } finally {
@@ -451,9 +699,9 @@ window.saveMNAUOrderToLog = async function() {
 };
 
 // ====================================================
-// PDF DOWNLOAD DIREKT AUS DEM AUFTRAGS-LOG IN HIGH QUALITY
+// PDF DOWNLOAD DIREKT AUS DEM AUFTRAGS-LOG (VERSIONEN-AWARE)
 // ====================================================
-window.downloadKalkulatorPDFFromLog = function(recordId) {
+window.downloadKalkulatorPDFFromLog = function(recordId, snapshotIndex = null) {
     const record = (window.loadedRecords || []).find(r => r.id === recordId);
     if (!record || !record.fields.Fremdkosten_Details) { alert("Kein Kalkulator-Datensatz gefunden."); return; }
 
@@ -463,13 +711,23 @@ window.downloadKalkulatorPDFFromLog = function(recordId) {
         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) groupMeta = parsed.groupMeta;
     } catch(e) {}
 
-    if (!groupMeta || !groupMeta.snapshot) { alert("Kein Kalkulator-PDF-Snapshot gespeichert."); return; }
+    if (!groupMeta) { alert("Kein Kalkulator-Snapshot gespeichert."); return; }
 
-    const snap = groupMeta.snapshot;
+    const snapshots = groupMeta.snapshots || (groupMeta.snapshot ? [groupMeta.snapshot] : []);
+    if (snapshots.length === 0) { alert("Keine PDF-Snapshots gefunden."); return; }
+
+    // Verwende angefragten Index oder standardmäßig die neueste Version
+    const targetIndex = (snapshotIndex !== null && snapshotIndex >= 0 && snapshotIndex < snapshots.length)
+        ? snapshotIndex
+        : (snapshots.length - 1);
+
+    const snap = snapshots[targetIndex];
+    const versionTag = snap.version ? `v${snap.version}` : `v${targetIndex + 1}`;
+
     const jsPDF = window.jspdf && window.jspdf.jsPDF;
     if (typeof html2canvas === 'undefined' || !jsPDF) { alert("PDF-Bibliotheken nicht geladen."); return; }
 
-    const d = new Date(record.createdTime || Date.now()), p = n => String(n).padStart(2,'0');
+    const d = new Date(snap.timestamp || record.createdTime || Date.now()), p = n => String(n).padStart(2,'0');
     const ts = `${p(d.getDate())}.${p(d.getMonth()+1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
     const logo = `<span style="font-weight:900;font-size:24px;letter-spacing:-.03em;color:#1a1a1a;">MAD&nbsp;N/CE <span style="font-size:12px;letter-spacing:.12em;color:#00663a;">GROUP</span></span>`;
     const field = (lbl,val) => val ? `<div class="pdf-meta-item"><span class="lbl">${lbl}</span><span class="val">${esc(val)}</span></div>` : '';
@@ -488,7 +746,6 @@ window.downloadKalkulatorPDFFromLog = function(recordId) {
       .pdf-meta-item .lbl { font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; letter-spacing: 0.5px; }
       .pdf-meta-item .val { font-size: 15px; font-weight: 700; color: #0f172a; }
       .pdf-notes { background: #f0fdf4; border-left: 4px solid #10b981; padding: 14px 18px; font-size: 13px; color: #064e3b; margin-bottom: 24px; border-radius: 4px; line-height: 1.5; }
-      
       .pdf-table-container { border: 1px solid #cbd5e1; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
       table.results { width: 100%; border-collapse: collapse; font-size: 12px; }
       table.results th { background: #f1f5f9; color: #334155; padding: 14px 10px; text-align: right; font-weight: 800; border-bottom: 2px solid #cbd5e1; text-transform: uppercase; font-size: 11px; }
@@ -501,20 +758,17 @@ window.downloadKalkulatorPDFFromLog = function(recordId) {
       table.results .val-pos { color: #059669; font-weight: 800; }
       table.results .val-neg { color: #dc2626; font-weight: 800; }
       table.results .val-zero { color: #94a3b8; }
-      
       table.results tr.rg-base td { background: #ffffff; }
       table.results tr.rg-sales td { background: #fff7ed; }
       table.results tr.rg-cost td { background: #f0f9ff; }
       table.results tr.rg-fulfill td { background: #f0fdf4; font-weight: 800; color: #064e3b; }
       table.results tr.rg-sum td { background: #e6f4ea; border-top: 2px solid #10b981; border-bottom: 2px solid #10b981; font-weight: 800; font-size: 13px; color: #064e3b; }
-      
-      .metric-grid { display: none; } /* Hide metrics inside table wrapper for PDF */
     </style>
     <div class="pdf-wrapper">
         <div class="pdf-header">
             <div class="pdf-header-left">
-                <h2>Group Kalkulation</h2>
-                <p>Archivierter Snapshot • Erstellt am ${ts}</p>
+                <h2>Group Kalkulation (${versionTag})</h2>
+                <p>Versionierter Snapshot • Erstellt von ${esc(snap.user || 'Unbekannt')} am ${ts}</p>
             </div>
             <div>${logo}</div>
         </div>
@@ -523,9 +777,10 @@ window.downloadKalkulatorPDFFromLog = function(recordId) {
             ${field('Projekt', snap.projName || 'Nicht angegeben')}
             ${field('Angebot', snap.projOffer)}
             ${field('Rechnung', snap.projInvoice)}
+            ${field('Version', versionTag)}
         </div>
         
-        ${snap.projNotes ? `<div class="pdf-notes"><strong>Notizen:</strong><br>${esc(snap.projNotes)}</div>` : ''}
+        ${snap.projNotes ? `<div class="pdf-notes"><strong>Notizen (v${versionTag}):</strong><br>${esc(snap.projNotes)}</div>` : ''}
         
         <div class="pdf-table-container">
             ${snap.resultsTableHtml}
@@ -553,7 +808,7 @@ window.downloadKalkulatorPDFFromLog = function(recordId) {
                 const x = (pw - iw) / 2, y = m;
                 pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', x, y, iw, ih);
                 const safeName = (snap.projName || record.fields.Auftrag || 'Group-Kalkulator').replace(/[^\wäöüÄÖÜ\- ]+/g,'').trim().replace(/\s+/g,'_');
-                pdf.save(`Group-Kalkulator_${safeName}.pdf`);
+                pdf.save(`Group-Kalkulator_${safeName}_${versionTag}.pdf`);
                 cleanup();
             }).catch(err => { cleanup(); alert('PDF-Fehler: ' + err.message); });
     }, 300);
@@ -581,7 +836,6 @@ window.exportPDF = function(){
     const jsPDF = window.jspdf && window.jspdf.jsPDF;
     if(typeof html2canvas==='undefined' || !jsPDF){ alert('PDF-Bibliothek nicht geladen.'); return; }
 
-    // Use the same robust PDF logic for direct export
     const snap = {
         projName: getVal('proj-name'),
         projOffer: getVal('proj-offer'),
@@ -674,7 +928,6 @@ window.exportPDF = function(){
 window.addEventListener('beforeprint',()=>{
     if (document.getElementById('view-calculator').classList.contains('hidden')) return;
     if (document.getElementById('results-section').style.display==='none') window.calculate();
-    // We no longer overwrite the header via preparePrintHeader as we rely on native CSS print media queries
 });
 
 // INIT

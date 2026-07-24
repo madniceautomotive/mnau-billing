@@ -1,5 +1,5 @@
 // ====================================================
-// ui.js: DOM RENDERING & STATS COMPILING (MULTI-TENANT & DYNAMIC SHARE DISPLAY)
+// ui.js: DOM RENDERING & VERSIONED PDF DOWNLOADS
 // ====================================================
 
 window.UI = {
@@ -60,7 +60,6 @@ window.UI = {
                 const fremdkosten = fremdkostenVal.toFixed(2);
                 const deckungsbeitrag = deckungsbeitragVal.toFixed(2);
 
-                // Flagged Badge
                 const isFlagged = fields.Flagged === true;
                 const flagBadgeHTML = isFlagged ? `<span class="flag-badge">🚩 Geändert</span>` : '';
 
@@ -82,7 +81,7 @@ window.UI = {
                 const isReadOnlyShare = groupMeta && groupMeta.isReadOnlyShare === true;
                 const creatorCompany = (groupMeta && groupMeta.originCompany) ? groupMeta.originCompany.toUpperCase() : (fields.Firma || "MNAU").toUpperCase();
 
-                // Echte Fremdkosten Breakdown (Checkboxen sind für EIGENE Lieferanten immer klickbar)
+                // Echte Fremdkosten Breakdown
                 let breakdownHTML = '';
                 if (suppliers.length > 0) {
                     breakdownHTML = `<div class="breakdown-container">`;
@@ -100,7 +99,29 @@ window.UI = {
                     breakdownHTML += `</div>`;
                 }
 
-                // Group Erlös-Info Box (ZEIGT DYNAMISCH DIE ANTEILE DER ANDERN FIRMEN AN)
+                // VERSIONIERTE KALKULATOR PDF BUTTONS
+                let pdfVersionsHTML = '';
+                if (groupMeta) {
+                    const snapshots = groupMeta.snapshots || (groupMeta.snapshot ? [groupMeta.snapshot] : []);
+                    if (snapshots.length > 0) {
+                        pdfVersionsHTML = `<div class="pdf-version-list-box"><span class="pdf-version-label">📄 Kalkulator PDFs:</span><div class="pdf-version-btns">`;
+                        snapshots.forEach((snap, sIdx) => {
+                            const isLatest = sIdx === snapshots.length - 1;
+                            const vLabel = snap.version ? `v${snap.version}` : `v${sIdx + 1}`;
+                            const tagText = isLatest ? `${vLabel} (Aktuell)` : vLabel;
+                            pdfVersionsHTML += `
+                                <button type="button" class="btn-secondary btn-small pdf-v-btn ${isLatest ? 'active-v' : ''}" 
+                                        onclick="window.downloadKalkulatorPDFFromLog('${id}', ${sIdx})" 
+                                        title="Version ${vLabel} als PDF herunterladen">
+                                    ⬇ ${tagText}
+                                </button>
+                            `;
+                        });
+                        pdfVersionsHTML += `</div></div>`;
+                    }
+                }
+
+                // Group Erlös-Info Box
                 let groupMetaHTML = '';
                 if (groupMeta) {
                     const kp = (parseFloat(groupMeta.kundenpreis)||0).toFixed(2);
@@ -117,24 +138,17 @@ window.UI = {
                         });
                     }
 
-                    const pdfBtn = groupMeta.snapshot ? `
-                        <button class="btn-secondary btn-small" onclick="window.downloadKalkulatorPDFFromLog('${id}')" style="margin-top:8px; display:inline-flex; align-items:center; gap:6px; font-size:0.7rem; padding:4px 10px; border-color:rgba(0,255,115,0.4); color:#00ff73; background:rgba(0,255,115,0.08);" title="Group Kalkulator PDF herunterladen">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> Kalkulator PDF Export
-                        </button>
-                    ` : '';
-
                     groupMetaHTML = `
                         <div class="group-info-box">
                             <div class="group-info-header">🌐 Group Erlösverteilung</div>
                             <div class="group-info-row"><span>Gesamt Projektvolumen:</span><strong>€ ${kp}</strong></div>
                             <div class="group-info-row"><span>Group-Abgabe (MNGR):</span><span>€ ${mngr}</span></div>
                             ${sistersHTML}
-                            ${pdfBtn}
+                            ${pdfVersionsHTML}
                         </div>
                     `;
                 }
 
-                // Read-Only Hinweis Banner für passive Erlösanteile
                 const readOnlyBanner = isReadOnlyShare ? `
                     <div class="read-only-banner">
                         🔒 Erlösanteil aus Projekt "${groupMeta.originProject || 'Kalkulator'}" (Hauptauftrag von ${creatorCompany})
@@ -146,7 +160,7 @@ window.UI = {
                 else if(status === "An Group verrechnet") { cardStatusClass = "status-an-group-verrechnet"; }
                 else if(status === "Bezahlt") { cardStatusClass = "status-bezahlt"; }
 
-                // Aktions-Steuerung: Bei passiven Anteilen zeigen wir das Dropdown "disabled" an
+                // Aktions-Steuerung (Edit-Pfeil leitet direkt zum Kalkulator um)
                 const actionControlsHTML = isReadOnlyShare ? `
                     <div style="display:flex; align-items:center; gap:8px;">
                         <span title="Schreibgeschützter Status" style="font-size:1.2rem; filter:grayscale(1);">🔒</span>
@@ -170,8 +184,8 @@ window.UI = {
                     <button class="changelog-btn" onclick="window.openChangelogModal('${id}')" title="Änderungshistorie anzeigen">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.25 2.52.77-1.28-3.52-2.09V8z"/></svg>
                     </button>
-                    <button class="edit-btn" onclick="window.openEditModal('${id}')" title="Auftrag bearbeiten">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                    <button class="edit-btn" onclick="window.openInKalkulator('${id}')" title="Im Group Kalkulator bearbeiten">
+                        ✏️
                     </button>
                     <button class="delete-btn" onclick="deleteOrder('${id}')" title="Auftrag löschen">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
@@ -244,7 +258,6 @@ window.UI = {
         });
 
         const sumDeckungsbeitrag = sumCompanyGesamt - sumFremdkosten;
-
         const summaryContainer = document.getElementById('dashboard-summary');
         if(!summaryContainer) return;
 
@@ -382,7 +395,6 @@ window.UI = {
         window.globalSuppliers.forEach(supplier => {
             const row = document.createElement('div');
             row.className = 'supplier-manager-row';
-            // Korrigiertes Layout & Einheitlicher Button-Style für die Verwaltung!
             row.innerHTML = `
                 <span class="supplier-manager-name" style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-right:10px;">${supplier.name}</span>
                 <button type="button" class="btn-remove-supplier" style="width:32px; height:32px; min-width:32px;" onclick="deleteSupplier('${supplier.id}', '${supplier.name.replace(/'/g, "\\'")}')">
@@ -391,32 +403,6 @@ window.UI = {
             `;
             listContainer.appendChild(row);
         });
-    },
-
-    addSupplierRow(defaultName = '', defaultAmount = '') {
-        const container = document.getElementById('supplier-container');
-        const row = document.createElement('div');
-        row.className = 'supplier-row';
-        row.innerHTML = `
-            <input type="text" class="mnau-input supplier-name" list="supplier-list" placeholder="Lieferant..." style="margin-top:0;">
-            <input type="number" step="0.01" class="mnau-input supplier-amount" placeholder="0.00" style="margin-top:0;">
-            <button type="button" class="btn-remove-supplier" title="Entfernen">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-            </button>
-        `;
-        row.querySelector('.supplier-name').value = defaultName;
-        if (defaultAmount !== '') row.querySelector('.supplier-amount').value = defaultAmount;
-
-        row.querySelector('.btn-remove-supplier').addEventListener('click', () => { row.remove(); UI.calculateTotalFremdkosten(); });
-        row.querySelector('.supplier-amount').addEventListener('input', UI.calculateTotalFremdkosten);
-        container.appendChild(row);
-    },
-
-    calculateTotalFremdkosten() {
-        let total = 0;
-        document.querySelectorAll('.supplier-amount').forEach(input => { total += parseFloat(input.value) || 0; });
-        document.getElementById('display-total-fremdkosten').textContent = total.toFixed(2);
-        return total;
     },
 
     showSetupRequired() {

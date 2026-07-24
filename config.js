@@ -26,17 +26,14 @@ window.globalSuppliers = [];
 window.currentUserEmail = "Unbekannt";
 window.currentUserCompanies = ["MNAU"];
 window.currentUserCompany = "MNAU";
+window.activeEditingGroupId = null; // Verfolgt aktives Projekt im Kalkulator
 
-// Globale DOM-Schnittstellen (aktualisiert mit externalOrderList)
+// Globale DOM-Schnittstellen
 window.DOM = {
     orderList: document.getElementById('order-list'),
     externalOrderList: document.getElementById('external-order-list'),
     archiveList: document.getElementById('archive-list'),
     loading: document.getElementById('loading'),
-    modal: document.getElementById('modal-overlay'),
-    btnNewOrder: document.getElementById('btn-new-order'),
-    btnCancel: document.getElementById('btn-cancel'),
-    formNewOrder: document.getElementById('form-new-order'),
     searchInput: document.getElementById('search-input'),
     searchClearBtn: document.getElementById('search-clear-btn'),
     btnManageSuppliers: document.getElementById('btn-manage-suppliers'),
