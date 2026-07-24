@@ -1,5 +1,5 @@
 // ====================================================
-// kalkulator.js: GROUP KALKULATOR LOGIC & MNAU LOG INTEGRATION
+// kalkulator.js: GROUP KALKULATOR LOGIC & MULTI-TENANT LOG INTEGRATION
 // ====================================================
 
 const ENTITIES = ['MNAG','MNMH','MNWB','MNAT','MNAU','MNGR'];
@@ -257,37 +257,46 @@ window.calculate = function(){
     h+='</tbody></table>';
     document.getElementById('results-table-wrap').innerHTML=h;
 
-    // MNAU PERSPKETIVE KENNZAHLEN
-    const mnauUmsatz = summe['MNAU'] || 0;
-    const mnauEchteFremdkosten = (FK['MNAU'] || 0) + (SP['MNAU'] || 0);
-    const mnauErtrag = mnauUmsatz - mnauEchteFremdkosten;
+    // DYNAMISCHE USER FIRMEN KENNZAHLEN
+    const myCompany = window.currentUserCompany || "MNAU";
+    const userUmsatz = summe[myCompany] || 0;
+    const userEchteFremdkosten = (FK[myCompany] || 0) + (SP[myCompany] || 0);
+    const userErtrag = userUmsatz - userEchteFremdkosten;
 
     const mngrAbgabe = summe['MNGR'] || 0;
 
     const sisterSharesDetail = {};
     let totalSisterShares = 0;
-    ['MNAG','MNMH','MNWB','MNAT','EXT'].forEach(comp => {
-        const amt = summe[comp] || 0;
-        if (amt > 0) {
-            sisterSharesDetail[comp] = Math.round(amt * 100) / 100;
-            totalSisterShares += amt;
+    ['MNAG','MNMH','MNWB','MNAT','MNAU','EXT'].forEach(comp => {
+        if (comp !== myCompany) {
+            const amt = summe[comp] || 0;
+            if (amt > 0) {
+                sisterSharesDetail[comp] = Math.round(amt * 100) / 100;
+                totalSisterShares += amt;
+            }
         }
     });
 
+    // Aktualisiert Button Text dynamisch für die jeweilige Firma
+    const btnSave = document.getElementById('btn-save-to-log');
+    if (btnSave) {
+        btnSave.innerHTML = `<span class="ti">➔</span> ${myCompany} Auftrag im Log erfassen`;
+    }
+
     document.getElementById('metrics').innerHTML=`
     <div class="metric highlight-main">
-      <div class="ml">MNAU Umsatz (Zufluss)</div>
-      <div class="mv">${fmt(mnauUmsatz)}</div>
+      <div class="ml">${myCompany} Umsatz (Zufluss)</div>
+      <div class="mv">${fmt(userUmsatz)}</div>
       <div class="sub-info">Verrechnung an Group</div>
     </div>
     <div class="metric highlight-profit">
-      <div class="ml">MNAU Deckungsbeitrag</div>
-      <div class="mv">${fmt(mnauErtrag)}</div>
-      <div class="sub-info">Netto-Ertrag vor MNAU-Fixkosten</div>
+      <div class="ml">${myCompany} Deckungsbeitrag</div>
+      <div class="mv">${fmt(userErtrag)}</div>
+      <div class="sub-info">Netto-Ertrag vor ${myCompany}-Fixkosten</div>
     </div>
     <div class="metric">
-      <div class="ml">MNAU Echte Fremdkosten</div>
-      <div class="mv">${fmt(mnauEchteFremdkosten)}</div>
+      <div class="ml">${myCompany} Echte Fremdkosten</div>
+      <div class="mv">${fmt(userEchteFremdkosten)}</div>
       <div class="sub-info">Eigene Lieferanten &amp; Spesen</div>
     </div>
     <div class="metric">
@@ -325,12 +334,13 @@ window.calculate = function(){
 };
 
 // ====================================================
-// MNAU AUFTRAG IM LOG ERFASSEN (INITIALSTATUS: IN BEARBEITUNG)
+// AUFTRAG IM LOG ERFASSEN (DYNAMISCH FÜR USER FIRMA)
 // ====================================================
 window.saveMNAUOrderToLog = async function() {
+    const myCompany = window.currentUserCompany || "MNAU";
     const projNameRaw = getVal('proj-name');
     const projName = projNameRaw ? projNameRaw : "Unbenanntes Projekt";
-    const orderTitle = `${projName} (MNAU)`;
+    const orderTitle = `${projName} (${myCompany})`;
 
     const roles = getRoles();
     const OTHER = COSTS.filter(c => c.key !== FUL_KEY);
@@ -362,25 +372,25 @@ window.saveMNAUOrderToLog = async function() {
     });
     summe['MNGR'] += fkMNGR;
 
-    // 1. MNAU Umsatz
-    const mnauUmsatz = Math.round((summe['MNAU'] || 0) * 100) / 100;
+    // 1. Umsatz der jeweiligen Firma des Users
+    const userUmsatz = Math.round((summe[myCompany] || 0) * 100) / 100;
 
-    if (mnauUmsatz <= 0) {
-        alert("Der MNAU-Umsatz beträgt 0.00 €. Es wurde kein Auftrag erfasst.");
+    if (userUmsatz <= 0) {
+        alert(`Der ${myCompany}-Umsatz beträgt 0.00 €. Es wurde kein Auftrag erfasst.`);
         return;
     }
 
-    // 2. Echte Fremdkosten NUR von MNAU selbst
+    // 2. Echte Fremdkosten NUR von der Firma des Users
     const suppliers = [];
-    const containerMNAU = document.getElementById('suppliers-list-MNAU');
+    const containerCompany = document.getElementById(`suppliers-list-${myCompany}`);
 
-    if (containerMNAU) {
-        containerMNAU.querySelectorAll('.kalk-supplier-row').forEach(row => {
+    if (containerCompany) {
+        containerCompany.querySelectorAll('.kalk-supplier-row').forEach(row => {
             const sName = (row.querySelector('.kalk-supp-name').value || '').trim();
             const sAmount = parseFloat(row.querySelector('.kalk-supp-amount').value) || 0;
             if (sName !== '' || sAmount > 0) {
                 suppliers.push({
-                    name: sName || "Fremdkosten MNAU",
+                    name: sName || `Fremdkosten ${myCompany}`,
                     amount: Math.round(sAmount * 100) / 100,
                     paid: false
                 });
@@ -401,24 +411,26 @@ window.saveMNAUOrderToLog = async function() {
         });
     }
 
-    const mnauSP = SP['MNAU'] || 0;
-    if (mnauSP > 0) {
+    const userSP = SP[myCompany] || 0;
+    if (userSP > 0) {
         suppliers.push({
-            name: "Spesen MNAU",
-            amount: Math.round(mnauSP * 100) / 100,
+            name: `Spesen ${myCompany}`,
+            amount: Math.round(userSP * 100) / 100,
             paid: false
         });
     }
 
     const totalFremdkosten = suppliers.reduce((s, item) => s + item.amount, 0);
 
-    // 3. Einzelne Schwesterfirmen Summen
+    // 3. Einzelne Schwesterfirmen Summen für Info-Box
     const mngrAbgabe = summe['MNGR'] || 0;
     const sisterSharesDetail = {};
-    ['MNAG','MNMH','MNWB','MNAT','EXT'].forEach(comp => {
-        const amt = summe[comp] || 0;
-        if (amt > 0) {
-            sisterSharesDetail[comp] = Math.round(amt * 100) / 100;
+    ['MNAG','MNMH','MNWB','MNAT','MNAU','EXT'].forEach(comp => {
+        if (comp !== myCompany) {
+            const amt = summe[comp] || 0;
+            if (amt > 0) {
+                sisterSharesDetail[comp] = Math.round(amt * 100) / 100;
+            }
         }
     });
 
@@ -449,9 +461,9 @@ window.saveMNAUOrderToLog = async function() {
             comment: `Aus Group Kalkulator erfasst (Status: In Bearbeitung)`,
             details: [
                 `Auftrag "${orderTitle}" angelegt:`,
-                `• MNAU Umsatz (Verrechnung an Group): € ${mnauUmsatz.toFixed(2)}`,
-                `• MNAU Echte Fremdkosten: € ${totalFremdkosten.toFixed(2)}`,
-                `• MNAU Deckungsbeitrag: € ${(mnauUmsatz - totalFremdkosten).toFixed(2)}`,
+                `• ${myCompany} Umsatz (Verrechnung an Group): € ${userUmsatz.toFixed(2)}`,
+                `• ${myCompany} Echte Fremdkosten: € ${totalFremdkosten.toFixed(2)}`,
+                `• ${myCompany} Deckungsbeitrag: € ${(userUmsatz - totalFremdkosten).toFixed(2)}`,
                 `• Gesamt-Projektvolumen (Group): € ${kundenpreis.toFixed(2)}`,
                 `• Group-Abgabe (MNGR): € ${mngrAbgabe.toFixed(2)}`
             ]
@@ -466,10 +478,11 @@ window.saveMNAUOrderToLog = async function() {
             records: [{
                 fields: {
                     "Auftrag": orderTitle,
-                    "Betrag_Automotive": mnauUmsatz,
+                    "Betrag_Automotive": userUmsatz,
                     "Fremdkosten": Math.round(totalFremdkosten * 100) / 100,
                     "Fremdkosten_Details": detailsPayload,
-                    "Status": "In Bearbeitung", // INITIALSTATUS AUF "IN BEARBEITUNG" GESETZT
+                    "Status": "In Bearbeitung",
+                    "Firma": myCompany, // DYNAMISCH AN GEÖFFNETE FIRMA GEBUNDEN
                     "Flagged": false,
                     "Changelog": JSON.stringify(initialChangelog)
                 }
@@ -481,7 +494,7 @@ window.saveMNAUOrderToLog = async function() {
             window.loadedRecords.unshift(createdData.records[0]);
             window.UI.updateSupplierDatalist();
             window.UI.renderOrders(window.loadedRecords);
-            alert(`Erfolg! MNAU-Auftrag "${orderTitle}" über € ${mnauUmsatz.toFixed(2)} wurde mit Status "In Bearbeitung" im Log erfasst.`);
+            alert(`Erfolg! ${myCompany}-Auftrag "${orderTitle}" über € ${userUmsatz.toFixed(2)} wurde mit Status "In Bearbeitung" im Log erfasst.`);
 
             if (typeof window.switchTab === 'function') {
                 window.switchTab('billing');
@@ -493,7 +506,7 @@ window.saveMNAUOrderToLog = async function() {
     } finally {
         if (btn) {
             btn.disabled = false;
-            btn.innerHTML = '<span class="ti">➔</span> MNAU Auftrag im Log erfassen';
+            btn.innerHTML = `<span class="ti">➔</span> ${myCompany} Auftrag im Log erfassen`;
         }
     }
 };

@@ -14,6 +14,22 @@ window.API = {
         return await response.json();
     },
 
+    async fetchUserCompany(email) {
+        if (!email) return "MNAU";
+        try {
+            const encodedEmail = encodeURIComponent(email.trim().toLowerCase());
+            const response = await fetch(`${window.API_URL_USERS}?filterByFormula=LOWER({Email})='${encodedEmail}'`, { headers: window.HEADERS });
+            if (!response.ok) return "MNAU";
+            const data = await response.json();
+            if (data && data.records && data.records.length > 0 && data.records[0].fields.Firma) {
+                return data.records[0].fields.Firma.trim();
+            }
+        } catch (e) {
+            console.warn("Benutzer-Tabelle in Airtable konnte nicht abgefragt werden:", e);
+        }
+        return "MNAU";
+    },
+
     async saveSuppliers(newSuppliers) {
         const response = await fetch(window.API_URL_SUPPLIERS, {
             method: 'POST',

@@ -2,17 +2,18 @@
 // config.js: BASE64 OBFUSCATED AIRTABLE CREDENTIALS
 // ====================================================
 
-// Füge hier deinen Base64-String ein (z. B. "cGF0MTIzNDU..."):
 const OBFUSCATED_TOKEN = "cGF0c290TGpINmdNdEpJMnAuYzZlMjVkOWNkZDZmYzU5MTJmOGNiZmJlOTlmYzczYjk4YTYzMWM3MmJmYzM0YWMzNWFiZTI5NzQ5YjU4MjBkNQ==";
 
-window.AIRTABLE_TOKEN = atob(OBFUSCATED_TOKEN); // Decodiert das Token im Browser
+window.AIRTABLE_TOKEN = atob(OBFUSCATED_TOKEN);
 window.BASE_ID = "appCESBUunBy9OOo0";
 
 window.TABLE_NAME_ORDERS = "Auftraege";
 window.TABLE_NAME_SUPPLIERS = "Lieferanten";
+window.TABLE_NAME_USERS = "Benutzer";
 
 window.API_URL_ORDERS = `https://api.airtable.com/v0/${window.BASE_ID}/${window.TABLE_NAME_ORDERS}`;
 window.API_URL_SUPPLIERS = `https://api.airtable.com/v0/${window.BASE_ID}/${window.TABLE_NAME_SUPPLIERS}`;
+window.API_URL_USERS = `https://api.airtable.com/v0/${window.BASE_ID}/${window.TABLE_NAME_USERS}`;
 
 window.HEADERS = {
     "Authorization": `Bearer ${window.AIRTABLE_TOKEN}`,
@@ -22,6 +23,8 @@ window.HEADERS = {
 // Globaler App-State
 window.loadedRecords = [];
 window.globalSuppliers = [];
+window.currentUserEmail = "Unbekannt";
+window.currentUserCompany = "MNAU";
 
 // Globale DOM-Schnittstellen
 window.DOM = {

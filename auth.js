@@ -18,8 +18,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// Globale Variable für den eingeloggten Nutzer
+// Globale Variablen
 window.currentUserEmail = "Unbekannt";
+window.currentUserCompany = "MNAU";
 
 // DOM Elemente
 const authOverlay = document.getElementById('auth-overlay');
@@ -86,15 +87,24 @@ if (btnLogout) {
 }
 
 // 🔐 Der Wächter: Prüft permanent den Login-Status
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
     if (user) {
         window.currentUserEmail = user.email || "Unbekannt";
+
+        // Fragt die zugewiesene Firma aus Airtable ab (Fallback: MNAU)
+        if (window.API && typeof window.API.fetchUserCompany === "function") {
+            window.currentUserCompany = await window.API.fetchUserCompany(user.email);
+        } else {
+            window.currentUserCompany = "MNAU";
+        }
+
         authOverlay.classList.add('hidden');
         if (typeof window.initMNAUApp === "function") {
             window.initMNAUApp();
         }
     } else {
         window.currentUserEmail = "Unbekannt";
+        window.currentUserCompany = "MNAU";
         authOverlay.classList.remove('hidden');
         btnAuthSubmit.disabled = false;
         btnAuthSubmit.textContent = "Anmelden";

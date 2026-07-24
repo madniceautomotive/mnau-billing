@@ -1,14 +1,22 @@
 // ====================================================
-// ui.js: DOM RENDERING & STATS COMPILING
+// ui.js: DOM RENDERING & STATS COMPILING (MULTI-TENANT)
 // ====================================================
 
 window.UI = {
     renderOrders(records) {
-        UI.updateSummary(records);
-        UI.updateSupplierBreakdown(records);
+        // ZUORDNUNG: Zeige nur Aufträge der eigenen Firma des eingeloggten Users
+        const myCompany = (window.currentUserCompany || "MNAU").toUpperCase();
 
-        const activeRecords = records.filter(r => (r.fields.Status || "Zu verrechnen") !== "Bezahlt");
-        const archivedRecords = records.filter(r => r.fields.Status === "Bezahlt");
+        const companyRecords = records.filter(r => {
+            const recordCompany = (r.fields.Firma || "MNAU").toUpperCase();
+            return recordCompany === myCompany;
+        });
+
+        UI.updateSummary(companyRecords);
+        UI.updateSupplierBreakdown(companyRecords);
+
+        const activeRecords = companyRecords.filter(r => (r.fields.Status || "Zu verrechnen") !== "Bezahlt");
+        const archivedRecords = companyRecords.filter(r => r.fields.Status === "Bezahlt");
 
         const renderContainer = (containerEl, listRecords, emptyMessage) => {
             if(!listRecords || listRecords.length === 0) {
@@ -61,7 +69,7 @@ window.UI = {
                     } catch(e) {}
                 }
 
-                // Echte MNAU Fremdkosten Breakdown (Checkboxen)
+                // Echte Fremdkosten Breakdown (Checkboxen)
                 let breakdownHTML = '';
                 if (suppliers.length > 0) {
                     breakdownHTML = `<div class="breakdown-container">`;
@@ -79,7 +87,7 @@ window.UI = {
                     breakdownHTML += `</div>`;
                 }
 
-                // Group Erlös-Info Box (Transparenz über Gesamtprojekt & Einzelne Schwesterfirmen)
+                // Group Erlös-Info Box
                 let groupMetaHTML = '';
                 if (groupMeta) {
                     const kp = (parseFloat(groupMeta.kundenpreis)||0).toFixed(2);
@@ -120,18 +128,18 @@ window.UI = {
                 const innerHTML = `
                     <div class="billing-info-block">
                         <div class="billing-row-title">${fields.Auftrag || "Unbenannt"} ${flagBadgeHTML}</div>
-                        <div class="billing-row-meta">Erstellt: ${new Date(record.createdTime).toLocaleDateString('de-DE')}</div>
+                        <div class="billing-row-meta">Erstellt: ${new Date(record.createdTime).toLocaleDateString('de-DE')} • Firma: ${myCompany}</div>
                         ${groupMetaHTML}
                     </div>
                     
                     <div class="billing-financials">
-                        <div class="amount-main" title="MNAU Umsatz (Abrechnung an Group)">
-                            <span class="amount-title-label">MNAU Umsatz:</span> € ${betrag}
+                        <div class="amount-main" title="${myCompany} Umsatz (Abrechnung an Group)">
+                            <span class="amount-title-label">${myCompany} Umsatz:</span> € ${betrag}
                         </div>
-                        <div class="amount-deckungsbeitrag" title="Netto-Ertrag für MNAU nach echten Fremdkosten">
+                        <div class="amount-deckungsbeitrag" title="Netto-Ertrag nach echten Fremdkosten">
                             <span class="amount-title-label">Deckungsbeitrag:</span> € ${deckungsbeitrag}
                         </div>
-                        ${fremdkostenVal > 0 ? `<div class="amount-fremdkosten">MNAU Fremdkosten: € ${fremdkosten}</div>` : ''}
+                        ${fremdkostenVal > 0 ? `<div class="amount-fremdkosten">${myCompany} Fremdkosten: € ${fremdkosten}</div>` : ''}
                         ${breakdownHTML}
                     </div>
                     
@@ -177,14 +185,16 @@ window.UI = {
     },
 
     updateSummary(records) {
-        let sumZuVerrechnen = 0, sumInBearbeitung = 0, sumAnGroup = 0, sumFremdkosten = 0, sumAutomotiveGesamt = 0;
+        const myCompany = window.currentUserCompany || "MNAU";
+        let sumZuVerrechnen = 0, sumInBearbeitung = 0, sumAnGroup = 0, sumFremdkosten = 0, sumCompanyGesamt = 0;
+
         records.forEach(record => {
             const fields = record.fields;
             const status = fields.Status || "Zu verrechnen";
             const betrag = parseFloat(fields.Betrag_Automotive) || 0;
             const fremd = parseFloat(fields.Fremdkosten) || 0;
 
-            sumAutomotiveGesamt += betrag;
+            sumCompanyGesamt += betrag;
             sumFremdkosten += fremd;
 
             if (status === "Zu verrechnen") sumZuVerrechnen += betrag;
@@ -192,18 +202,18 @@ window.UI = {
             if (status === "An Group verrechnet") sumAnGroup += betrag;
         });
 
-        const sumDeckungsbeitrag = sumAutomotiveGesamt - sumFremdkosten;
+        const sumDeckungsbeitrag = sumCompanyGesamt - sumFremdkosten;
 
         const summaryContainer = document.getElementById('dashboard-summary');
         if(!summaryContainer) return;
 
         summaryContainer.innerHTML = `
             <div class="summary-card green">
-                <span class="summary-label">MNAU Umsatz Gesamt</span>
-                <span class="summary-value">€ ${sumAutomotiveGesamt.toFixed(2)}</span>
+                <span class="summary-label">${myCompany} Umsatz Gesamt</span>
+                <span class="summary-value">€ ${sumCompanyGesamt.toFixed(2)}</span>
             </div>
             <div class="summary-card blue">
-                <span class="summary-label">MNAU Deckungsbeitrag</span>
+                <span class="summary-label">${myCompany} Deckungsbeitrag</span>
                 <span class="summary-value">€ ${sumDeckungsbeitrag.toFixed(2)}</span>
             </div>
             <div class="summary-card cyan">
@@ -261,7 +271,7 @@ window.UI = {
                     <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
                     <div class="no-debts-text">
                         <h3>Keine offenen Posten</h3>
-                        <p>Alle MNAU-Lieferantenkosten wurden vollständig beglichen.</p>
+                        <p>Alle Lieferantenkosten wurden vollständig beglichen.</p>
                     </div>
                 </div>
             `;
