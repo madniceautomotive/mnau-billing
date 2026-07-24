@@ -1,5 +1,5 @@
 // ====================================================
-// ui.js: DOM RENDERING & VERSIONED PDF DOWNLOADS
+// ui.js: DOM RENDERING WITH MULTI-BRAND BADGES
 // ====================================================
 
 window.UI = {
@@ -121,7 +121,7 @@ window.UI = {
                     }
                 }
 
-                // Group Erlös-Info Box
+                // Group Erlös-Info Box mit gefärbten Marken-Badges!
                 let groupMetaHTML = '';
                 if (groupMeta) {
                     const kp = (parseFloat(groupMeta.kundenpreis)||0).toFixed(2);
@@ -132,8 +132,13 @@ window.UI = {
 
                     if (sharesDict && Object.keys(sharesDict).length > 0) {
                         Object.entries(sharesDict).forEach(([comp, amt]) => {
-                            if (comp.toUpperCase() !== myCompany) {
-                                sistersHTML += `<div class="group-info-row"><span>• Anteil ${comp}:</span><span>€ ${(parseFloat(amt)||0).toFixed(2)}</span></div>`;
+                            const upperComp = comp.toUpperCase();
+                            if (upperComp !== myCompany) {
+                                sistersHTML += `
+                                    <div class="group-info-row">
+                                        <span>• Anteil <span class="comp-badge badge-${upperComp}">${upperComp}</span>:</span>
+                                        <strong>€ ${(parseFloat(amt)||0).toFixed(2)}</strong>
+                                    </div>`;
                             }
                         });
                     }
@@ -142,7 +147,7 @@ window.UI = {
                         <div class="group-info-box">
                             <div class="group-info-header">🌐 Group Erlösverteilung</div>
                             <div class="group-info-row"><span>Gesamt Projektvolumen:</span><strong>€ ${kp}</strong></div>
-                            <div class="group-info-row"><span>Group-Abgabe (MNGR):</span><span>€ ${mngr}</span></div>
+                            <div class="group-info-row"><span>Group-Abgabe (<span class="comp-badge badge-MNGR">MNGR</span>):</span><span>€ ${mngr}</span></div>
                             ${sistersHTML}
                             ${pdfVersionsHTML}
                         </div>
@@ -151,7 +156,7 @@ window.UI = {
 
                 const readOnlyBanner = isReadOnlyShare ? `
                     <div class="read-only-banner">
-                        🔒 Erlösanteil aus Projekt "${groupMeta.originProject || 'Kalkulator'}" (Hauptauftrag von ${creatorCompany})
+                        🔒 Erlösanteil aus Projekt "${groupMeta.originProject || 'Kalkulator'}" (Hauptauftrag von <span class="comp-badge badge-${creatorCompany}">${creatorCompany}</span>)
                     </div>
                 ` : '';
 
@@ -160,7 +165,6 @@ window.UI = {
                 else if(status === "An Group verrechnet") { cardStatusClass = "status-an-group-verrechnet"; }
                 else if(status === "Bezahlt") { cardStatusClass = "status-bezahlt"; }
 
-                // Aktions-Steuerung (Edit-Pfeil leitet direkt zum Kalkulator um)
                 const actionControlsHTML = isReadOnlyShare ? `
                     <div style="display:flex; align-items:center; gap:8px;">
                         <span title="Schreibgeschützter Status" style="font-size:1.2rem; filter:grayscale(1);">🔒</span>
@@ -195,7 +199,11 @@ window.UI = {
                 const innerHTML = `
                     <div class="billing-info-block">
                         <div class="billing-row-title">${fields.Auftrag || "Unbenannt"} ${flagBadgeHTML}</div>
-                        <div class="billing-row-meta">Erstellt: ${new Date(record.createdTime).toLocaleDateString('de-DE')} • Erstellt von: ${creatorCompany}</div>
+                        <div class="billing-row-meta">
+                            <span>Erstellt: ${new Date(record.createdTime).toLocaleDateString('de-DE')}</span>
+                            <span>•</span>
+                            <span>Erstellt von: <span class="comp-badge badge-${creatorCompany}">${creatorCompany}</span></span>
+                        </div>
                         ${readOnlyBanner}
                         ${groupMetaHTML}
                     </div>
@@ -350,7 +358,7 @@ window.UI = {
                 html += `
                     <div class="supplier-stat-item">
                         <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0; text-transform:none; user-select:none; min-width:0; flex:1;">
-                            <input type="checkbox" onchange="window.toggleSupplierPaid('${item.orderId}', ${item.index})" style="accent-color:#00ff73; cursor:pointer; width:14px; height:14px; flex-shrink:0;">
+                            <input type="checkbox" onchange="window.toggleSupplierPaid('${item.orderId}', ${item.index})" style="accent-color:var(--active-company-color); cursor:pointer; width:14px; height:14px; flex-shrink:0;">
                             <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">↳ ${item.order}</span>
                         </label>
                         <span style="color:#ef4444; font-weight:600; flex-shrink:0;">€ ${item.amount.toFixed(2)}</span>

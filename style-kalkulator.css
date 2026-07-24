@@ -1,5 +1,5 @@
 /* ==================================================== */
-/* style-kalkulator.css: MOBILE OPTIMIZED DARK THEME   */
+/* style-kalkulator.css: MULTI-BRAND KALKULATOR DESIGN */
 /* ==================================================== */
 #view-calculator {
     width: 100%;
@@ -18,7 +18,7 @@
     gap: 12px;
     margin-bottom: 1.2rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid rgba(0, 255, 115, 0.2);
+    border-bottom: 1px solid var(--active-company-color);
 }
 
 #view-calculator .logo-title h1 {
@@ -31,7 +31,7 @@
 }
 #view-calculator .logo-title span {
     font-size: 0.78rem;
-    color: #00ff73 !important;
+    color: var(--active-company-color) !important;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -69,12 +69,12 @@
 #view-calculator .mode-btn .md { font-size: 0.75rem; color: #94a3b8; line-height: 1.4; }
 
 #view-calculator .mode-btn.active.td { border-color: #ff7b00; background: rgba(255, 123, 0, 0.05); box-shadow: 0 4px 15px rgba(255, 123, 0, 0.1); }
-#view-calculator .mode-btn.active.bu { border-color: #00ff73; background: rgba(0, 255, 115, 0.05); box-shadow: 0 4px 15px rgba(0, 255, 115, 0.1); }
+#view-calculator .mode-btn.active.bu { border-color: var(--active-company-color); background: rgba(255, 255, 255, 0.03); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); }
 #view-calculator .mode-btn.active.td .ic { color: #ff7b00; background: rgba(255, 123, 0, 0.15); }
-#view-calculator .mode-btn.active.bu .ic { color: #00ff73; background: rgba(0, 255, 115, 0.15); }
+#view-calculator .mode-btn.active.bu .ic { color: var(--active-company-color); background: rgba(255, 255, 255, 0.1); }
 
 #view-calculator .mode-btn .chk { margin-left: auto; font-size: 16px; opacity: 0; font-weight: 700; }
-#view-calculator .mode-btn.active .chk { opacity: 1; color: #00ff73; }
+#view-calculator .mode-btn.active .chk { opacity: 1; color: var(--active-company-color); }
 #view-calculator .mode-btn.active.td .chk { color: #ff7b00; }
 
 /* Flow Banner */
@@ -93,8 +93,8 @@
 }
 #view-calculator .flow-step { padding: 4px 8px; border-radius: 6px; background: #1c1c1c; color: #ffffff; border: 1px solid rgba(255,255,255,0.1); font-weight: 600; }
 #view-calculator .flow.td .flow-step.base { background: #ff7b00; color: #121212; border-color: #ff7b00; font-weight: 800; }
-#view-calculator .flow.bu .flow-step.base { background: #00ff73; color: #121212; border-color: #00ff73; font-weight: 800; }
-#view-calculator .flow-step.result { background: rgba(0, 255, 115, 0.1); color: #00ff73; border-color: #00ff73; font-weight: 800; }
+#view-calculator .flow.bu .flow-step.base { background: var(--active-company-color); color: #ffffff; border-color: var(--active-company-color); font-weight: 800; }
+#view-calculator .flow-step.result { background: rgba(255, 255, 255, 0.08); color: #ffffff; border-color: var(--active-company-color); font-weight: 800; }
 #view-calculator .flow .op { font-size: 14px; color: #64748b; font-weight: 800; }
 
 /* Sektionen */
@@ -110,7 +110,7 @@
 #view-calculator .section-title {
     font-size: 0.85rem;
     font-weight: 800;
-    color: #00ff73;
+    color: var(--active-company-color);
     margin-bottom: 1rem;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -118,15 +118,15 @@
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
-    border-bottom: 1px solid rgba(0, 255, 115, 0.15);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     padding-bottom: 6px;
 }
 #view-calculator .section-title .layer-tag {
     font-size: 0.65rem;
-    background: rgba(0, 255, 115, 0.08);
+    background: rgba(255, 255, 255, 0.05);
     padding: 2px 6px;
     border-radius: 4px;
-    color: #00ff73;
+    color: #a0aec0;
     font-weight: 700;
 }
 
@@ -139,7 +139,7 @@
     padding-bottom: 10px;
 }
 #view-calculator .grid-6-scroll::-webkit-scrollbar { height: 5px; }
-#view-calculator .grid-6-scroll::-webkit-scrollbar-thumb { background: rgba(0, 255, 115, 0.2); border-radius: 3px; }
+#view-calculator .grid-6-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 3px; }
 
 #view-calculator .grid-6 { display: grid; grid-template-columns: repeat(6, minmax(180px, 1fr)); gap: 12px; min-width: 1100px; }
 #view-calculator .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(160px, 1fr)); gap: 12px; min-width: 680px; }
@@ -172,32 +172,43 @@
 #view-calculator .kalk-supplier-row .kalk-supp-amount { flex: 1; min-width: 0; padding: 6px !important; font-size: 0.72rem !important; text-align: right; }
 #view-calculator .kalk-supplier-row .kalk-supp-remove { width: 26px; height: 26px; min-width: 26px; border-radius: 4px; display: flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
 
-/* Entitäts-Karten */
+/* ENTITÄTS-KARTEN MIT FIRMEN-BRANDING */
 #view-calculator .entity-card {
     background: linear-gradient(160deg, #1e1e1e 0%, #141414 100%);
     border-radius: 10px;
     padding: 14px;
-    border: 1px solid rgba(0, 255, 115, 0.15);
+    border: 1fr solid rgba(255, 255, 255, 0.08);
     display: flex;
     flex-direction: column;
+    position: relative;
+    overflow: hidden;
 }
+
+/* FIRMEN SPEZIFISCHE AKZENTE AUF DEN KARTEN */
 #view-calculator .entity-name {
-    font-size: 0.88rem;
-    font-weight: 800;
-    color: #00ff73;
-    margin-bottom: 10px;
+    font-size: 0.95rem;
+    font-weight: 900;
+    margin-bottom: 12px;
     text-align: center;
-    padding-bottom: 6px;
-    border-bottom: 1px dashed rgba(0, 255, 115, 0.2);
+    padding: 6px 0;
+    border-radius: 6px;
     text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #ffffff !important;
 }
+#view-calculator .entity-name.col-MNAG { background: var(--color-mnag); }
+#view-calculator .entity-name.col-MNMH { background: var(--color-mnmh); }
+#view-calculator .entity-name.col-MNWB { background: var(--color-mnwb); color: #121212 !important; }
+#view-calculator .entity-name.col-MNAT { background: var(--color-mnat); }
+#view-calculator .entity-name.col-MNAU { background: var(--color-mnau); }
+#view-calculator .entity-name.col-MNGR { background: #000000; border: 1px solid rgba(255,255,255,0.25); }
 
 /* Buttons & Aktionen */
 #view-calculator .actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
 #view-calculator .actions button { padding: 10px 16px; font-weight: 700; font-size: 0.8rem; border-radius: 6px; }
 
 /* ==================================================== */
-/* ERGEBNIS-TABELLE DARK DESIGN (AN PASSEND AN PDF-LOOK) */
+/* ERGEBNIS-TABELLE MIT FIRMEN-FARB-HEADERS             */
 /* ==================================================== */
 #view-calculator .results-wrap {
     width: 100%;
@@ -205,7 +216,7 @@
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     border-radius: 12px;
-    border: 1px solid rgba(0, 255, 115, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     background: #111111;
     margin-top: 18px;
     box-shadow: 0 8px 30px rgba(0,0,0,0.5);
@@ -223,35 +234,41 @@
 #view-calculator table.results.flow col.cg-label { width: 25%; }
 #view-calculator table.results.flow col.cg-col { width: 9.375%; }
 
-#view-calculator table.results.flow thead tr {
-    background: #181818;
-}
+#view-calculator table.results.flow thead tr { background: #181818; }
 
 #view-calculator table.results.flow thead th {
     padding: 12px 10px;
-    text-align: right;
-    color: #00ff73;
-    font-size: 0.8rem;
-    font-weight: 800;
+    text-align: center;
+    font-size: 0.82rem;
+    font-weight: 900;
     text-transform: uppercase;
-    border-bottom: 2px solid rgba(0, 255, 115, 0.3);
-    vertical-align: bottom;
+    border-bottom: 3px solid rgba(255, 255, 255, 0.1);
+    vertical-align: middle;
     letter-spacing: 0.5px;
+    color: #ffffff;
 }
 
+/* SPEZIFISCHE SCHWESTERFIRMEN HEADER SPALTEN IN DER TABELLE */
+#view-calculator table.results.flow thead th.col-MNAG { border-bottom-color: var(--color-mnag); color: var(--color-mnag); }
+#view-calculator table.results.flow thead th.col-MNMH { border-bottom-color: var(--color-mnmh); color: var(--color-mnmh); }
+#view-calculator table.results.flow thead th.col-MNWB { border-bottom-color: var(--color-mnwb); color: var(--color-mnwb); }
+#view-calculator table.results.flow thead th.col-MNAT { border-bottom-color: var(--color-mnat); color: var(--color-mnat); }
+#view-calculator table.results.flow thead th.col-MNAU { border-bottom-color: var(--color-mnau); color: var(--color-mnau); }
+#view-calculator table.results.flow thead th.col-MNGR { border-bottom-color: #a0aec0; color: #ffffff; }
+
 #view-calculator table.results.flow thead th.kundenpreis-cell {
-    background: linear-gradient(135deg, #00522f 0%, #00381e 100%);
+    background: linear-gradient(135deg, #222222 0%, #111111 100%);
     color: #ffffff;
     text-align: left;
     padding: 12px 16px;
     border-right: 1px solid rgba(255, 255, 255, 0.1);
-    border-bottom: 2px solid #00ff73;
+    border-bottom: 3px solid var(--active-company-color);
 }
 #view-calculator table.results.flow thead th.kundenpreis-cell .kp-title {
     font-size: 0.65rem;
     text-transform: uppercase;
     letter-spacing: 1px;
-    color: #a7f3d0;
+    color: #a0aec0;
     font-weight: 700;
     margin-bottom: 2px;
 }
@@ -298,22 +315,20 @@
 #view-calculator table.results.flow .val-zero { color: #64748b; }
 #view-calculator table.results.flow .val-neutral { color: #e2e8f0; }
 
-/* Farbliche Zeilen-Tints analog zum PDF */
 #view-calculator tr.rg-base td { background: rgba(255, 255, 255, 0.01); }
 #view-calculator tr.rg-sales td { background: rgba(255, 123, 0, 0.035); }
 #view-calculator tr.rg-cost td { background: rgba(0, 210, 255, 0.035); }
 #view-calculator tr.rg-fulfill td { background: rgba(0, 255, 115, 0.035); font-weight: 700; color: #a7f3d0; }
 #view-calculator tr.rg-pass td { background: rgba(255, 255, 255, 0.01); }
 
-/* Summen-Zeile als leuchtender Highlight-Balken */
-#view-calculator tr.rg-sum { background: rgba(0, 102, 58, 0.25); }
+/* Summen-Zeile Highlight */
+#view-calculator tr.rg-sum { background: rgba(255, 255, 255, 0.05); }
 #view-calculator tr.rg-sum td {
     font-weight: 800;
     font-size: 0.9rem;
-    border-top: 2px solid #00ff73;
-    border-bottom: 2px solid #00ff73;
+    border-top: 2px solid var(--active-company-color);
+    border-bottom: 2px solid var(--active-company-color);
     color: #ffffff !important;
-    background: rgba(0, 102, 58, 0.25) !important;
 }
 
 #view-calculator tr.rg-stunden td { background: rgba(246, 224, 94, 0.02); }
@@ -321,13 +336,15 @@
 /* Metriken Highlights */
 #view-calculator .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 1.2rem; }
 #view-calculator .metric { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 12px; }
+#view-calculator .metric.highlight-main { border-color: var(--active-company-color); background: rgba(255, 255, 255, 0.03); }
+#view-calculator .metric.highlight-main .mv { color: var(--active-company-color); }
+#view-calculator .metric.highlight-profit { border-color: #00d2ff; background: rgba(0, 210, 255, 0.03); }
 #view-calculator .metric .ml { font-size: 0.65rem; color: #94a3b8; text-transform: uppercase; font-weight: 800; margin-bottom: 4px; }
-#view-calculator .metric .mv { font-size: 1.15rem; font-weight: 800; color: #00ff73; }
+#view-calculator .metric .mv { font-size: 1.15rem; font-weight: 800; color: #ffffff; }
 #view-calculator .metric .sub-info { font-size: 0.65rem; color: #64748b; margin-top: 2px; }
 
 #view-calculator .hint { font-size: 0.72rem; color: #94a3b8; margin-top: 6px; }
 
-/* Mobile Query für den Kalkulator */
 @media (max-width: 768px) {
     #view-calculator .kalk-section { padding: 12px 14px; }
     #view-calculator .mode-switch { grid-template-columns: 1fr; }

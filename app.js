@@ -1,5 +1,5 @@
 // ==================================================== 
-// app.js: USER ACTIONS & CONTROLLER HUB
+// app.js: USER ACTIONS & DYNAMIC COMPANY SWITCHER
 // ====================================================
 
 // Globales Tab-Switching
@@ -25,10 +25,30 @@ window.switchTab = function(tabName) {
     }
 };
 
-// FIRMEN WECHSELN VIA DROPDOWN
+// FIRMEN WECHSELN VIA DROPDOWN (DYNAMIC COLOR UPDATES)
 window.switchCompany = function(newCompany) {
     if (!newCompany) return;
-    window.currentUserCompany = newCompany.toUpperCase();
+    const cleanComp = newCompany.toUpperCase();
+    window.currentUserCompany = cleanComp;
+
+    // Anpassen des globalen Data-Attributes für CSS Variables
+    document.documentElement.setAttribute('data-company', cleanComp);
+
+    // Styling des Firmen-Dropdowns auf die Markenfarbe anpassen
+    const compSelect = document.getElementById('company-select');
+    if (compSelect) {
+        const colorMap = {
+            'MNAG': '#ed694b',
+            'MNMH': '#d42168',
+            'MNWB': '#58bfc5',
+            'MNAT': '#5079ac',
+            'MNAU': '#00663a',
+            'MNGR': '#a0aec0'
+        };
+        const brandColor = colorMap[cleanComp] || '#00ff73';
+        compSelect.style.borderColor = brandColor;
+        compSelect.style.color = brandColor;
+    }
 
     if (typeof window.applyFilters === 'function') {
         window.applyFilters();
@@ -111,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Haupt-Laderoutine: Zieht sich alle Daten aus Airtable
+// Haupt-Laderoutine
 async function fetchOrders() {
     if (!window.AIRTABLE_TOKEN || !window.BASE_ID) {
         window.UI.showSetupRequired();
@@ -145,9 +165,7 @@ async function fetchOrders() {
     }
 }
 
-// ====================================================
-// AUFTRAG IM KALKULATOR FÜR RE-KALKULATION / NEUE VERSION LADEN
-// ====================================================
+// AUFTRAG IM KALKULATOR FÜR RE-KALKULATION LADEN
 window.openInKalkulator = function(recordId) {
     const record = window.loadedRecords.find(r => r.id === recordId);
     if (!record) return;
@@ -167,7 +185,6 @@ window.openInKalkulator = function(recordId) {
         return;
     }
 
-    // Neuesten Input-Snapshot ermitteln
     const snapshots = groupMeta.snapshots || (groupMeta.snapshot ? [groupMeta.snapshot] : []);
     const latestSnap = snapshots[snapshots.length - 1];
 
@@ -176,14 +193,11 @@ window.openInKalkulator = function(recordId) {
         return;
     }
 
-    // Lade Saved Inputs in den Kalkulator
     window.loadKalkulatorInputs(latestSnap.kalkInputs);
 
-    // Setze globale Bearbeitungs-IDs
     window.activeEditingGroupId = groupMeta.groupId || null;
     window.activeEditingRecordId = recordId;
 
-    // Zeige Bearbeitungs-Banner im Kalkulator
     const banner = document.getElementById('kalk-edit-banner');
     const titleEl = document.getElementById('kalk-edit-title');
     if (banner && titleEl) {
@@ -195,9 +209,7 @@ window.openInKalkulator = function(recordId) {
     window.calculate();
 };
 
-// ====================================================
 // BEARBEITUNG ABBRECHEN
-// ====================================================
 window.cancelKalkulatorEdit = function() {
     window.activeEditingGroupId = null;
     window.activeEditingRecordId = null;
@@ -255,7 +267,7 @@ window.openChangelogModal = function(recordId) {
     document.getElementById('modal-changelog-overlay').classList.remove('hidden');
 };
 
-// STATUS UPDATE (INKL. KASKADIERENDEM UPDATE)
+// STATUS UPDATE
 window.changeOrderStatus = async function(recordId, newStatus) {
     const targetRecord = window.loadedRecords.find(r => r.id === recordId);
     if (!targetRecord) return;
@@ -307,7 +319,7 @@ window.changeOrderStatus = async function(recordId, newStatus) {
     }
 };
 
-// Checkbox-Toggle (mit Changelog-Eintrag & Flagging)
+// Checkbox-Toggle
 window.toggleSupplierPaid = async function(orderId, supplierIndex) {
     const record = window.loadedRecords.find(r => r.id === orderId);
     if (!record || !record.fields.Fremdkosten_Details) return;
