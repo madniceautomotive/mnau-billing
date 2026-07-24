@@ -1,5 +1,5 @@
 // ====================================================
-// kalkulator.js: VERSIONED GROUP KALKULATOR & REAL-TIME LOG SYNCHRONIZATION
+// kalkulator.js: LIVE AUTO-CALCULATION & NO AUTO-SCROLL
 // ====================================================
 
 const ENTITIES = ['MNAG','MNMH','MNWB','MNAT','MNAU','MNGR'];
@@ -42,7 +42,7 @@ window.setMode = function(m){
         document.getElementById('prov-tag').textContent='% vom Endpreis';
     }
     relabelBase();
-    document.getElementById('results-section').style.display='none';
+    window.calculate();
 };
 
 function relabelBase(){
@@ -128,6 +128,7 @@ window.updateFulfillment = function(){
         const el = document.getElementById('cost-'+e+'-fulfillment');
         if(el){ el.value = f; el.classList.toggle('neg', f<0); }
     });
+    if (typeof window.calculate === 'function') window.calculate();
 };
 
 window.syncCostsToVolume = function(){
@@ -306,7 +307,6 @@ window.calculate = function(){
 
     document.getElementById('result-mode-tag').textContent = MODE==='td' ? 'Top-down' : 'Bottom-up';
     document.getElementById('results-section').style.display='block';
-    document.getElementById('results-section').scrollIntoView({behavior:'smooth',block:'nearest'});
 };
 
 window.loadKalkulatorInputs = function(inputs) {
@@ -726,7 +726,6 @@ window.saveMNAUOrderToLog = async function() {
                 await window.API.batchUpdateOrders(batch);
             }
 
-            // DIREKTES INTEGRATION: NEU GENERIERTE FIRMEN-RECORDS IN SPEICHER UNSHIFTEN
             if (newCompanyRecordsToCreate.length > 0) {
                 const createdData = await window.API.saveOrder({ records: newCompanyRecordsToCreate });
                 if (createdData && createdData.records && createdData.records.length > 0) {
@@ -814,9 +813,6 @@ window.saveMNAUOrderToLog = async function() {
     }
 };
 
-// ====================================================
-// PDF DOWNLOAD DIREKT AUS DEM AUFTRAGS-LOG
-// ====================================================
 window.downloadKalkulatorPDFFromLog = function(recordId, snapshotIndex = null) {
     const record = (window.loadedRecords || []).find(r => r.id === recordId);
     if (!record || !record.fields.Fremdkosten_Details) { alert("Kein Kalkulator-Datensatz gefunden."); return; }
@@ -948,9 +944,10 @@ window.resetAll = function(){
     [['seller',3],['setter',4],['closer1',4],['closer2',4]].forEach(([id,v])=>{const el=document.getElementById('role-'+id+'-pct'); if(el) el.value=v;});
     ['proj-name','proj-offer','proj-invoice','proj-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     const fm=document.getElementById('fkmngr'); if(fm) fm.value='';
-    window.syncCostsToVolume();
-    const resultsSec = document.getElementById('results-section');
-    if(resultsSec) resultsSec.style.display='none';
+
+    // PROJEKTNAME WIEDER FREIGEBEN BEIM RESET
+    const projNameInput = document.getElementById('proj-name');
+    if (projNameInput) { projNameInput.disabled = false; }
 
     window.activeEditingGroupId = null;
     window.activeEditingRecordId = null;
@@ -962,6 +959,9 @@ window.resetAll = function(){
         const myCompany = window.currentUserCompany || "MNAU";
         btnSave.innerHTML = `<span class="ti">➔</span> ${myCompany} Auftrag im Log erfassen`;
     }
+
+    window.syncCostsToVolume();
+    window.calculate();
 };
 
 window.exportPDF = function(){
@@ -1070,13 +1070,22 @@ window.exportPDF = function(){
 
 window.addEventListener('beforeprint',()=>{
     if (document.getElementById('view-calculator').classList.contains('hidden')) return;
-    if (document.getElementById('results-section').style.display==='none') window.calculate();
+    window.calculate();
 });
 
-// INIT
+// INIT & LIVE RE-CALCULATION EVENT LISTENERS
 document.addEventListener('DOMContentLoaded', () => {
     buildBaseCards();
     buildCostCards();
     syncCostsToVolume();
     setMode('td');
+
+    // LIVE AUTOMATISCHE NEUBERECHNUNG BEI JEDER EINGABE
+    const calcContainer = document.getElementById('view-calculator');
+    if (calcContainer) {
+        calcContainer.addEventListener('input', () => window.calculate());
+        calcContainer.addEventListener('change', () => window.calculate());
+    }
+
+    window.calculate();
 });

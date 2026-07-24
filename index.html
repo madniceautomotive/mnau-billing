@@ -120,19 +120,19 @@
         <!-- TAB 2: GROUP KALKULATOR -->
         <div id="view-calculator" class="tab-content hidden">
             <div class="kalkulator-container">
+                <!-- STICKY HINWEIS-BANNER BEI DER BEARBEITUNG EINES BESTEHENDEN AUFTRAGS -->
+                <div id="kalk-edit-banner" class="kalk-edit-banner hidden">
+                    <div class="kalk-edit-text">
+                        <span>✏️ <strong>PROJEKT-BEARBEITUNG:</strong> Sie erstellen eine neue Version für <u id="kalk-edit-title"></u></span>
+                    </div>
+                    <button class="btn-secondary btn-small" onclick="cancelKalkulatorEdit()">Bearbeitung abbrechen</button>
+                </div>
+
                 <div class="logo-header">
                     <div class="logo-title">
                         <h1>Group Kalkulator</h1>
                         <span>Top-down &amp; Bottom-up</span>
                     </div>
-                </div>
-
-                <!-- HINWEIS-BANNER BEI DER BEARBEITUNG EINES BESTEHENDEN AUFTRAGS -->
-                <div id="kalk-edit-banner" class="kalk-edit-banner hidden">
-                    <div class="kalk-edit-text">
-                        <span>✏️ <strong>PROJEKT-BEARBEITUNG:</strong> Sie erstellen eine neue Version für <u id="kalk-edit-title"></u></span>
-                    </div>
-                    <button class="btn-secondary btn-small" onclick="cancelKalkulatorEdit()" style="border-color:#f6e05e; color:#f6e05e;">Bearbeitung abbrechen</button>
                 </div>
 
                 <div class="print-only print-header" id="print-header"></div>
@@ -209,20 +209,15 @@
                     <div class="hint">Fulfillment wird automatisch berechnet = 100 % − (Backoffice + PM + Overhead + Sales). Wird der Wert rot/negativ, übersteigen die anderen %-Posten 100 %.</div>
                 </div>
 
-                <div class="kalk-section no-print">
-                    <div class="actions" style="margin-top:0">
-                        <button class="btn-primary" onclick="calculate()"><span class="ti">∑</span> Berechnen</button>
-                        <button class="btn-secondary" onclick="resetAll()"><span class="ti">↻</span> Reset</button>
-                        <button class="btn-secondary" onclick="exportPDF()"><span class="ti">⬇</span> PDF herunterladen</button>
-                    </div>
-                </div>
-
-                <div class="kalk-section print-keep" id="results-section" style="display:none">
+                <!-- ERGEBNISSEN UND STEUERUNGS-BUTTONS UNTEN -->
+                <div class="kalk-section print-keep" id="results-section" style="display:block">
                     <div class="section-title"><span class="ti">▸</span> Ergebnis <span class="layer-tag" id="result-mode-tag"></span></div>
                     <div class="metric-grid" id="metrics"></div>
                     <div class="results-wrap" id="results-table-wrap"></div>
 
-                    <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
+                    <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn-secondary" onclick="resetAll()"><span class="ti">↻</span> Reset</button>
+                        <button class="btn-secondary" onclick="exportPDF()"><span class="ti">⬇</span> PDF herunterladen</button>
                         <button class="btn-primary" id="btn-save-to-log" onclick="saveMNAUOrderToLog()" style="background: #00663a; padding: 12px 22px; font-size: 0.9rem; font-weight: bold; border-radius: 8px;">
                             <span class="ti">➔</span> Auftrag im Log erfassen
                         </button>

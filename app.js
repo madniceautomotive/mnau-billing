@@ -1,5 +1,5 @@
 // ==================================================== 
-// app.js: USER ACTIONS & ISOLATED STATUS UPDATES
+// app.js: USER ACTIONS, CONTROLLER HUB & EDIT LOCK LOGIC
 // ====================================================
 
 const SUN_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
@@ -205,6 +205,7 @@ async function fetchOrders() {
     }
 }
 
+// AUFTRAG IM KALKULATOR LADEN
 window.openInKalkulator = function(recordId) {
     const record = window.loadedRecords.find(r => r.id === recordId);
     if (!record) return;
@@ -244,6 +245,12 @@ window.openInKalkulator = function(recordId) {
         banner.classList.remove('hidden');
     }
 
+    // PROJEKTNAME SPERREN WÄHREND DER BEARBEITUNG
+    const projNameInput = document.getElementById('proj-name');
+    if (projNameInput) {
+        projNameInput.disabled = true;
+    }
+
     window.switchTab('calculator');
     window.calculate();
 };
@@ -254,6 +261,12 @@ window.cancelKalkulatorEdit = function() {
 
     const banner = document.getElementById('kalk-edit-banner');
     if (banner) banner.classList.add('hidden');
+
+    // PROJEKTNAME WIEDER FREIGEBEN
+    const projNameInput = document.getElementById('proj-name');
+    if (projNameInput) {
+        projNameInput.disabled = false;
+    }
 
     if (typeof window.resetAll === 'function') {
         window.resetAll();
@@ -304,7 +317,6 @@ window.openChangelogModal = function(recordId) {
     document.getElementById('modal-changelog-overlay').classList.remove('hidden');
 };
 
-// STATUS UPDATE (PRÄZISE SCHWESTERFIRMEN-ISOLIERUNG)
 window.changeOrderStatus = async function(recordId, newStatus) {
     const targetRecord = window.loadedRecords.find(r => r.id === recordId);
     if (!targetRecord) return;
@@ -319,10 +331,6 @@ window.changeOrderStatus = async function(recordId, newStatus) {
         } catch(e) {}
     }
 
-    // KASKADIERUNG:
-    // Wenn es ein EIGENER Hauptauftrag ist UND der neue Status NICHT "Bezahlt" ist,
-    // werden alle Schwesterfirmen mit auf den neuen Status gezogen (z.B. "An Group verrechnet" schaltet die Anteile bei den Schwesterfirmen frei).
-    // Wenn die Schwesterfirma ihren Status ändert OR auf "Bezahlt" gesetzt wird, betrifft es NUR [recordId].
     if (!isReadOnlyShare && newStatus !== "Bezahlt") {
         let groupId = null;
         const auftragName = targetRecord.fields.Auftrag;
@@ -371,7 +379,6 @@ window.changeOrderStatus = async function(recordId, newStatus) {
     }
 };
 
-// Checkbox-Toggle
 window.toggleSupplierPaid = async function(orderId, supplierIndex) {
     const record = window.loadedRecords.find(r => r.id === orderId);
     if (!record || !record.fields.Fremdkosten_Details) return;
@@ -424,7 +431,6 @@ window.toggleSupplierPaid = async function(orderId, supplierIndex) {
     }
 };
 
-// Massen-Abgeltung
 window.bulkPaySupplier = async function(supplierName) {
     if (!confirm(`Möchtest du wirklich alle offenen Rechnungen für "${supplierName}" auf einmal als erledigt markieren?`)) return;
 
@@ -482,7 +488,6 @@ window.bulkPaySupplier = async function(supplierName) {
     }
 };
 
-// Lieferant dauerhaft löschen
 window.deleteSupplier = async function(supplierId, supplierName) {
     if (!confirm(`Möchtest du "${supplierName}" dauerhaft aus der Lieferanten-Datenbank löschen?`)) return;
 
@@ -497,7 +502,6 @@ window.deleteSupplier = async function(supplierId, supplierName) {
     }
 };
 
-// AUFTRAG LÖSCHEN
 window.deleteOrder = async function(recordId) {
     const targetRecord = window.loadedRecords.find(r => r.id === recordId);
     if (!targetRecord) return;
