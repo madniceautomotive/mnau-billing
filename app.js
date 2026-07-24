@@ -1,6 +1,28 @@
 // ==================================================== 
-// app.js: USER ACTIONS & DYNAMIC COMPANY SWITCHER
+// app.js: USER ACTIONS, CONTROLLER HUB & THEME TOGGLE
 // ====================================================
+
+// THEME TOGGLE (DARK / LIGHT MODE)
+window.toggleTheme = function() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('mnau_theme', newTheme);
+
+    const iconEl = document.getElementById('theme-toggle-icon');
+    if (iconEl) {
+        iconEl.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+    }
+};
+
+window.initTheme = function() {
+    const savedTheme = localStorage.getItem('mnau_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    const iconEl = document.getElementById('theme-toggle-icon');
+    if (iconEl) {
+        iconEl.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    }
+};
 
 // Globales Tab-Switching
 window.switchTab = function(tabName) {
@@ -31,10 +53,8 @@ window.switchCompany = function(newCompany) {
     const cleanComp = newCompany.toUpperCase();
     window.currentUserCompany = cleanComp;
 
-    // Anpassen des globalen Data-Attributes für CSS Variables
     document.documentElement.setAttribute('data-company', cleanComp);
 
-    // Styling des Firmen-Dropdowns auf die Markenfarbe anpassen
     const compSelect = document.getElementById('company-select');
     if (compSelect) {
         const colorMap = {
@@ -88,8 +108,8 @@ window.applyFilters = function() {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+    window.initTheme();
 
-    // Modal Changelog schließen
     const btnCloseChangelog = document.getElementById('btn-close-changelog');
     if (btnCloseChangelog) {
         btnCloseChangelog.addEventListener('click', () => {
@@ -97,7 +117,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Lieferanten-Verwaltung Modal
     if (window.DOM.btnManageSuppliers) {
         window.DOM.btnManageSuppliers.addEventListener('click', () => {
             window.UI.renderSuppliersManager();
@@ -110,18 +129,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Live-Suche
     if (window.DOM.searchInput) {
         window.DOM.searchInput.addEventListener('input', window.applyFilters);
     }
 
-    // Status Filter
     const statusFilterElement = document.getElementById('status-filter');
     if (statusFilterElement) {
         statusFilterElement.addEventListener('change', window.applyFilters);
     }
 
-    // Suche löschen
     if (window.DOM.searchClearBtn) {
         window.DOM.searchClearBtn.addEventListener('click', () => {
             window.DOM.searchInput.value = '';
