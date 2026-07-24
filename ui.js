@@ -1,5 +1,5 @@
 // ====================================================
-// ui.js: DOM RENDERING WITH SMOOTH EXPANDABLE ACCORDION CARDS
+// ui.js: DOM RENDERING WITH CLEAN THEME-AWARE UI
 // ====================================================
 
 window.toggleCardExpand = function(recordId, event) {
@@ -39,7 +39,7 @@ window.UI = {
         const renderContainer = (containerEl, listRecords, emptyMessage) => {
             if (!containerEl) return;
             if(!listRecords || listRecords.length === 0) {
-                containerEl.innerHTML = `<p style="color:var(--text-muted); padding: 16px; font-size:0.8rem; text-align:center; border: 1px dashed var(--border-color); border-radius:8px; letter-spacing:0.5px;">${emptyMessage}</p>`;
+                containerEl.innerHTML = `<p style="padding: 16px; font-size:0.8rem; text-align:center; letter-spacing:0.5px;">${emptyMessage}</p>`;
                 return;
             }
             if (containerEl.querySelector('p')) {
@@ -70,7 +70,7 @@ window.UI = {
                 const deckungsbeitrag = deckungsbeitragVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
 
                 const isFlagged = fields.Flagged === true;
-                const flagBadgeHTML = isFlagged ? `<span class="flag-badge" style="font-size:0.65rem; background:rgba(255,255,255,0.1); padding:2px 5px; border-radius:4px; margin-left:6px; font-weight:normal;">🚩 Update</span>` : '';
+                const flagBadgeHTML = isFlagged ? `<span class="flag-badge" style="font-size:0.65rem; background:var(--bg-panel); border:1px solid var(--border-color); padding:2px 5px; border-radius:4px; margin-left:6px; font-weight:normal; color:var(--text-sub);">🚩 Update</span>` : '';
 
                 let suppliers = [];
                 let groupMeta = null;
@@ -206,7 +206,7 @@ window.UI = {
                     </button>
                 `;
 
-                // WRAPPER FÜR NAHTLOSE CSS-GRID ANIMATION
+                // ERSTELLUNG DER AUFKLAPPBAREN MINI-KARTE
                 const innerHTML = `
                     <div class="oc-compact-bar" onclick="window.toggleCardExpand('${id}', event)">
                         <div class="oc-title-col">
@@ -241,7 +241,7 @@ window.UI = {
                                 </div>
                                 <div class="oc-metric-box">
                                     <span class="oc-metric-lbl">Deckungsbeitrag</span>
-                                    <span class="oc-metric-val" style="color:#00d2ff;">€ ${deckungsbeitrag}</span>
+                                    <span class="oc-metric-val" style="color:#0284c7;">€ ${deckungsbeitrag}</span>
                                 </div>
                                 <div class="oc-metric-box">
                                     <span class="oc-metric-lbl">Echte Fremdkosten</span>
@@ -378,8 +378,8 @@ window.UI = {
         if (supplierNames.length === 0) {
             supplierContainer.innerHTML = `
                 <div class="no-debts-panel">
-                    <div style="width: 32px; height: 32px; min-width: 32px; min-height: 32px; border-radius: 50%; background: rgba(0,255,115,0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                        <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: var(--active-company-color);"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                    <div style="width: 32px; height: 32px; min-width: 32px; min-height: 32px; border-radius: 50%; background: rgba(16,185,129,0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; fill: var(--active-company-color);"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
                     </div>
                     <div class="no-debts-text">
                         <h3>Keine offenen Posten</h3>
@@ -447,7 +447,7 @@ window.UI = {
         if (!listContainer) return;
         listContainer.innerHTML = '';
         if (window.globalSuppliers.length === 0) {
-            listContainer.innerHTML = '<p style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:16px;">Datenbank leer.</p>';
+            listContainer.innerHTML = '<p style="font-size:0.8rem; text-align:center; padding:16px;">Datenbank leer.</p>';
             return;
         }
         window.globalSuppliers.forEach(supplier => {
@@ -466,8 +466,8 @@ window.UI = {
     showSetupRequired() {
         window.DOM.loading.classList.add('hidden');
         window.DOM.orderList.innerHTML = `
-            <div style="padding: 60px 20px; text-align: center; color: var(--text-muted);">
-                <h3 style="color: var(--text-main); margin-bottom: 12px; text-transform: uppercase;">Konfiguration fehlt</h3>
+            <div style="padding: 60px 20px; text-align: center;">
+                <h3 style="margin-bottom: 12px; text-transform: uppercase;">Konfiguration fehlt</h3>
                 <button class="btn-primary" style="margin: 0 auto;" onclick="triggerSetup()">➔ Setup starten</button>
             </div>
         `;
