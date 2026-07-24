@@ -26,7 +26,7 @@
 }
 
 #view-calculator * { box-sizing: border-box; }
-#view-calculator .kalkulator-container { max-width: 1100px; margin: 0 auto; width: 100%; }
+#view-calculator .kalkulator-container { max-width: 1200px; margin: 0 auto; width: 100%; }
 
 #view-calculator .logo-header { display:flex; align-items:center; gap:16px; margin-bottom:1.5rem; padding-bottom:1.25rem; border-bottom:1px solid var(--border); flex-wrap:wrap; }
 #view-calculator .logo-divider { width:1px; height:46px; background:var(--border); flex-shrink:0; margin:0 16px; }
@@ -89,27 +89,37 @@
 #view-calculator .btn-primary { background:var(--black); color:#fff; border:none; padding:10px 20px; border-radius:var(--radius); font-size:13.5px; cursor:pointer; font-weight:600; display:inline-flex; align-items:center; gap:7px; }
 #view-calculator .btn-secondary { background:transparent; color:var(--text); border:1px solid var(--border-2); padding:10px 18px; border-radius:var(--radius); font-size:13.5px; cursor:pointer; display:inline-flex; align-items:center; gap:7px; }
 
-/* ERGEBNISTABELLE FIX (100% BREITE & OPTIMIERTE SPALTEN) */
-#view-calculator .results-wrap { width: 100%; overflow-x: auto; }
-#view-calculator table.results { width: 100%; border-collapse: collapse; font-size: 12.5px; color: var(--text); }
+/* ERGEBNISTABELLE: VOLLSTÄNDIGER FIX FÜR DIE BREITE */
+#view-calculator .results-wrap {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    margin-top: 12px;
+}
+
+#view-calculator table.results {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    color: var(--text);
+}
 
 #view-calculator table.results.flow {
     width: 100%;
-    min-width: 850px;
+    min-width: 1000px;
     border-collapse: collapse;
-    table-layout: fixed;
+    table-layout: auto; /* Erlaubt natürliche Breitenverteilung */
 }
-
-#view-calculator table.results.flow col.cg-label { width: 24%; }
-#view-calculator table.results.flow col.cg-col { width: 9.5%; }
 
 #view-calculator table.results.flow thead th {
     background: #f3f1ec;
-    font-size: 12px;
-    padding: 10px 6px;
-    text-align: center;
+    font-size: 12.5px;
+    padding: 10px 12px;
+    text-align: right;
     border: none;
     color: #1a1a1a;
+    font-weight: 700;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
 }
@@ -118,21 +128,19 @@
     background: #D85A30;
     color: #fff;
     text-align: left;
-    font-size: 13px;
+    font-size: 13.5px;
     font-weight: 700;
-    padding-left: 10px;
+    padding-left: 14px;
     white-space: nowrap;
 }
 
 #view-calculator table.results.flow td {
     text-align: right;
-    padding: 8px 6px;
+    padding: 9px 12px;
     border: none;
-    border-bottom: 1px solid rgba(255,255,255,.55);
+    border-bottom: 1px solid rgba(0,0,0,0.06);
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-size: 12px;
+    font-size: 12.5px;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
 }
@@ -140,11 +148,20 @@
 #view-calculator table.results.flow td.rowlabel {
     text-align: left;
     color: #1a1a1a;
-    font-weight: 500;
-    padding-left: 10px;
+    font-weight: 600;
+    padding-left: 14px;
+    min-width: 240px; /* Gibt der Textbeschreibung links ausreichend Raum */
+    white-space: nowrap;
 }
 
-#view-calculator table.results.flow .pct-pre { float: left; font-size: 10px; color: #9a9890; font-weight: 400; padding-top: 2px; }
+#view-calculator table.results.flow .pct-pre {
+    display: inline-block;
+    margin-right: 6px;
+    font-size: 11px;
+    color: #77756d;
+    font-weight: 500;
+}
+
 #view-calculator table.results.flow .val-pos { color: #1F7A4D; font-weight: 600; }
 #view-calculator table.results.flow .val-neg { color: #C92A6A; font-weight: 600; }
 
@@ -153,7 +170,7 @@
 #view-calculator .rg-cost { background: #DCF1E4; }
 #view-calculator .rg-fulfill, #view-calculator .rg-pass { background: #E4EEFB; }
 #view-calculator .rg-sum { background: #EFEDE6; }
-#view-calculator .rg-sum td { font-weight: 700; }
+#view-calculator .rg-sum td { font-weight: 700; font-size: 13px; }
 #view-calculator .rg-stunden { background: #FBF6E3; }
 
 #view-calculator .col-MNAG { color:#993C1D!important; background:#f6b4a5!important; }
@@ -165,7 +182,7 @@
 #view-calculator .col-EXT { color:#8A5A12!important; background:#f3e2bd!important; }
 #view-calculator .col-OVERHEAD { color:#5F5E5A!important; background:#eceae2!important; }
 
-#view-calculator .metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:1.1rem; }
+#view-calculator .metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:1.1rem; }
 #view-calculator .metric { background:var(--surface-2); border-radius:var(--radius); padding:0.9rem 1.1rem; }
 #view-calculator .metric .ml { font-size:12px; color:var(--text-2); margin-bottom:5px; }
 #view-calculator .metric .mv { font-size:22px; font-weight:600; color:var(--text); }

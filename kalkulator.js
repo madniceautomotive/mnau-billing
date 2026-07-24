@@ -152,7 +152,7 @@ window.calculate = function(){
     const fc = (val,pct)=>{ const z=Math.abs(val)<0.005; const cls=z?'val-zero':(val>0?'val-pos':'val-neg'); const pre=(pct!=null&&pct>0)?`<span class="pct-pre">(${ps(pct)})</span>`:''; return `<td class="${cls}">${pre}${vn(val)}</td>`; };
     const nc = val => `<td class="val-neutral">${vn(val)}</td>`;
 
-    let h='<table class="results flow"><colgroup><col class="cg-label">'+COLS.map(()=>'<col class="cg-col">').join('')+'</colgroup><thead><tr>';
+    let h='<table class="results flow"><thead><tr>';
     h+=`<th class="kundenpreis-cell">Kundenpreis: ${fmt(kundenpreis)}</th>`;
     COLS.forEach(c=>h+=`<th class="col-${c}">${c}</th>`);
     h+='</tr></thead><tbody>';
