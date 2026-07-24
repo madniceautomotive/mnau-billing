@@ -143,6 +143,9 @@ form label {
     align-items: center;
     gap: 12px;
 }
+.kalk-edit-banner.hidden {
+    display: none !important; /* DIESER BEFEHL WAR DAS PROBLEM! */
+}
 .kalk-edit-text {
     color: #f6e05e;
     font-size: 0.85rem;

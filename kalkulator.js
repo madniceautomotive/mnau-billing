@@ -831,6 +831,11 @@ window.resetAll = function(){
     const resultsSec = document.getElementById('results-section');
     if(resultsSec) resultsSec.style.display='none';
 
+    // HARTES ZURÜCKSETZEN DES BEARBEITUNGS-MODUS AUCH BEIM "RESET"-KLICK
+    window.activeEditingGroupId = null;
+    const banner = document.getElementById('kalk-edit-banner');
+    if (banner) banner.classList.add('hidden');
+
     // Button Status resetten falls abgebrochen
     const btnSave = document.getElementById('btn-save-to-log');
     if (btnSave) {
