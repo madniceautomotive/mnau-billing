@@ -1,6 +1,17 @@
 // ====================================================
-// ui.js: DOM RENDERING WITH CLEAN CARD LAYOUT
+// ui.js: DOM RENDERING WITH MINIFIED / EXPANDABLE CARDS
 // ====================================================
+
+// Globaler Toggle für das Aufklappen der Karten
+window.toggleCardExpand = function(recordId, event) {
+    if (event && event.target.closest('.status-select, button, input, a, label')) {
+        return; // Verhindert Aufklappen, wenn man Status-Dropdowns oder Checkboxen anklickt
+    }
+    const card = document.querySelector(`.billing-row[data-id="${recordId}"]`);
+    if (card) {
+        card.classList.toggle('is-expanded');
+    }
+};
 
 window.UI = {
     renderOrders(records) {
@@ -60,7 +71,7 @@ window.UI = {
                 const deckungsbeitrag = deckungsbeitragVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
 
                 const isFlagged = fields.Flagged === true;
-                const flagBadgeHTML = isFlagged ? `<span class="flag-badge" style="font-size:0.7rem; background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; margin-left:6px; font-weight:normal;">🚩 Update</span>` : '';
+                const flagBadgeHTML = isFlagged ? `<span class="flag-badge" style="font-size:0.65rem; background:rgba(255,255,255,0.1); padding:2px 5px; border-radius:4px; margin-left:6px; font-weight:normal;">🚩 Update</span>` : '';
 
                 let suppliers = [];
                 let groupMeta = null;
@@ -166,7 +177,7 @@ window.UI = {
                 else if(status === "Bezahlt") { cardStatusClass = "status-bezahlt"; }
 
                 const statusControlHTML = isReadOnlyShare ? `
-                    <span title="Schreibgeschützter Status" style="font-size:1.1rem; filter:grayscale(1);">🔒</span>
+                    <span title="Schreibgeschützter Status" style="font-size:1rem; filter:grayscale(1);">🔒</span>
                     <select class="status-select" disabled>
                         <option value="Zu verrechnen" ${status === "Zu verrechnen" ? "selected" : ""}>Zu verrechnen</option>
                         <option value="In Bearbeitung" ${status === "In Bearbeitung" ? "selected" : ""}>In Bearbeitung</option>
@@ -196,52 +207,68 @@ window.UI = {
                     </button>
                 `;
 
-                // NEUER CLEAN HTML AUFBAU DER KARTE
+                // ERSTELLUNG DER AUFKLAPPBAREN MINI-KARTE
                 const innerHTML = `
-                    <div class="oc-header">
+                    <!-- 1. KOMPAKTE ZEILE (IMMER SICHTBAR) -->
+                    <div class="oc-compact-bar" onclick="window.toggleCardExpand('${id}', event)">
                         <div class="oc-title-col">
                             <div class="oc-title">${fields.Auftrag || "Unbenannt"} ${flagBadgeHTML}</div>
-                            <div class="oc-meta">Erstellt: ${new Date(record.createdTime).toLocaleDateString('de-DE')} • Ersteller: <span class="comp-badge badge-${creatorCompany}">${creatorCompany}</span></div>
+                            <div class="oc-meta">
+                                <span>${new Date(record.createdTime).toLocaleDateString('de-DE')}</span>
+                                <span>•</span>
+                                <span class="comp-badge badge-${creatorCompany}">${creatorCompany}</span>
+                            </div>
                         </div>
-                        <div class="oc-status-col">
+
+                        <div class="oc-compact-financials">
+                            <div class="oc-compact-amt">€ ${betrag}</div>
+                            <div class="oc-compact-db">DB: € ${deckungsbeitrag}</div>
+                        </div>
+
+                        <div class="oc-status-col" onclick="event.stopPropagation()">
                             ${statusControlHTML}
                         </div>
-                    </div>
-                    
-                    ${readOnlyBanner}
-                    
-                    <div class="oc-metrics-bar">
-                        <div class="oc-metric-box">
-                            <span class="oc-metric-lbl">Umsatz (${myCompany})</span>
-                            <span class="oc-metric-val" style="color:var(--active-company-color);">€ ${betrag}</span>
-                        </div>
-                        <div class="oc-metric-box">
-                            <span class="oc-metric-lbl">Deckungsbeitrag</span>
-                            <span class="oc-metric-val" style="color:#00d2ff;">€ ${deckungsbeitrag}</span>
-                        </div>
-                        <div class="oc-metric-box">
-                            <span class="oc-metric-lbl">Fremdkosten</span>
-                            <span class="oc-metric-val" style="color:#e74c3c;">€ ${fremdkosten}</span>
-                        </div>
-                    </div>
 
-                    <div class="oc-details-grid">
-                        <div class="oc-detail-panel">
-                            <h5>Lieferanten & Spesen</h5>
-                            ${suppliersHTML}
-                        </div>
-                        <div class="oc-detail-panel">
-                            <h5>Erlösverteilung (Kundenpreis: € ${kp})</h5>
-                            ${groupMetaHTML}
-                        </div>
+                        <div class="oc-toggle-icon" title="Details auf- / zuklappen">▼</div>
                     </div>
                     
-                    <div class="oc-footer">
-                        <div class="oc-footer-pdfs">
-                            ${pdfVersionsHTML ? `<span style="font-size:0.7rem; color:#64748b; font-weight:700; margin-right:4px;">PDFs:</span> ${pdfVersionsHTML}` : `<span style="font-size:0.7rem; color:#64748b;">Kein PDF generiert.</span>`}
+                    <!-- 2. EXPANDABLE CONTENT (NUR BEIM AUFKLAPPEN SICHTBAR) -->
+                    <div class="oc-expandable-content">
+                        ${readOnlyBanner}
+                        
+                        <div class="oc-metrics-bar">
+                            <div class="oc-metric-box">
+                                <span class="oc-metric-lbl">Umsatz (${myCompany})</span>
+                                <span class="oc-metric-val" style="color:var(--active-company-color);">€ ${betrag}</span>
+                            </div>
+                            <div class="oc-metric-box">
+                                <span class="oc-metric-lbl">Deckungsbeitrag</span>
+                                <span class="oc-metric-val" style="color:#00d2ff;">€ ${deckungsbeitrag}</span>
+                            </div>
+                            <div class="oc-metric-box">
+                                <span class="oc-metric-lbl">Echte Fremdkosten</span>
+                                <span class="oc-metric-val" style="color:#e74c3c;">€ ${fremdkosten}</span>
+                            </div>
                         </div>
-                        <div class="oc-footer-actions">
-                            ${actionControlsHTML}
+
+                        <div class="oc-details-grid">
+                            <div class="oc-detail-panel">
+                                <h5>Lieferanten & Spesen</h5>
+                                ${suppliersHTML}
+                            </div>
+                            <div class="oc-detail-panel">
+                                <h5>Erlösverteilung (Kundenpreis: € ${kp})</h5>
+                                ${groupMetaHTML}
+                            </div>
+                        </div>
+                        
+                        <div class="oc-footer">
+                            <div class="oc-footer-pdfs">
+                                ${pdfVersionsHTML ? `<span style="font-size:0.7rem; color:#64748b; font-weight:700; margin-right:4px;">PDFs:</span> ${pdfVersionsHTML}` : `<span style="font-size:0.7rem; color:#64748b;">Kein PDF generiert.</span>`}
+                            </div>
+                            <div class="oc-footer-actions" onclick="event.stopPropagation()">
+                                ${actionControlsHTML}
+                            </div>
                         </div>
                     </div>
                 `;
