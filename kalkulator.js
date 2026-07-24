@@ -56,12 +56,12 @@ function buildBaseCards(){
     document.getElementById('base-cards').innerHTML = ENTITIES.map(e=>`
     <div class="entity-card">
       <div class="entity-name col-${e}">${e}</div>
-      <div class="field"><label id="base-label-${e}">Volumen (€)</label><input type="number" id="base-${e}" value="0" min="0" step="100" oninput="syncCostsToVolume()"></div>
-      <div class="field" style="margin-top:6px"><label>Fremdkosten (€)</label><input type="number" id="fk-${e}" value="0" min="0" step="10"></div>
-      ${e==='MNGR'?`<div class="field" style="margin-top:6px"><label>Fremdkosten MNGR (€)</label><input type="number" id="fkmngr" value="0" min="0" step="10"></div>`:''}
-      <div class="field" style="margin-top:6px"><label>Spesen (€)</label><input type="number" id="sp-${e}" value="0" min="0" step="10"></div>
-      <div class="field" style="margin-top:6px"><label>Stundenpreis (€)</label><input type="number" id="hp-${e}" value="150" min="0" step="5"></div>
-      <div class="field note-field note-sep"><label>✎ Notiz ${e}</label><textarea id="note-${e}" rows="1" placeholder="Anmerkung zu ${e} …"></textarea></div>
+      <div class="field"><label id="base-label-${e}">Volumen (€)</label><input type="number" id="base-${e}" class="mnau-input" value="0" min="0" step="100" oninput="syncCostsToVolume()"></div>
+      <div class="field" style="margin-top:6px"><label>Fremdkosten (€)</label><input type="number" id="fk-${e}" class="mnau-input" value="0" min="0" step="10"></div>
+      ${e==='MNGR'?`<div class="field" style="margin-top:6px"><label>Fremdkosten MNGR (€)</label><input type="number" id="fkmngr" class="mnau-input" value="0" min="0" step="10"></div>`:''}
+      <div class="field" style="margin-top:6px"><label>Spesen (€)</label><input type="number" id="sp-${e}" class="mnau-input" value="0" min="0" step="10"></div>
+      <div class="field" style="margin-top:6px"><label>Stundenpreis (€)</label><input type="number" id="hp-${e}" class="mnau-input" value="150" min="0" step="5"></div>
+      <div class="field note-field note-sep"><label>✎ Notiz ${e}</label><textarea id="note-${e}" class="mnau-input" rows="1" placeholder="Anmerkung zu ${e} …"></textarea></div>
     </div>`).join('');
 }
 
@@ -70,8 +70,8 @@ function buildCostCards(){
     <div class="entity-card">
       <div class="entity-name col-${e}">${e}</div>
       ${COSTS.map(c=> c.key==='fulfillment'
-        ? `<div class="field" style="margin-bottom:5px"><label>${c.label} % <span class="auto-tag">auto</span></label><input type="number" id="cost-${e}-${c.key}" value="${c.def}" readonly tabindex="-1" class="auto-field"></div>`
-        : `<div class="field" style="margin-bottom:5px"><label>${c.label} %</label><input type="number" id="cost-${e}-${c.key}" value="${c.def}" min="0" step="1" oninput="updateFulfillment()"></div>`
+        ? `<div class="field" style="margin-bottom:5px"><label>${c.label} % <span class="auto-tag">auto</span></label><input type="number" id="cost-${e}-${c.key}" value="${c.def}" readonly tabindex="-1" class="mnau-input auto-field"></div>`
+        : `<div class="field" style="margin-bottom:5px"><label>${c.label} %</label><input type="number" id="cost-${e}-${c.key}" class="mnau-input" value="${c.def}" min="0" step="1" oninput="updateFulfillment()"></div>`
     ).join('')}
     </div>`).join('');
 }
@@ -150,7 +150,6 @@ window.calculate = function(){
     const vn = n => Number(Math.round(n*100)/100).toLocaleString('de-AT',{minimumFractionDigits:2,maximumFractionDigits:2});
     const ps = p => (p%1===0?p:(+p).toFixed(1))+'%';
 
-    // PERFEKTES ZELLEN-ALIGNMENT MIT FLEXBOX
     const fc = (val,pct)=>{
         const z = Math.abs(val) < 0.005;
         const cls = z ? 'val-zero' : (val > 0 ? 'val-pos' : 'val-neg');
@@ -275,12 +274,12 @@ window.preparePrintHeader = function(){
     const d=new Date(), p=n=>String(n).padStart(2,'0');
     const ts=`${p(d.getDate())}.${p(d.getMonth()+1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 
-    const logo = `<span style="font-weight:800;font-size:19px;letter-spacing:-.02em;color:#0A0A0A">MAD&nbsp;N/CE <span style="font-size:11px;letter-spacing:.12em">GROUP</span></span>`;
+    const logo = `<span style="font-weight:800;font-size:19px;letter-spacing:-.02em;color:#ffffff">MAD&nbsp;N/CE <span style="font-size:11px;letter-spacing:.12em;color:#00ff73">GROUP</span></span>`;
 
     document.getElementById('print-header').innerHTML=
         `<div style="display:flex;align-items:center;justify-content:space-between;gap:20px">
-       <strong style="font-size:20px;font-weight:600">Berechnung</strong>
-       <span style="font-size:14px;color:#444">${ts}</span>
+       <strong style="font-size:20px;font-weight:600;color:#ffffff">Berechnung</strong>
+       <span style="font-size:14px;color:#a0aec0">${ts}</span>
        <div style="flex-shrink:0;display:flex;align-items:center">${logo}</div>
      </div>`;
 };
@@ -315,7 +314,7 @@ window.exportPDF = function(){
     window.calculate();
     const name=(getVal('proj-name')||'Group-Kalkulator').replace(/[^\wäöüÄÖÜ\- ]+/g,'').trim().replace(/\s+/g,'_')||'Group-Kalkulator';
     const jsPDF = window.jspdf && window.jspdf.jsPDF;
-    if(typeof html2canvas==='undefined' || !jsPDF){ alert('PDF-Bibliothek nicht geladen — html2canvas.min.js und jspdf.umd.min.js müssen im selben Ordner liegen.'); return; }
+    if(typeof html2canvas==='undefined' || !jsPDF){ alert('PDF-Bibliothek nicht geladen.'); return; }
     const sheet=window.buildPdfSheet();
     sheet.style.position='absolute'; sheet.style.left='0'; sheet.style.top='0';
     sheet.style.zIndex='2147483647'; sheet.style.background='#fff';

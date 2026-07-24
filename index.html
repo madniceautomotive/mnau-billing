@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MNAU Billing Terminal &amp; Kalkulator</title>
+
+    <!-- Inline Favicon gegen 404 Fehler -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+
     <link rel="stylesheet" href="style-core.css">
     <link rel="stylesheet" href="style-billing.css">
     <link rel="stylesheet" href="style-kalkulator.css">
@@ -15,10 +19,10 @@
         <h2>MNAU Login</h2>
         <form id="auth-form">
             <label>E-Mail Adresse</label>
-            <input type="email" id="auth-email" class="mnau-input" required placeholder="team@mnau.com">
+            <input type="email" id="auth-email" class="mnau-input" required autocomplete="username" placeholder="team@mnau.com">
 
             <label>Passwort</label>
-            <input type="password" id="auth-password" class="mnau-input" required placeholder="••••••••">
+            <input type="password" id="auth-password" class="mnau-input" required autocomplete="current-password" placeholder="••••••••">
 
             <div id="auth-error" style="color:#e74c3c; font-size:0.8rem; margin-top:12px; display:none; font-weight:600;"></div>
 
@@ -82,8 +86,8 @@
             <div class="kalkulator-container">
                 <div class="logo-header">
                     <div class="logo-title">
-                        <h1 style="color: #1a1a1a;">Group Kalkulator</h1>
-                        <span style="color: #5f5e5a;">Top-down &amp; Bottom-up</span>
+                        <h1>Group Kalkulator</h1>
+                        <span>Top-down &amp; Bottom-up</span>
                     </div>
                 </div>
 
@@ -113,11 +117,11 @@
                 <div class="kalk-section print-keep">
                     <div class="section-title"><span class="ti">▸</span> Projektdetails</div>
                     <div class="proj-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
-                        <div class="field"><label>Projektname</label><input type="text" id="proj-name" placeholder="z.B. Kampagne Q3 2026"></div>
-                        <div class="field"><label>Angebotsnummer</label><input type="text" id="proj-offer" placeholder="AN-2026-001"></div>
-                        <div class="field"><label>Rechnungsnummer</label><input type="text" id="proj-invoice" placeholder="RE-2026-001"></div>
+                        <div class="field"><label>Projektname</label><input type="text" id="proj-name" class="mnau-input" placeholder="z.B. Kampagne Q3 2026"></div>
+                        <div class="field"><label>Angebotsnummer</label><input type="text" id="proj-offer" class="mnau-input" placeholder="AN-2026-001"></div>
+                        <div class="field"><label>Rechnungsnummer</label><input type="text" id="proj-invoice" class="mnau-input" placeholder="RE-2026-001"></div>
                     </div>
-                    <div class="field" style="margin-top:12px"><label>Allgemeine Notizen</label><textarea id="proj-notes" rows="2" placeholder="Übergreifende Anmerkungen zum gesamten Projekt …"></textarea></div>
+                    <div class="field" style="margin-top:12px"><label>Allgemeine Notizen</label><textarea id="proj-notes" class="mnau-input" rows="2" placeholder="Übergreifende Anmerkungen zum gesamten Projekt …"></textarea></div>
                 </div>
 
                 <div class="kalk-section">
@@ -126,23 +130,23 @@
                         <div class="grid-4" id="roles-container">
                             <div class="entity-card">
                                 <div class="entity-name">Urspr. Verkäufer</div>
-                                <div class="field"><label>Empfänger</label><select id="role-seller-entity"><option>MNGR</option><option>MNAG</option><option>MNWB</option><option>MNAT</option><option>MNAU</option><option>MNMH</option><option>EXT</option></select></div>
-                                <div class="field" style="margin-top:6px"><label>Provision %</label><input type="number" id="role-seller-pct" value="3" min="0" step="0.5" oninput="updateFulfillment()"></div>
+                                <div class="field"><label>Empfänger</label><select id="role-seller-entity" class="mnau-input"><option>MNGR</option><option>MNAG</option><option>MNWB</option><option>MNAT</option><option>MNAU</option><option>MNMH</option><option>EXT</option></select></div>
+                                <div class="field" style="margin-top:6px"><label>Provision %</label><input type="number" id="role-seller-pct" class="mnau-input" value="3" min="0" step="0.5" oninput="updateFulfillment()"></div>
                             </div>
                             <div class="entity-card">
                                 <div class="entity-name">Setter</div>
-                                <div class="field"><label>Empfänger</label><select id="role-setter-entity"><option>MNGR</option><option>MNAG</option><option>MNWB</option><option>MNAT</option><option>MNAU</option><option>MNMH</option><option>EXT</option></select></div>
-                                <div class="field" style="margin-top:6px"><label>Provision %</label><input type="number" id="role-setter-pct" value="4" min="0" step="0.5" oninput="updateFulfillment()"></div>
+                                <div class="field"><label>Empfänger</label><select id="role-setter-entity" class="mnau-input"><option>MNGR</option><option>MNAG</option><option>MNWB</option><option>MNAT</option><option>MNAU</option><option>MNMH</option><option>EXT</option></select></div>
+                                <div class="field" style="margin-top:6px"><label>Provision %</label><input type="number" id="role-setter-pct" class="mnau-input" value="4" min="0" step="0.5" oninput="updateFulfillment()"></div>
                             </div>
                             <div class="entity-card">
                                 <div class="entity-name">Closer 1</div>
-                                <div class="field"><label>Empfänger</label><select id="role-closer1-entity"><option>MNGR</option><option>MNAG</option><option>MNWB</option><option>MNAT</option><option>MNAU</option><option>MNMH</option><option>EXT</option></select></div>
-                                <div class="field" style="margin-top:6px"><label>Provision %</label><input type="number" id="role-closer1-pct" value="4" min="0" step="0.5" oninput="updateFulfillment()"></div>
+                                <div class="field"><label>Empfänger</label><select id="role-closer1-entity" class="mnau-input"><option>MNGR</option><option>MNAG</option><option>MNWB</option><option>MNAT</option><option>MNAU</option><option>MNMH</option><option>EXT</option></select></div>
+                                <div class="field" style="margin-top:6px"><label>Provision %</label><input type="number" id="role-closer1-pct" class="mnau-input" value="4" min="0" step="0.5" oninput="updateFulfillment()"></div>
                             </div>
                             <div class="entity-card">
                                 <div class="entity-name">Closer 2</div>
-                                <div class="field"><label>Empfänger</label><select id="role-closer2-entity"><option>MNGR</option><option>MNAG</option><option>MNWB</option><option>MNAT</option><option>MNAU</option><option>MNMH</option><option>EXT</option></select></div>
-                                <div class="field" style="margin-top:6px"><label>Provision %</label><input type="number" id="role-closer2-pct" value="4" min="0" step="0.5" oninput="updateFulfillment()"></div>
+                                <div class="field"><label>Empfänger</label><select id="role-closer2-entity" class="mnau-input"><option>MNGR</option><option>MNAG</option><option>MNWB</option><option>MNAT</option><option>MNAU</option><option>MNMH</option><option>EXT</option></select></div>
+                                <div class="field" style="margin-top:6px"><label>Provision %</label><input type="number" id="role-closer2-pct" class="mnau-input" value="4" min="0" step="0.5" oninput="updateFulfillment()"></div>
                             </div>
                         </div>
                     </div>
@@ -243,9 +247,10 @@
     </div>
 </div>
 
-<!-- JS-Module -->
-<script src="html2canvas.min.js"></script>
-<script src="jspdf.umd.min.js"></script>
+<!-- JS-Module (CDN Links gegen 404 Fehler) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <script src="config.js"></script>
 <script src="api.js"></script>
 <script src="ui.js"></script>
