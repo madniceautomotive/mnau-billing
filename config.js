@@ -24,6 +24,7 @@ window.HEADERS = {
 window.loadedRecords = [];
 window.globalSuppliers = [];
 window.currentUserEmail = "Unbekannt";
+window.currentUserCompanies = ["MNAU"];
 window.currentUserCompany = "MNAU";
 
 // Globale DOM-Schnittstellen

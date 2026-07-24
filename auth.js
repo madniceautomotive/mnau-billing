@@ -20,6 +20,7 @@ const auth = getAuth(app);
 
 // Globale Variablen
 window.currentUserEmail = "Unbekannt";
+window.currentUserCompanies = ["MNAU"];
 window.currentUserCompany = "MNAU";
 
 // DOM Elemente
@@ -91,11 +92,28 @@ onAuthStateChanged(auth, async (user) => {
     if (user) {
         window.currentUserEmail = user.email || "Unbekannt";
 
-        // Fragt die zugewiesene Firma aus Airtable ab (Fallback: MNAU)
-        if (window.API && typeof window.API.fetchUserCompany === "function") {
-            window.currentUserCompany = await window.API.fetchUserCompany(user.email);
+        // Fragt alle zugewiesenen Firmen des Users aus Airtable ab
+        if (window.API && typeof window.API.fetchUserCompanies === "function") {
+            window.currentUserCompanies = await window.API.fetchUserCompanies(user.email);
         } else {
-            window.currentUserCompany = "MNAU";
+            window.currentUserCompanies = ["MNAU"];
+        }
+
+        // Standardmäßig die erste Firma wählen
+        window.currentUserCompany = window.currentUserCompanies[0] || "MNAU";
+
+        // Befülle Firmen-Dropdown im Header
+        const companySelect = document.getElementById('company-select');
+        if (companySelect) {
+            companySelect.innerHTML = '';
+            window.currentUserCompanies.forEach(comp => {
+                const opt = document.createElement('option');
+                opt.value = comp;
+                opt.textContent = `Firma: ${comp}`;
+                companySelect.appendChild(opt);
+            });
+            companySelect.value = window.currentUserCompany;
+            companySelect.style.display = window.currentUserCompanies.length > 0 ? 'inline-block' : 'none';
         }
 
         authOverlay.classList.add('hidden');
@@ -104,6 +122,7 @@ onAuthStateChanged(auth, async (user) => {
         }
     } else {
         window.currentUserEmail = "Unbekannt";
+        window.currentUserCompanies = ["MNAU"];
         window.currentUserCompany = "MNAU";
         authOverlay.classList.remove('hidden');
         btnAuthSubmit.disabled = false;

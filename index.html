@@ -49,6 +49,9 @@
             </div>
 
             <div style="display: flex; gap: 10px; align-items: center;">
+                <!-- FIRMEN UMSCHALTER DROPDOWN -->
+                <select id="company-select" class="status-select" onchange="switchCompany(this.value)" style="border-color: #00ff73; color: #00ff73; font-weight: 800; min-width: 120px;" title="Aktive Firma wechseln"></select>
+
                 <button id="btn-manage-suppliers" class="sort-icon-btn" title="Lieferanten-Datenbank verwalten">
                     <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
                 </button>
@@ -178,10 +181,10 @@
                     <div class="metric-grid" id="metrics"></div>
                     <div class="results-wrap" id="results-table-wrap"></div>
 
-                    <!-- BUTTON ZUM ERFASSEN DES MNAU AUFTRAGS IM LOG -->
+                    <!-- BUTTON ZUM ERFASSEN DES AUFTRAGS IM LOG -->
                     <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
                         <button class="btn-primary" id="btn-save-to-log" onclick="saveMNAUOrderToLog()" style="background: #00663a; padding: 12px 22px; font-size: 0.9rem; font-weight: bold; border-radius: 8px;">
-                            <span class="ti">➔</span> MNAU Auftrag im Log erfassen
+                            <span class="ti">➔</span> Auftrag im Log erfassen
                         </button>
                     </div>
 
@@ -214,7 +217,6 @@
                 <div class="supplier-total">Summe: <br>€ <span id="display-total-fremdkosten">0.00</span></div>
             </div>
 
-            <!-- Kommentarfeld für Änderungen -->
             <div id="change-reason-group" style="display: none; margin-top: 14px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px;">
                 <label style="color: #00d2ff;">Änderungsgrund / Kommentar *</label>
                 <input type="text" id="input-change-reason" class="mnau-input" placeholder="z.B. Nachverhandlung mit Lieferant X..." style="border-color: rgba(0, 210, 255, 0.4);">

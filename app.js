@@ -9,7 +9,6 @@ window.switchTab = function(tabName) {
     document.getElementById('tab-btn-billing').classList.remove('active');
     document.getElementById('tab-btn-calculator').classList.remove('active');
 
-    // Suchfeld und Buttons im Header nur im Billing Tab anzeigen
     const searchRow = document.getElementById('billing-search-row');
     const newOrderBtn = document.getElementById('btn-new-order');
     const manageSuppliersBtn = document.getElementById('btn-manage-suppliers');
@@ -26,6 +25,22 @@ window.switchTab = function(tabName) {
         if (searchRow) searchRow.style.display = 'none';
         if (newOrderBtn) newOrderBtn.style.display = 'none';
         if (manageSuppliersBtn) manageSuppliersBtn.style.display = 'none';
+    }
+};
+
+// FIRMEN WECHSELN VIA DROPDOWN
+window.switchCompany = function(newCompany) {
+    if (!newCompany) return;
+    window.currentUserCompany = newCompany.toUpperCase();
+
+    // 1. Auftrags-Log für die neu gewählte Firma rendern
+    if (window.loadedRecords && window.UI && window.UI.renderOrders) {
+        window.UI.renderOrders(window.loadedRecords);
+    }
+
+    // 2. Kalkulator Metriken & Buttons neu berechnen
+    if (typeof window.calculate === 'function') {
+        window.calculate();
     }
 };
 
@@ -149,8 +164,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 2. Auftragsobjekt vorbereiten
             const totalFremdkosten = window.UI.calculateTotalFremdkosten();
+            const myCompany = window.currentUserCompany || "MNAU";
 
-            // Behält bestehende GroupMeta bei, falls vorhanden
             const suppliersPayload = existingGroupMeta ? { suppliers: suppliers, groupMeta: existingGroupMeta } : suppliers;
             const suppliersJSON = JSON.stringify(suppliersPayload);
 
@@ -215,6 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             "Fremdkosten": totalFremdkosten,
                             "Fremdkosten_Details": suppliersJSON,
                             "Status": "Zu verrechnen",
+                            "Firma": myCompany,
                             "Flagged": false,
                             "Changelog": JSON.stringify(initialChangelog)
                         }
