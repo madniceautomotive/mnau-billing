@@ -195,11 +195,21 @@ window.openInKalkulator = function(recordId) {
     window.calculate();
 };
 
+// ====================================================
+// BEARBEITUNG ABBRECHEN
+// ====================================================
 window.cancelKalkulatorEdit = function() {
-    window.activeEditingGroupId = null;
+    window.activeEditingGroupId = null; // Status zurücksetzen
+
     const banner = document.getElementById('kalk-edit-banner');
     if (banner) banner.classList.add('hidden');
-    window.resetAll();
+
+    if (typeof window.resetAll === 'function') {
+        window.resetAll(); // Leert den Kalkulator
+    }
+
+    // Springt zurück ins Auftrags-Log
+    window.switchTab('billing');
 };
 
 // Modal öffnen für Changelog-Verlauf

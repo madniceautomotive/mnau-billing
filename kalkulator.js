@@ -76,7 +76,7 @@ function buildBaseCards(){
     </div>`).join('');
 
     ENTITIES.forEach(e => {
-        addKalkSupplierRow(e);
+        window.addKalkSupplierRow(e);
     });
 }
 
@@ -89,7 +89,7 @@ window.addKalkSupplierRow = function(entity, name = '', amount = '') {
     <input type="text" class="mnau-input kalk-supp-name" list="supplier-list" placeholder="Lieferant..." value="${name}" oninput="updateEntityFremdkosten('${entity}')">
     <input type="number" step="0.01" class="mnau-input kalk-supp-amount" placeholder="0.00" value="${amount}" oninput="updateEntityFremdkosten('${entity}')">
     <button type="button" class="btn-remove-supplier kalk-supp-remove" title="Entfernen" onclick="this.parentElement.remove(); updateEntityFremdkosten('${entity}');">
-      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 13.41 12z"/></svg>
     </button>
   `;
     container.appendChild(row);
@@ -181,7 +181,7 @@ window.calculate = function(){
     const costPool  = OTHER.map((c,ci)=>({pool:ENTITIES.reduce((s,e)=>s+COST[e][ci].amt,0)}));
     const salesByRec={}; salesPool.forEach(p=>salesByRec[p.rec]=(salesByRec[p.rec]||0)+p.pool);
     const totalCostPool = costPool.reduce((s,p)=>s+p.pool,0);
-
+    const recipientTotals = salesByRec;
     const summe={};
     COLS.forEach(c=>{
         if(c==='OVERHEAD') summe[c]=totalCostPool;
@@ -640,9 +640,9 @@ window.saveMNAUOrderToLog = async function() {
                 await window.API.saveOrder({ records: newCompanyRecordsToCreate });
             }
 
-            // Lokalen state nachladen
+            // Lokalen state nachladen und aufräumen
             window.cancelKalkulatorEdit();
-            await fetchOrders();
+            await fetchOrders(); // Lädt die frischen Daten komplett aus Airtable
             alert(`Erfolg! Neue Version v${newVersionNum} für "${orderTitle}" wurde im Log erfasst.`);
 
         } else {
@@ -683,13 +683,14 @@ window.saveMNAUOrderToLog = async function() {
             if (createdData && createdData.records && createdData.records.length > 0) {
                 createdData.records.forEach(r => window.loadedRecords.unshift(r));
                 window.UI.updateSupplierDatalist();
+
+                window.cancelKalkulatorEdit();
                 if (typeof window.applyFilters === 'function') window.applyFilters();
                 else window.UI.renderOrders(window.loadedRecords);
+
                 alert(`Erfolg! ${createdData.records.length} Auftrag/Aufträge (Version v1) im Log erfasst.`);
             }
         }
-
-        if (typeof window.switchTab === 'function') window.switchTab('billing');
 
     } catch (err) {
         alert("Fehler beim Erfassen des Auftrags im Log: " + (err.message || err));
@@ -818,16 +819,24 @@ window.resetAll = function(){
     ENTITIES.forEach(e=>{
         ['base','sp'].forEach(p=>{const el=document.getElementById(p+'-'+e);if(el)el.value=0;});
         const container = document.getElementById(`suppliers-list-${e}`);
-        if (container) { container.innerHTML = ''; addKalkSupplierRow(e); }
+        if (container) { container.innerHTML = ''; window.addKalkSupplierRow(e); }
         const hp=document.getElementById('hp-'+e); if(hp) hp.value=150;
         const nt=document.getElementById('note-'+e); if(nt) nt.value='';
         COSTS.forEach(c=>{const el=document.getElementById('cost-'+e+'-'+c.key);if(el){el.value=c.def;el.disabled=false;delete el.dataset.prev;}});
     });
-    [['seller',3],['setter',4],['closer1',4],['closer2',4]].forEach(([id,v])=>{document.getElementById('role-'+id+'-pct').value=v;});
+    [['seller',3],['setter',4],['closer1',4],['closer2',4]].forEach(([id,v])=>{const el=document.getElementById('role-'+id+'-pct'); if(el) el.value=v;});
     ['proj-name','proj-offer','proj-invoice','proj-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     const fm=document.getElementById('fkmngr'); if(fm) fm.value=0;
     window.syncCostsToVolume();
-    document.getElementById('results-section').style.display='none';
+    const resultsSec = document.getElementById('results-section');
+    if(resultsSec) resultsSec.style.display='none';
+
+    // Button Status resetten falls abgebrochen
+    const btnSave = document.getElementById('btn-save-to-log');
+    if (btnSave) {
+        const myCompany = window.currentUserCompany || "MNAU";
+        btnSave.innerHTML = `<span class="ti">➔</span> ${myCompany} Auftrag im Log erfassen`;
+    }
 };
 
 window.exportPDF = function(){
