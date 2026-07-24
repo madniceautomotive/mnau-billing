@@ -1,5 +1,5 @@
 /* ==================================================== */
-/* style-kalkulator.css: MULTI-BRAND KALKULATOR DESIGN */
+/* style-kalkulator.css: MULTI-BRAND & THEME SYSTEM     */
 /* ==================================================== */
 #view-calculator {
     width: 100%;
@@ -158,7 +158,7 @@
     background: var(--bg-input) !important;
     border: 1px solid var(--border-color-strong) !important;
     border-radius: 6px;
-    color: var(--text-main);
+    color: var(--text-main) !important;
 }
 
 #view-calculator .auto-field { background: var(--bg-metrics) !important; color: #00ff73 !important; font-weight: 800; border-style: dashed !important; border-color: rgba(0,255,115,0.3) !important; }
@@ -302,6 +302,7 @@
     text-overflow: ellipsis;
     vertical-align: middle;
     box-sizing: border-box;
+    color: var(--text-main);
 }
 
 #view-calculator table.kalk-results-table tbody tr td.rowlabel {
@@ -344,7 +345,8 @@
     font-size: 0.9rem;
     border-top: 2px solid var(--active-company-color);
     border-bottom: 2px solid var(--active-company-color);
-    color: var(--text-main) !important;
+    color: #ffffff !important;
+    background-color: var(--active-company-color) !important;
 }
 
 #view-calculator tr.rg-stunden td { background: rgba(246, 224, 94, 0.02); }

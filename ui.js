@@ -39,7 +39,7 @@ window.UI = {
         const renderContainer = (containerEl, listRecords, emptyMessage) => {
             if (!containerEl) return;
             if(!listRecords || listRecords.length === 0) {
-                containerEl.innerHTML = `<p style="color:#444; padding: 16px; font-size:0.8rem; text-align:center; border: 1px dashed rgba(255,255,255,0.02); border-radius:8px; letter-spacing:0.5px;">${emptyMessage}</p>`;
+                containerEl.innerHTML = `<p style="color:var(--text-muted); padding: 16px; font-size:0.8rem; text-align:center; border: 1px dashed var(--border-color); border-radius:8px; letter-spacing:0.5px;">${emptyMessage}</p>`;
                 return;
             }
             if (containerEl.querySelector('p')) {
@@ -107,7 +107,7 @@ window.UI = {
                     });
                     suppliersHTML += `</div>`;
                 } else {
-                    suppliersHTML = `<div style="font-size:0.75rem; color:#64748b;">Keine Lieferanten erfasst.</div>`;
+                    suppliersHTML = `<div style="font-size:0.75rem; color:var(--text-muted);">Keine Lieferanten erfasst.</div>`;
                 }
 
                 // 2. DETAIL PANEL: Erlösverteilung (Group Info)
@@ -141,7 +141,7 @@ window.UI = {
                         </div>
                     `;
                 } else {
-                    groupMetaHTML = `<div style="font-size:0.75rem; color:#64748b;">Keine Group-Daten verfügbar.</div>`;
+                    groupMetaHTML = `<div style="font-size:0.75rem; color:var(--text-muted);">Keine Group-Daten verfügbar.</div>`;
                 }
 
                 // 3. FOOTER: PDF Versions Buttons
@@ -262,7 +262,7 @@ window.UI = {
                             
                             <div class="oc-footer">
                                 <div class="oc-footer-pdfs">
-                                    ${pdfVersionsHTML ? `<span style="font-size:0.7rem; color:#64748b; font-weight:700; margin-right:4px;">PDFs:</span> ${pdfVersionsHTML}` : `<span style="font-size:0.7rem; color:#64748b;">Kein PDF generiert.</span>`}
+                                    ${pdfVersionsHTML ? `<span style="font-size:0.7rem; color:var(--text-muted); font-weight:700; margin-right:4px;">PDFs:</span> ${pdfVersionsHTML}` : `<span style="font-size:0.7rem; color:var(--text-muted);">Kein PDF generiert.</span>`}
                                 </div>
                                 <div class="oc-footer-actions" onclick="event.stopPropagation()">
                                     ${actionControlsHTML}
@@ -378,7 +378,9 @@ window.UI = {
         if (supplierNames.length === 0) {
             supplierContainer.innerHTML = `
                 <div class="no-debts-panel">
-                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                    <div style="width: 32px; height: 32px; min-width: 32px; min-height: 32px; border-radius: 50%; background: rgba(0,255,115,0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: var(--active-company-color);"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                    </div>
                     <div class="no-debts-text">
                         <h3>Keine offenen Posten</h3>
                         <p>Alle Lieferantenkosten wurden vollständig beglichen.</p>
@@ -445,7 +447,7 @@ window.UI = {
         if (!listContainer) return;
         listContainer.innerHTML = '';
         if (window.globalSuppliers.length === 0) {
-            listContainer.innerHTML = '<p style="color:#666; font-size:0.8rem; text-align:center; padding:16px;">Datenbank leer.</p>';
+            listContainer.innerHTML = '<p style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:16px;">Datenbank leer.</p>';
             return;
         }
         window.globalSuppliers.forEach(supplier => {
@@ -464,8 +466,8 @@ window.UI = {
     showSetupRequired() {
         window.DOM.loading.classList.add('hidden');
         window.DOM.orderList.innerHTML = `
-            <div style="padding: 60px 20px; text-align: center; color: #a0aec0;">
-                <h3 style="color: white; margin-bottom: 12px; text-transform: uppercase;">Konfiguration fehlt</h3>
+            <div style="padding: 60px 20px; text-align: center; color: var(--text-muted);">
+                <h3 style="color: var(--text-main); margin-bottom: 12px; text-transform: uppercase;">Konfiguration fehlt</h3>
                 <button class="btn-primary" style="margin: 0 auto;" onclick="triggerSetup()">➔ Setup starten</button>
             </div>
         `;

@@ -28,28 +28,31 @@
     --shadow-card: 0 4px 15px rgba(0,0,0,0.3);
 }
 
-/* LIGHT THEME OVERRIDES */
+/* LIGHT THEME (HOCHWERTIG & SAUBER) */
 [data-theme="light"] {
-    --bg-body: #f1f5f9;
+    --bg-body: #f4f6f8;
     --bg-header: #ffffff;
     --bg-card: #ffffff;
-    --bg-card-hover: #f8fafc;
+    --bg-card-hover: #fcfcfc;
     --bg-input: #ffffff;
-    --bg-panel: #f8fafc;
-    --bg-metrics: #f1f5f9;
+    --bg-panel: #f1f3f5;
+    --bg-metrics: #f8f9fa;
     --border-color: #e2e8f0;
     --border-color-strong: #cbd5e1;
-    --text-main: #0f172a;
-    --text-sub: #334155;
-    --text-muted: #64748b;
-    --text-dim: #475569;
-    --shadow-card: 0 4px 12px rgba(0,0,0,0.06);
+    --text-main: #1f2937;
+    --text-sub: #4b5563;
+    --text-muted: #6b7280;
+    --text-dim: #9ca3af;
+    --shadow-card: 0 4px 20px rgba(0,0,0,0.05);
 }
 
 body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background-color: var(--bg-body);
     color: var(--text-main);
     transition: background-color 0.3s ease, color 0.3s ease;
+    margin: 0;
+    padding: 0;
 }
 
 /* FIRMEN-SPEZIFISCHE THEME-ADAPTION */
@@ -117,7 +120,7 @@ body {
     border: 1px solid var(--border-color-strong) !important;
     border-radius: 8px; color: var(--text-main) !important;
     font-family: inherit; font-size: 0.88rem; box-sizing: border-box;
-    transition: border-color 0.2s, box-shadow 0.2s, background-color 0.3s;
+    transition: border-color 0.2s, box-shadow 0.2s, background-color 0.3s, color 0.3s;
 }
 .mnau-input:focus, .search-input:focus {
     border-color: var(--active-company-color) !important;
@@ -232,6 +235,7 @@ form label {
     transform: rotate(180deg);
     background: var(--active-company-color);
     color: #ffffff;
+    border-color: var(--active-company-color);
 }
 
 /* EXPANDABLE GRID WRAPPER */
@@ -262,8 +266,9 @@ form label {
 /* Read-Only Banner in der Karte */
 .read-only-banner {
     margin-bottom: 12px; background: rgba(0, 210, 255, 0.08); border: 1px solid rgba(0, 210, 255, 0.2);
-    color: #00d2ff; border-radius: 6px; padding: 6px 12px; font-size: 0.7rem; font-weight: 600;
+    color: #0099cc; border-radius: 6px; padding: 6px 12px; font-size: 0.7rem; font-weight: 600;
 }
+[data-theme="dark"] .read-only-banner { color: #00d2ff; }
 
 /* Kennzahlen (Metrics Bar im aufgeklappten Zustand) */
 .oc-metrics-bar {
@@ -278,7 +283,7 @@ form label {
 }
 .oc-metric-box { display: flex; flex-direction: column; gap: 3px; }
 .oc-metric-lbl { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
-.oc-metric-val { font-size: 1.1rem; font-weight: 800; }
+.oc-metric-val { font-size: 1.1rem; font-weight: 800; color: var(--text-main); }
 
 /* Detail Panels */
 .oc-details-grid {
@@ -350,9 +355,12 @@ form label {
     display: flex; align-items: center; justify-content: center;
     cursor: pointer; transition: all 0.2s; padding: 0; font-size: 0.85rem;
 }
-.changelog-btn:hover { background: rgba(0, 210, 255, 0.1); color: #00d2ff; border-color: #00d2ff; }
-.edit-btn:hover { background: rgba(246, 224, 94, 0.15); color: #f6e05e; border-color: #f6e05e; }
+.changelog-btn:hover { background: rgba(0, 210, 255, 0.1); color: #0099cc; border-color: #0099cc; }
+.edit-btn:hover { background: rgba(246, 224, 94, 0.15); color: #d69e2e; border-color: #d69e2e; }
 .delete-btn:hover { background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: #ef4444; }
+
+[data-theme="dark"] .changelog-btn:hover { color: #00d2ff; border-color: #00d2ff; }
+[data-theme="dark"] .edit-btn:hover { color: #f6e05e; border-color: #f6e05e; }
 
 /* Status Dropdown in Karte */
 .status-select {
@@ -373,6 +381,10 @@ form label {
 .section-divider.red-divider::after { background: linear-gradient(to right, rgba(231, 76, 60, 0.5), transparent); }
 
 /* Offene Lieferanten Posten Panel */
+.no-debts-panel { grid-column: 1 / -1; background: var(--bg-panel); border: 1px dashed var(--border-color-strong); border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 14px; justify-content: center; }
+.no-debts-text h3 { margin: 0 0 2px 0; font-size: 0.85rem; color: var(--active-company-color); font-weight: 800; }
+.no-debts-text p { margin: 0; font-size: 0.75rem; color: var(--text-muted); }
+
 .supplier-summary-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 24px; }
 .supplier-stat-card { background: var(--bg-card); border: 1px solid var(--border-color); border-left: 3px solid #e74c3c; border-radius: 8px; padding: 12px; box-shadow: var(--shadow-card); }
 .supplier-stat-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--border-color); padding-bottom: 6px; margin-bottom: 8px; }
@@ -405,7 +417,7 @@ form label {
 .archive-details, .external-details { margin-top: 24px; }
 .archive-divider, .external-divider { cursor: pointer; user-select: none; }
 .archive-details summary::-webkit-details-marker, .external-details summary::-webkit-details-marker { display: none !important; }
-.archive-details summary::before, .external-details summary::before { content: '▶ // ' !important; display: inline-block; margin-right: 6px; transition: transform 0.25s ease; color: #555; }
+.archive-details summary::before, .external-details summary::before { content: '▶ // ' !important; display: inline-block; margin-right: 6px; transition: transform 0.25s ease; color: var(--text-sub); }
 .archive-details[open] summary::before, .external-details[open] summary::before { transform: rotate(90deg); color: var(--active-company-color); }
 .external-details[open] summary::before { color: #00d2ff; }
 
@@ -424,7 +436,6 @@ form label {
     .header-controls-row#billing-search-row { flex-direction: column; align-items: stretch; gap: 8px; margin-top: 8px; }
     #status-filter { max-width: 100% !important; width: 100%; }
 
-    /* Perfekt ausgerichtetes Kompakt-Grid auf Mobile */
     .billing-row { padding: 12px; }
     .oc-compact-bar {
         display: grid;
