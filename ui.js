@@ -113,7 +113,8 @@ window.UI = {
                 }
 
                 let cardStatusClass = "status-zu-verrechnen";
-                if(status === "An Group verrechnet") { cardStatusClass = "status-an-group-verrechnet"; }
+                if(status === "In Bearbeitung") { cardStatusClass = "status-in-bearbeitung"; }
+                else if(status === "An Group verrechnet") { cardStatusClass = "status-an-group-verrechnet"; }
                 else if(status === "Bezahlt") { cardStatusClass = "status-bezahlt"; }
 
                 const innerHTML = `
@@ -137,6 +138,7 @@ window.UI = {
                     <div class="action-group">
                         <select class="status-select" onchange="changeOrderStatus('${id}', this.value)">
                             <option value="Zu verrechnen" ${status === "Zu verrechnen" ? "selected" : ""}>Zu verrechnen</option>
+                            <option value="In Bearbeitung" ${status === "In Bearbeitung" ? "selected" : ""}>In Bearbeitung</option>
                             <option value="An Group verrechnet" ${status === "An Group verrechnet" ? "selected" : ""}>An Group verrechnet</option>
                             <option value="Bezahlt" ${status === "Bezahlt" ? "selected" : ""}>Bezahlt</option>
                         </select>
@@ -175,7 +177,7 @@ window.UI = {
     },
 
     updateSummary(records) {
-        let sumZuVerrechnen = 0, sumAnGroup = 0, sumFremdkosten = 0, sumAutomotiveGesamt = 0;
+        let sumZuVerrechnen = 0, sumInBearbeitung = 0, sumAnGroup = 0, sumFremdkosten = 0, sumAutomotiveGesamt = 0;
         records.forEach(record => {
             const fields = record.fields;
             const status = fields.Status || "Zu verrechnen";
@@ -186,6 +188,7 @@ window.UI = {
             sumFremdkosten += fremd;
 
             if (status === "Zu verrechnen") sumZuVerrechnen += betrag;
+            if (status === "In Bearbeitung") sumInBearbeitung += betrag;
             if (status === "An Group verrechnet") sumAnGroup += betrag;
         });
 
@@ -202,6 +205,10 @@ window.UI = {
             <div class="summary-card blue">
                 <span class="summary-label">MNAU Deckungsbeitrag</span>
                 <span class="summary-value">€ ${sumDeckungsbeitrag.toFixed(2)}</span>
+            </div>
+            <div class="summary-card cyan">
+                <span class="summary-label">In Bearbeitung</span>
+                <span class="summary-value">€ ${sumInBearbeitung.toFixed(2)}</span>
             </div>
             <div class="summary-card red">
                 <span class="summary-label">Zu verrechnen</span>

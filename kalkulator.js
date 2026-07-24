@@ -86,7 +86,7 @@ window.addKalkSupplierRow = function(entity, name = '', amount = '') {
     <input type="text" class="mnau-input kalk-supp-name" list="supplier-list" placeholder="Lieferant..." value="${name}" oninput="updateEntityFremdkosten('${entity}')">
     <input type="number" step="0.01" class="mnau-input kalk-supp-amount" placeholder="0.00" value="${amount}" oninput="updateEntityFremdkosten('${entity}')">
     <button type="button" class="btn-remove-supplier kalk-supp-remove" title="Entfernen" onclick="this.parentElement.remove(); updateEntityFremdkosten('${entity}');">
-      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 13.41 12z"/></svg>
     </button>
   `;
     container.appendChild(row);
@@ -264,7 +264,6 @@ window.calculate = function(){
 
     const mngrAbgabe = summe['MNGR'] || 0;
 
-    // Einzelne Schwesterfirmen Summe berechnen
     const sisterSharesDetail = {};
     let totalSisterShares = 0;
     ['MNAG','MNMH','MNWB','MNAT','EXT'].forEach(comp => {
@@ -326,7 +325,7 @@ window.calculate = function(){
 };
 
 // ====================================================
-// MNAU AUFTRAG IM LOG ERFASSEN (INKL. PDF SNAPSHOT)
+// MNAU AUFTRAG IM LOG ERFASSEN (INITIALSTATUS: IN BEARBEITUNG)
 // ====================================================
 window.saveMNAUOrderToLog = async function() {
     const projNameRaw = getVal('proj-name');
@@ -423,7 +422,6 @@ window.saveMNAUOrderToLog = async function() {
         }
     });
 
-    // Snapshot der gesamten Kalkulator-Berechnung für späten PDF-Download im Log
     const groupMeta = {
         kundenpreis: Math.round(kundenpreis * 100) / 100,
         mngrAbgabe: Math.round(mngrAbgabe * 100) / 100,
@@ -448,7 +446,7 @@ window.saveMNAUOrderToLog = async function() {
             user: window.currentUserEmail || "Unbekannt",
             timestamp: new Date().toISOString(),
             action: "Auftrag aus Group Kalkulator erfasst",
-            comment: `Aus Group Kalkulator erfasst`,
+            comment: `Aus Group Kalkulator erfasst (Status: In Bearbeitung)`,
             details: [
                 `Auftrag "${orderTitle}" angelegt:`,
                 `• MNAU Umsatz (Verrechnung an Group): € ${mnauUmsatz.toFixed(2)}`,
@@ -471,7 +469,7 @@ window.saveMNAUOrderToLog = async function() {
                     "Betrag_Automotive": mnauUmsatz,
                     "Fremdkosten": Math.round(totalFremdkosten * 100) / 100,
                     "Fremdkosten_Details": detailsPayload,
-                    "Status": "An Group verrechnet",
+                    "Status": "In Bearbeitung", // INITIALSTATUS AUF "IN BEARBEITUNG" GESETZT
                     "Flagged": false,
                     "Changelog": JSON.stringify(initialChangelog)
                 }
@@ -483,7 +481,7 @@ window.saveMNAUOrderToLog = async function() {
             window.loadedRecords.unshift(createdData.records[0]);
             window.UI.updateSupplierDatalist();
             window.UI.renderOrders(window.loadedRecords);
-            alert(`Erfolg! MNAU-Auftrag "${orderTitle}" über € ${mnauUmsatz.toFixed(2)} wurde im Log erfasst.`);
+            alert(`Erfolg! MNAU-Auftrag "${orderTitle}" über € ${mnauUmsatz.toFixed(2)} wurde mit Status "In Bearbeitung" im Log erfasst.`);
 
             if (typeof window.switchTab === 'function') {
                 window.switchTab('billing');

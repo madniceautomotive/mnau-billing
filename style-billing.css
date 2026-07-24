@@ -12,6 +12,7 @@
 .summary-card.orange { border-bottom: 3px solid #ff7b00; }
 .summary-card.green { border-bottom: 3px solid #00ff73; }
 .summary-card.blue { border-bottom: 3px solid #00d2ff; }
+.summary-card.cyan { border-bottom: 3px solid #00d2ff; }
 .summary-label { font-size: 0.65rem; color: #a0aec0; text-transform: uppercase; font-weight: 700; }
 .summary-value { font-size: 1.3rem; font-weight: 800; color: white; text-shadow: 0 0 10px rgba(255,255,255,0.1); }
 
@@ -24,6 +25,7 @@
     max-height: none; overflow: visible;
 }
 .billing-row.status-zu-verrechnen { border-left-color: #e74c3c; }
+.billing-row.status-in-bearbeitung { border-left-color: #00d2ff; }
 .billing-row.status-an-group-verrechnet { border-left-color: #f6e05e; }
 .billing-row.status-bezahlt { border-left-color: #00ff73; opacity: 0.65; }
 
