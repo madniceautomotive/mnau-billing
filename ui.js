@@ -43,11 +43,13 @@ window.UI = {
                         const details = JSON.parse(fields.Fremdkosten_Details);
                         if (details.length > 0) {
                             breakdownHTML = `<div class="breakdown-container">`;
-                            details.forEach((d) => {
+                            details.forEach((d, dIdx) => {
                                 const isPaid = d.paid === true;
                                 breakdownHTML += `
-                                    <div class="breakdown-row ${isPaid ? 'supplier-paid' : ''}">
-                                        <span>↳ ${d.name} ${isPaid ? '✓' : ''}</span>
+                                    <div class="breakdown-row ${isPaid ? 'supplier-paid' : ''}" 
+                                         onclick="window.toggleSupplierPaid('${id}', ${dIdx})" 
+                                         title="Klicken zum Umschalten (Bezahlt / Offen)">
+                                        <span>↳ ${d.name} ${isPaid ? '✓' : '◯'}</span>
                                         <span>€ ${d.amount.toFixed(2)}</span>
                                     </div>
                                 `;

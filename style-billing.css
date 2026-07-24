@@ -3,7 +3,7 @@
 /* ==================================================== */
 .manager-content { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 90px; }
 
-/* Die schicken summary Karten */
+/* Dashboard summary Karten */
 .dashboard-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
 .summary-card { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px; transition: transform 0.2s, background-color 0.2s; }
 .summary-card:hover { transform: translateY(-2px); background: rgba(255, 255, 255, 0.04); }
@@ -33,7 +33,7 @@
 .badge-verrechnet { background: #b79400; }
 .badge-bezahlt { background: #00663a; color: #00ff73; }
 
-/* MNAU Status-Auswahlelement */
+/* Status Dropdown */
 .status-select { background-color: #1c1c1c; color: white; border: 1px solid rgba(0, 102, 58, 0.5); padding: 8px 30px 8px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; -webkit-appearance: none; -moz-appearance: none; appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 10px center; background-size: 16px; transition: border-color 0.2s, box-shadow 0.2s; }
 .status-select:focus { border-color: #00ff73; box-shadow: 0 0 10px rgba(0, 255, 115, 0.15); outline: none; }
 
@@ -44,7 +44,7 @@
 .section-divider.red-divider { color: #e74c3c; }
 .section-divider.red-divider::after { background: linear-gradient(to right, rgba(231, 76, 60, 0.5), transparent); }
 
-/* System Secure No-Debts Panel */
+/* No Debts Panel */
 .no-debts-panel { grid-column: 1 / -1; background: rgba(0, 255, 115, 0.02); border: 1px dashed rgba(0, 255, 115, 0.2); border-radius: 12px; padding: 24px; display: flex; align-items: center; gap: 16px; justify-content: center; animation: rowSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .no-debts-panel svg { width: 32px; height: 32px; fill: #00ff73; background: rgba(0, 255, 115, 0.08); padding: 6px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 15px rgba(0, 255, 115, 0.15); }
 .no-debts-text h3 { margin: 0 0 4px 0; font-size: 0.85rem; color: #00ff73; font-weight: 800; letter-spacing: 1px; }
@@ -59,34 +59,36 @@
 .supplier-stat-total { color: #e74c3c; font-weight: 800; font-size: 1rem; }
 .supplier-stat-item { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #a0aec0; margin-bottom: 6px; }
 
-/* Lieferanten-Eintrag im Haupt-Log (Historie) */
+/* Interaktive Lieferanten-Zeile im Auftrags-Log */
 .breakdown-container { margin-top: 6px; padding-top: 8px; border-top: 1px dashed rgba(255, 255, 255, 0.08); }
-.breakdown-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: #a0aec0; margin-bottom: 4px; }
-.breakdown-row.supplier-paid { opacity: 0.35; text-decoration: line-through; color: #666; }
+.breakdown-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.78rem; color: #a0aec0; margin-bottom: 4px;
+    padding: 3px 6px; border-radius: 6px; cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+    user-select: none;
+}
+.breakdown-row:hover { background: rgba(0, 255, 115, 0.1); color: #00ff73; }
+.breakdown-row.supplier-paid { opacity: 0.45; text-decoration: line-through; color: #666; }
+.breakdown-row.supplier-paid:hover { opacity: 0.9; text-decoration: none; color: #ef4444; background: rgba(231, 76, 60, 0.15); }
 .breakdown-row.supplier-paid span:last-child { color: #666 !important; }
 
-/* ==================================================== */
-/* MODALS, POPUPS & EINGABE-BEREICHE                    */
-/* ==================================================== */
+/* Modals & Popups */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 200; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: opacity 0.25s, visibility 0.25s; }
 .modal-overlay:not(.hidden) { opacity: 1; visibility: visible; }
 .modal-card { background: #141414; border: 1px solid rgba(0, 102, 58, 0.4); border-radius: 16px; padding: 24px; width: 92%; max-width: 440px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); box-sizing: border-box; }
 .modal-card h2 { margin-top: 0; font-size: 1.4rem; font-weight: 800; color: white; text-transform: uppercase; margin-bottom: 20px; }
 form label { display: block; margin-top: 14px; font-size: 0.8rem; color: #a0aec0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
 
-/* WIEDER DA: Knöpfe unten im Modal nebeneinander und mit Abstand */
 .modal-actions { display: flex; justify-content: space-between; margin-top: 26px; gap: 12px; }
 .modal-actions button { flex: 1; justify-content: center; }
 
-/* WIEDER DA: Summen-Bereich für Lieferanten */
 .supplier-actions { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 16px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 16px; }
 .btn-small { padding: 8px 12px; font-size: 0.75rem; }
 
-/* WIEDER DA: Die korrekte Lesbarkeit und Farbe der Gesamtsumme */
 .supplier-total { font-size: 0.75rem; color: #a0aec0; text-align: right; text-transform: uppercase; }
 .supplier-total span { color: #e74c3c; font-weight: bold; font-size: 1.1rem; }
 
-/* Lieferanten Input im Popup */
 .supplier-container { max-height: 160px; overflow-y: auto; margin-top: 8px; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
 .supplier-row { display: flex; gap: 8px; align-items: center; }
 .supplier-row .supplier-name {
@@ -98,7 +100,6 @@ form label { display: block; margin-top: 14px; font-size: 0.8rem; color: #a0aec0
 .supplier-row .supplier-amount { flex: 1; min-width: 0; padding: 11px 12px !important; color: white !important;}
 .supplier-name::-webkit-calendar-picker-indicator { opacity: 0 !important; width: 28px; height: 100%; cursor: pointer; }
 
-/* WIEDER DA: Der knallrote, schicke Lösch-Button für die Lieferantenzeile */
 .btn-remove-supplier {
     background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(231, 76, 60, 0.25); color: #e74c3c;
     width: 41px; height: 41px; border-radius: 10px; cursor: pointer;
@@ -112,65 +113,28 @@ form label { display: block; margin-top: 14px; font-size: 0.8rem; color: #a0aec0
 }
 .btn-remove-supplier:active { transform: scale(0.92); }
 
-/* Lieferanten-Verwaltungs-Manager */
 .suppliers-manager-list { max-height: 250px; overflow-y: auto; padding-right: 4px; margin-top: 12px; }
 .supplier-manager-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; margin-bottom: 8px; }
 .supplier-manager-name { font-size: 0.85rem; font-weight: 600; color: white; }
+
+/* Archiving Collapsible */
+.archive-details { margin-top: 40px; }
+.archive-divider { cursor: pointer; user-select: none; color: #666; transition: color 0.2s ease; }
+.archive-divider:hover { color: #00ff73; }
+.archive-details summary::-webkit-details-marker,
+.archive-details summary::marker { display: none !important; }
+.archive-details summary::before {
+    content: '▶ // ' !important; display: inline-block; margin-right: 6px;
+    transition: transform 0.25s ease, color 0.25s ease; color: #555;
+}
+.archive-details[open] summary::before { transform: rotate(90deg); color: #00ff73; }
+.archive-details[open] summary { color: #00ff73; }
+#archive-list { margin-top: 16px; padding: 2px 0; }
+#archive-list .billing-row { background: rgba(255, 255, 255, 0.01); border-left-color: #00663a; opacity: 0.4; }
+#archive-list .billing-row:hover { opacity: 0.85; background: rgba(255, 255, 255, 0.025); }
 
 @media (max-width: 768px) {
     .billing-row { flex-direction: column; align-items: stretch; gap: 14px; }
     .billing-financials { text-align: left; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 10px; }
     .action-group { justify-content: space-between; width: 100%; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 12px; }
-}
-
-/* ==================================================== */
-/* 9. ARCHIVE BLOCK COLLAPSIBLE INTERACTION             */
-/* ==================================================== */
-.archive-details {
-    margin-top: 40px;
-}
-/* Summary als interaktiver HUD-Header */
-.archive-divider {
-    cursor: pointer;
-    user-select: none;
-    color: #666; /* Standardmäßig dezent im Hintergrund */
-    transition: color 0.2s ease;
-}
-.archive-divider:hover {
-    color: #00ff73;
-}
-/* Hässlichen Standard-Browser-Pfeil komplett eliminieren */
-.archive-details summary::-webkit-details-marker,
-.archive-details summary::marker {
-    display: none !important;
-}
-/* Cyberpunk-Rotations-Dreieck vor den Text spannen */
-.archive-details summary::before {
-    content: '▶ // ' !important;
-    display: inline-block;
-    margin-right: 6px;
-    transition: transform 0.25s ease, color 0.25s ease;
-    color: #555;
-}
-/* Wenn geöffnet: Pfeil drehen und Divider giftgrün glühen lassen */
-.archive-details[open] summary::before {
-    transform: rotate(90deg);
-    color: #00ff73;
-}
-.archive-details[open] summary {
-    color: #00ff73;
-}
-#archive-list {
-    margin-top: 16px;
-    padding: 2px 0;
-}
-/* Historische Einträge im Archiv clean abdunkeln gegen Ablenkung */
-#archive-list .billing-row {
-    background: rgba(255, 255, 255, 0.01);
-    border-left-color: #00663a;
-    opacity: 0.4;
-}
-#archive-list .billing-row:hover {
-    opacity: 0.85;
-    background: rgba(255, 255, 255, 0.025);
 }
