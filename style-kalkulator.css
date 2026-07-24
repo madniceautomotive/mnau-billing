@@ -177,14 +177,13 @@
     background: linear-gradient(160deg, #1e1e1e 0%, #141414 100%);
     border-radius: 10px;
     padding: 14px;
-    border: 1fr solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
     flex-direction: column;
     position: relative;
     overflow: hidden;
 }
 
-/* FIRMEN SPEZIFISCHE AKZENTE AUF DEN KARTEN */
 #view-calculator .entity-name {
     font-size: 0.95rem;
     font-weight: 900;
@@ -208,7 +207,7 @@
 #view-calculator .actions button { padding: 10px 16px; font-weight: 700; font-size: 0.8rem; border-radius: 6px; }
 
 /* ==================================================== */
-/* ERGEBNIS-TABELLE MIT FIRMEN-FARB-HEADERS             */
+/* ERGEBNIS-TABELLE METICULOUSLY ALIGNED (PERFECT MATCH)*/
 /* ==================================================== */
 #view-calculator .results-wrap {
     width: 100%;
@@ -225,20 +224,22 @@
 #view-calculator table.results.flow {
     width: 100%;
     min-width: 1000px;
-    border-collapse: separate;
-    border-spacing: 0;
-    table-layout: fixed;
+    border-collapse: collapse !important;
+    table-layout: fixed !important;
     font-variant-numeric: tabular-nums;
+    box-sizing: border-box;
 }
 
-#view-calculator table.results.flow col.cg-label { width: 25%; }
-#view-calculator table.results.flow col.cg-col { width: 9.375%; }
+#view-calculator table.results.flow col.cg-label { width: 24%; }
+#view-calculator table.results.flow col.cg-col { width: 9.5%; }
 
-#view-calculator table.results.flow thead tr { background: #181818; }
+#view-calculator table.results.flow thead tr {
+    background: #181818;
+}
 
 #view-calculator table.results.flow thead th {
-    padding: 12px 10px;
-    text-align: center;
+    padding: 12px 8px;
+    text-align: right;
     font-size: 0.82rem;
     font-weight: 900;
     text-transform: uppercase;
@@ -246,9 +247,12 @@
     vertical-align: middle;
     letter-spacing: 0.5px;
     color: #ffffff;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-/* SPEZIFISCHE SCHWESTERFIRMEN HEADER SPALTEN IN DER TABELLE */
 #view-calculator table.results.flow thead th.col-MNAG { border-bottom-color: var(--color-mnag); color: var(--color-mnag); }
 #view-calculator table.results.flow thead th.col-MNMH { border-bottom-color: var(--color-mnmh); color: var(--color-mnmh); }
 #view-calculator table.results.flow thead th.col-MNWB { border-bottom-color: var(--color-mnwb); color: var(--color-mnwb); }
@@ -260,9 +264,10 @@
     background: linear-gradient(135deg, #222222 0%, #111111 100%);
     color: #ffffff;
     text-align: left;
-    padding: 12px 16px;
+    padding: 10px 14px;
     border-right: 1px solid rgba(255, 255, 255, 0.1);
     border-bottom: 3px solid var(--active-company-color);
+    box-sizing: border-box;
 }
 #view-calculator table.results.flow thead th.kundenpreis-cell .kp-title {
     font-size: 0.65rem;
@@ -273,13 +278,14 @@
     margin-bottom: 2px;
 }
 #view-calculator table.results.flow thead th.kundenpreis-cell .kp-amount {
-    font-size: 1.25rem;
+    font-size: 1.2rem;
     font-weight: 800;
     color: #ffffff;
 }
 
 #view-calculator table.results.flow tbody tr td {
-    padding: 11px 10px;
+    padding: 11px 8px;
+    border: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.04);
     white-space: nowrap;
     font-size: 0.82rem;
@@ -287,15 +293,17 @@
     overflow: hidden;
     text-overflow: ellipsis;
     vertical-align: middle;
+    box-sizing: border-box;
 }
 
 #view-calculator table.results.flow tbody tr td.rowlabel {
     text-align: left;
     color: #f8fafc;
     font-weight: 700;
-    padding-left: 16px;
+    padding-left: 14px;
     background: rgba(255, 255, 255, 0.02);
     border-right: 1px solid rgba(255, 255, 255, 0.08);
+    box-sizing: border-box;
 }
 
 #view-calculator table.results.flow .pct-badge {
@@ -304,10 +312,10 @@
     color: #cbd5e1;
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 2px 6px;
+    padding: 2px 5px;
     border-radius: 4px;
     font-weight: 700;
-    margin-right: 6px;
+    margin-right: 4px;
 }
 
 #view-calculator table.results.flow .val-pos { color: #00ff73; font-weight: 700; }

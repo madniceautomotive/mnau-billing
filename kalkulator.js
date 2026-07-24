@@ -4,10 +4,10 @@
 
 const ENTITIES = ['MNAG','MNMH','MNWB','MNAT','MNAU','MNGR'];
 const COSTS = [
-    {key:'backoffice', label:'Backoffice', def:6},
-    {key:'pm', label:'Projektmanagement', def:9},
+    {key:'backoffice', label:'Backoffice', def:5},
+    {key:'pm', label:'Projektmanagement', def:5},
     {key:'overhead', label:'Overhead + Marketing', def:5},
-    {key:'fulfillment', label:'Fulfillment', def:65},
+    {key:'fulfillment', label:'Fulfillment', def:70},
 ];
 const ROLES = [
     {id:'seller', label:'Verkäufer'},
@@ -502,7 +502,6 @@ window.saveMNAUOrderToLog = async function() {
     });
 
     const kalkInputs = exportKalkulatorInputs();
-
     const btn = document.getElementById('btn-save-to-log');
 
     try {
