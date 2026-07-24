@@ -335,7 +335,7 @@ window.saveMNAUOrderToLog = async function() {
     const projNameRaw = getVal('proj-name');
     const projName = projNameRaw ? projNameRaw : "Unbenanntes Projekt";
 
-    // Der Auftragsname gehört EXAKT der anlegenden Firma an!
+    // Der Auftragsname gehört EXAKT der anlegenden Firma an (wird an alle vererbt)!
     const orderTitle = `${projName} (${myCompany})`;
 
     const roles = getRoles();
@@ -368,7 +368,51 @@ window.saveMNAUOrderToLog = async function() {
     });
     summe['MNGR'] += fkMNGR;
 
-    // 1. Hauptauftrag für den erfassenden User (z.B. MNAU)
+    // Hilfsfunktion: Lieferanten & Spesen einer beliebigen Firma aus den Karten extrahieren
+    const getSuppliersForCompany = (compName) => {
+        const compSuppliers = [];
+        const container = document.getElementById(`suppliers-list-${compName}`);
+
+        if (container) {
+            container.querySelectorAll('.kalk-supplier-row').forEach(row => {
+                const sName = (row.querySelector('.kalk-supp-name').value || '').trim();
+                const sAmount = parseFloat(row.querySelector('.kalk-supp-amount').value) || 0;
+                if (sName !== '' || sAmount > 0) {
+                    compSuppliers.push({
+                        name: sName || `Fremdkosten ${compName}`,
+                        amount: Math.round(sAmount * 100) / 100,
+                        paid: false
+                    });
+
+                    // Unbekannte Lieferanten global in Airtable sichern
+                    if (sName !== '' && window.globalSuppliers && window.API && window.API.saveSuppliers) {
+                        const exists = window.globalSuppliers.some(g => g.name.toLowerCase() === sName.toLowerCase());
+                        if (!exists) {
+                            window.API.saveSuppliers([{ fields: { "Name": sName } }])
+                                .then(res => {
+                                    if (res && res.records) {
+                                        res.records.forEach(r => window.globalSuppliers.push({ id: r.id, name: r.fields.Name }));
+                                        if (window.UI && window.UI.updateSupplierDatalist) window.UI.updateSupplierDatalist();
+                                    }
+                                }).catch(e => console.warn("Lieferant konnte nicht gespeichert werden:", e));
+                        }
+                    }
+                }
+            });
+        }
+
+        const compSP = SP[compName] || 0;
+        if (compSP > 0) {
+            compSuppliers.push({
+                name: `Spesen ${compName}`,
+                amount: Math.round(compSP * 100) / 100,
+                paid: false
+            });
+        }
+        return compSuppliers;
+    };
+
+    // 1. Hauptauftrag für den erfassenden User
     const userUmsatz = Math.round((summe[myCompany] || 0) * 100) / 100;
 
     if (userUmsatz <= 0) {
@@ -376,52 +420,13 @@ window.saveMNAUOrderToLog = async function() {
         return;
     }
 
-    // Echte Fremdkosten NUR von der Hauptfirma
-    const suppliers = [];
-    const containerCompany = document.getElementById(`suppliers-list-${myCompany}`);
+    const mainSuppliers = getSuppliersForCompany(myCompany);
+    const totalFremdkosten = mainSuppliers.reduce((s, item) => s + item.amount, 0);
 
-    if (containerCompany) {
-        containerCompany.querySelectorAll('.kalk-supplier-row').forEach(row => {
-            const sName = (row.querySelector('.kalk-supp-name').value || '').trim();
-            const sAmount = parseFloat(row.querySelector('.kalk-supp-amount').value) || 0;
-            if (sName !== '' || sAmount > 0) {
-                suppliers.push({
-                    name: sName || `Fremdkosten ${myCompany}`,
-                    amount: Math.round(sAmount * 100) / 100,
-                    paid: false
-                });
-
-                if (sName !== '' && window.globalSuppliers && window.API && window.API.saveSuppliers) {
-                    const exists = window.globalSuppliers.some(g => g.name.toLowerCase() === sName.toLowerCase());
-                    if (!exists) {
-                        window.API.saveSuppliers([{ fields: { "Name": sName } }])
-                            .then(res => {
-                                if (res && res.records) {
-                                    res.records.forEach(r => window.globalSuppliers.push({ id: r.id, name: r.fields.Name }));
-                                    if (window.UI && window.UI.updateSupplierDatalist) window.UI.updateSupplierDatalist();
-                                }
-                            }).catch(e => console.warn("Lieferant konnte nicht gespeichert werden:", e));
-                    }
-                }
-            }
-        });
-    }
-
-    const userSP = SP[myCompany] || 0;
-    if (userSP > 0) {
-        suppliers.push({
-            name: `Spesen ${myCompany}`,
-            amount: Math.round(userSP * 100) / 100,
-            paid: false
-        });
-    }
-
-    const totalFremdkosten = suppliers.reduce((s, item) => s + item.amount, 0);
-
-    // Einzelne Schwesterfirmen Summen
+    // Basis Group-Infos sammeln
     const mngrAbgabe = summe['MNGR'] || 0;
     const allSharesDetail = {};
-    ['MNAG','MNMH','MNWB','MNAT','MNGR','EXT'].forEach(comp => {
+    ['MNAG','MNMH','MNWB','MNAT','MNAU','EXT'].forEach(comp => {
         const amt = summe[comp] || 0;
         if (amt > 0) {
             allSharesDetail[comp] = Math.round(amt * 100) / 100;
@@ -465,7 +470,7 @@ window.saveMNAUOrderToLog = async function() {
             "Auftrag": orderTitle,
             "Betrag_Automotive": userUmsatz,
             "Fremdkosten": Math.round(totalFremdkosten * 100) / 100,
-            "Fremdkosten_Details": JSON.stringify({ suppliers: suppliers, groupMeta: groupMetaMain }),
+            "Fremdkosten_Details": JSON.stringify({ suppliers: mainSuppliers, groupMeta: groupMetaMain }),
             "Status": "In Bearbeitung",
             "Firma": myCompany,
             "Flagged": false,
@@ -476,6 +481,10 @@ window.saveMNAUOrderToLog = async function() {
     // 3. PASSIV-AUFTRÄGE FÜR INVOLVIERTE SCHWESTERFIRMEN ERZEUGEN
     Object.entries(allSharesDetail).forEach(([comp, amt]) => {
         if (comp !== myCompany && amt > 0) {
+
+            const compSuppliers = getSuppliersForCompany(comp);
+            const compFremdkosten = compSuppliers.reduce((s, item) => s + item.amount, 0);
+
             const shareGroupMeta = {
                 isReadOnlyShare: true,
                 originCompany: myCompany,
@@ -494,6 +503,7 @@ window.saveMNAUOrderToLog = async function() {
                 details: [
                     `Erlösanteil für ${comp} aus Projekt "${projName}" (${myCompany}):`,
                     `• Anteil ${comp}: € ${amt.toFixed(2)}`,
+                    `• ${comp} Echte Fremdkosten: € ${compFremdkosten.toFixed(2)}`,
                     `• Gesamt-Projektvolumen: € ${kundenpreis.toFixed(2)}`
                 ]
             }];
@@ -502,8 +512,8 @@ window.saveMNAUOrderToLog = async function() {
                 fields: {
                     "Auftrag": orderTitle, // DER NAME BLEIBT EXAKT DER ORIGINALE PROJEKTNAME INKL. Z.B. (MNAU)!
                     "Betrag_Automotive": amt,
-                    "Fremdkosten": 0,
-                    "Fremdkosten_Details": JSON.stringify({ suppliers: [], groupMeta: shareGroupMeta }),
+                    "Fremdkosten": Math.round(compFremdkosten * 100) / 100,
+                    "Fremdkosten_Details": JSON.stringify({ suppliers: compSuppliers, groupMeta: shareGroupMeta }),
                     "Status": "An Group verrechnet",
                     "Firma": comp,
                     "Flagged": false,

@@ -73,7 +73,7 @@ window.UI = {
                 // Ersteller-Firma ermitteln (Zeigt immer die ERSTELLER-FIRMA an)
                 const creatorCompany = (groupMeta && groupMeta.originCompany) ? groupMeta.originCompany.toUpperCase() : (fields.Firma || "MNAU").toUpperCase();
 
-                // Echte Fremdkosten Breakdown
+                // Echte Fremdkosten Breakdown (Checkboxen sind für EIGENE Lieferanten immer klickbar)
                 let breakdownHTML = '';
                 if (suppliers.length > 0) {
                     breakdownHTML = `<div class="breakdown-container">`;
@@ -81,8 +81,8 @@ window.UI = {
                         const isPaid = d.paid === true;
                         breakdownHTML += `
                             <div class="breakdown-row ${isPaid ? 'supplier-paid' : ''}" 
-                                 onclick="${isReadOnlyShare ? '' : `window.toggleSupplierPaid('${id}', ${dIdx})`}" 
-                                 title="${isReadOnlyShare ? 'Schreibgeschützter Erlösanteil' : 'Klicken zum Umschalten (Bezahlt / Offen)'}">
+                                 onclick="window.toggleSupplierPaid('${id}', ${dIdx})" 
+                                 title="Klicken zum Umschalten (Bezahlt / Offen)">
                                 <span>↳ ${d.name} ${isPaid ? '✓' : '◯'}</span>
                                 <span>€ ${(parseFloat(d.amount)||0).toFixed(2)}</span>
                             </div>
@@ -138,6 +138,7 @@ window.UI = {
                 else if(status === "An Group verrechnet") { cardStatusClass = "status-an-group-verrechnet"; }
                 else if(status === "Bezahlt") { cardStatusClass = "status-bezahlt"; }
 
+                // Aktions-Steuerung: Für schreibgeschützte Anteile werden Edit/Delete/Status deaktiviert
                 const actionControlsHTML = isReadOnlyShare ? `
                     <span class="read-only-badge">🔒 Schreibgeschützt</span>
                     <button class="changelog-btn" onclick="window.openChangelogModal('${id}')" title="Änderungshistorie anzeigen">
