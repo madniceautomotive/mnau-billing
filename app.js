@@ -1,5 +1,5 @@
 // ==================================================== 
-// app.js: USER ACTIONS & CONTROLLER HUB (WITH GLOBAL FILTERS)
+// app.js: USER ACTIONS & CONTROLLER HUB (WITH GLOBAL FILTERS & CASCADING STATUS UPDATE)
 // ====================================================
 
 // Globales Tab-Switching
@@ -412,16 +412,59 @@ window.openChangelogModal = function(recordId) {
     document.getElementById('modal-changelog-overlay').classList.remove('hidden');
 };
 
-// Status-Update
+// ====================================================
+// STATUS UPDATE (INKL. KASKADIERENDEM UPDATE FÜR ALLE SCHWESTERFIRMEN)
+// ====================================================
 window.changeOrderStatus = async function(recordId, newStatus) {
-    const record = window.loadedRecords.find(r => r.id === recordId);
-    if (record) {
-        record.fields.Status = newStatus;
-        window.applyFilters();
+    const targetRecord = window.loadedRecords.find(r => r.id === recordId);
+    if (!targetRecord) return;
+
+    let linkedRecordIds = [recordId];
+    let groupId = null;
+    const auftragName = targetRecord.fields.Auftrag;
+
+    // Versuche, die Group-ID (Kalkulator-Verbindung) zu ermitteln
+    if (targetRecord.fields.Fremdkosten_Details) {
+        try {
+            const parsed = JSON.parse(targetRecord.fields.Fremdkosten_Details);
+            if (parsed && parsed.groupMeta && parsed.groupMeta.groupId) {
+                groupId = parsed.groupMeta.groupId;
+            }
+        } catch(e) {}
     }
 
+    // Sammle alle Aufträge mit derselben ID oder demselben Namen
+    if (groupId) {
+        linkedRecordIds = window.loadedRecords.filter(r => {
+            if (!r.fields.Fremdkosten_Details) return false;
+            try {
+                const p = JSON.parse(r.fields.Fremdkosten_Details);
+                return p && p.groupMeta && p.groupMeta.groupId === groupId;
+            } catch(e) { return false; }
+        }).map(r => r.id);
+    } else if (auftragName) {
+        // Fallback für alte Einträge ohne groupId
+        linkedRecordIds = window.loadedRecords.filter(r => r.fields.Auftrag === auftragName).map(r => r.id);
+    }
+
+    // 1. Lokales Update für SOFORTIGES UI Feedback
+    const updates = [];
+    linkedRecordIds.forEach(id => {
+        const r = window.loadedRecords.find(rec => rec.id === id);
+        if (r) {
+            r.fields.Status = newStatus;
+            updates.push({ id: id, fields: { "Status": newStatus } });
+        }
+    });
+
+    window.applyFilters();
+
+    // 2. Airtable API Update (Batch für Performance)
     try {
-        await window.API.updateOrderStatus(recordId, newStatus);
+        for (let i = 0; i < updates.length; i += 10) {
+            const batch = updates.slice(i, i + 10);
+            await window.API.batchUpdateOrders(batch);
+        }
     } catch (error) {
         alert("Fehler beim Status-Update.");
         fetchOrders();
