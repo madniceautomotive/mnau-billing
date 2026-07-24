@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MNAU Billing Terminal</title>
+    <title>MNAU Billing Terminal & Kalkulator</title>
     <link rel="stylesheet" href="style-core.css">
     <link rel="stylesheet" href="style-billing.css">
+    <link rel="stylesheet" href="style-kalkulator.css">
 </head>
 <body>
 <!-- DER SICHERHEITS-TRESOR (Login-Overlay) -->
@@ -35,7 +36,14 @@
 <div id="database-view">
     <header class="database-header">
         <div class="header-main-row">
-            <h1>MNAU <span>Billing</span></h1>
+            <h1>MNAU <span>Hub</span></h1>
+
+            <!-- TAB NAVIGATION -->
+            <div class="mnau-tabs">
+                <button id="tab-btn-billing" class="mnau-tab-btn active" onclick="switchTab('billing')">Auftrags-Log</button>
+                <button id="tab-btn-calculator" class="mnau-tab-btn" onclick="switchTab('calculator')">Group Kalkulator</button>
+            </div>
+
             <div style="display: flex; gap: 10px; align-items: center;">
                 <button id="btn-manage-suppliers" class="sort-icon-btn" title="Lieferanten-Datenbank verwalten">
                     <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
@@ -46,7 +54,7 @@
                 <button id="btn-new-order" class="btn-primary">+ Neuer Auftrag</button>
             </div>
         </div>
-        <div class="header-controls-row">
+        <div class="header-controls-row" id="billing-search-row">
             <div class="search-group">
                 <input type="text" id="search-input" class="search-input" placeholder="Nach Auftrag, Betrag oder Lieferant suchen...">
                 <button id="search-clear-btn" class="search-clear-btn"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
@@ -55,16 +63,121 @@
     </header>
 
     <main class="manager-content">
-        <div id="loading" class="spinner hidden"></div>
-        <div id="dashboard-summary" class="dashboard-summary"></div>
-        <div class="section-divider mnau-divider">AUFTRAGS_LOG</div>
-        <div id="order-list"></div>
-        <div class="section-divider red-divider">OFFENE_LIEFERANTEN_POSTEN</div>
-        <div id="supplier-summary-details" class="supplier-summary-details"></div>
-        <details class="archive-details">
-            <summary class="section-divider archive-divider">ARCHIV_LOG (BEZAHLT)</summary>
-            <div id="archive-list"></div>
-        </details>
+        <!-- TAB 1: BILLING TERMINAL -->
+        <div id="view-billing" class="tab-content active">
+            <div id="loading" class="spinner hidden"></div>
+            <div id="dashboard-summary" class="dashboard-summary"></div>
+            <div class="section-divider mnau-divider">AUFTRAGS_LOG</div>
+            <div id="order-list"></div>
+            <div class="section-divider red-divider">OFFENE_LIEFERANTEN_POSTEN</div>
+            <div id="supplier-summary-details" class="supplier-summary-details"></div>
+            <details class="archive-details">
+                <summary class="section-divider archive-divider">ARCHIV_LOG (BEZAHLT)</summary>
+                <div id="archive-list"></div>
+            </details>
+        </div>
+
+        <!-- TAB 2: GROUP KALKULATOR -->
+        <div id="view-calculator" class="tab-content hidden">
+            <div class="kalkulator-container">
+                <div class="logo-header">
+                    <div class="logo-title">
+                        <h1 style="color: #1a1a1a;">Group Kalkulator</h1>
+                        <span style="color: #5f5e5a;">Top-down &amp; Bottom-up</span>
+                    </div>
+                </div>
+
+                <div class="print-only print-header" id="print-header"></div>
+
+                <div class="mode-switch no-print">
+                    <div class="mode-btn td active" id="btn-td" onclick="setMode('td')">
+                        <div class="ic"><span class="ti">↓</span></div>
+                        <div>
+                            <div class="mt">Top-down</div>
+                            <div class="md">Vom Volumen / Verkaufspreis ausgehen — alle %-Posten werden abgezogen → Netto bleibt.</div>
+                        </div>
+                        <span class="ti chk">✓</span>
+                    </div>
+                    <div class="mode-btn bu" id="btn-bu" onclick="setMode('bu')">
+                        <div class="ic"><span class="ti">↑</span></div>
+                        <div>
+                            <div class="mt">Bottom-up</div>
+                            <div class="md">Vom Wunschbetrag der Schwesterfirma ausgehen — alle %-Posten werden aufgeschlagen → Endpreis.</div>
+                        </div>
+                        <span class="ti chk">✓</span>
+                    </div>
+                </div>
+
+                <div class="flow td" id="flow"></div>
+
+                <div class="kalk-section print-keep">
+                    <div class="section-title"><span class="ti">▸</span> Projektdetails</div>
+                    <div class="proj-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+                        <div class="field"><label>Projektname</label><input type="text" id="proj-name" placeholder="z.B. Kampagne Q3 2026"></div>
+                        <div class="field"><label>Angebotsnummer</label><input type="text" id="proj-offer" placeholder="AN-2026-001"></div>
+                        <div class="field"><label>Rechnungsnummer</label><input type="text" id="proj-invoice" placeholder="RE-2026-001"></div>
+                    </div>
+                    <div class="field" style="margin-top:12px"><label>Allgemeine Notizen</label><textarea id="proj-notes" rows="2" placeholder="Übergreifende Anmerkungen zum gesamten Projekt …"></textarea></div>
+                </div>
+
+                <div class="kalk-section">
+                    <div class="section-title"><span class="ti">▸</span> Provisionen / Rollen <span class="layer-tag" id="prov-tag">Layer 2 · % vom Volumen</span></div>
+                    <div class="grid-6-scroll">
+                        <div class="grid-4" id="roles-container">
+                            <div class="entity-card">
+                                <div class="entity-name">Urspr. Verkäufer</div>
+                                <div class="field"><label>Empfänger</label><select id="role-seller-entity"><option>MNGR</option><option>MNAG</option><option>MNWB</option><option>MNAT</option><option>MNAU</option><option>MNMH</option><option>EXT</option></select></div>
+                                <div class="field" style="margin-top:6px"><label>Provision %</label><input type="number" id="role-seller-pct" value="3" min="0" step="0.5" oninput="updateFulfillment()"></div>
+                            </div>
+                            <div class="entity-card">
+                                <div class="entity-name">Setter</div>
+                                <div class="field"><label>Empfänger</label><select id="role-setter-entity"><option>MNGR</option><option>MNAG</option><option>MNWB</option><option>MNAT</option><option>MNAU</option><option>MNMH</option><option>EXT</option></select></div>
+                                <div class="field" style="margin-top:6px"><label>Provision %</label><input type="number" id="role-setter-pct" value="4" min="0" step="0.5" oninput="updateFulfillment()"></div>
+                            </div>
+                            <div class="entity-card">
+                                <div class="entity-name">Closer 1</div>
+                                <div class="field"><label>Empfänger</label><select id="role-closer1-entity"><option>MNGR</option><option>MNAG</option><option>MNWB</option><option>MNAT</option><option>MNAU</option><option>MNMH</option><option>EXT</option></select></div>
+                                <div class="field" style="margin-top:6px"><label>Provision %</label><input type="number" id="role-closer1-pct" value="4" min="0" step="0.5" oninput="updateFulfillment()"></div>
+                            </div>
+                            <div class="entity-card">
+                                <div class="entity-name">Closer 2</div>
+                                <div class="field"><label>Empfänger</label><select id="role-closer2-entity"><option>MNGR</option><option>MNAG</option><option>MNWB</option><option>MNAT</option><option>MNAU</option><option>MNMH</option><option>EXT</option></select></div>
+                                <div class="field" style="margin-top:6px"><label>Provision %</label><input type="number" id="role-closer2-pct" value="4" min="0" step="0.5" oninput="updateFulfillment()"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hint">Pro Rolle: empfangende Entität und frei wählbarer Provisions-Prozentsatz.</div>
+                </div>
+
+                <div class="kalk-section">
+                    <div class="section-title"><span class="ti">▸</span> <span id="base-title">Volumen je Entität</span> <span class="layer-tag">Basis · inkl. Notiz</span></div>
+                    <div class="grid-6-scroll"><div class="grid-6" id="base-cards"></div></div>
+                    <div class="hint" id="base-hint"></div>
+                </div>
+
+                <div class="kalk-section">
+                    <div class="section-title"><span class="ti">▸</span> Kostenanteile <span class="layer-tag" id="cost-tag">Layer 1 · % vom Volumen</span></div>
+                    <div class="grid-6-scroll"><div class="grid-6" id="cost-cards"></div></div>
+                    <div class="hint">Fulfillment wird automatisch berechnet = 100 % − (Backoffice + PM + Overhead + Sales). Wird der Wert rot/negativ, übersteigen die anderen %-Posten 100 %.</div>
+                </div>
+
+                <div class="kalk-section no-print">
+                    <div class="actions" style="margin-top:0">
+                        <button class="btn-primary" onclick="calculate()"><span class="ti">∑</span> Berechnen</button>
+                        <button class="btn-secondary" onclick="resetAll()"><span class="ti">↻</span> Reset</button>
+                        <button class="btn-secondary" onclick="exportPDF()"><span class="ti">⬇</span> PDF herunterladen</button>
+                    </div>
+                </div>
+
+                <div class="kalk-section print-keep" id="results-section" style="display:none">
+                    <div class="section-title"><span class="ti">▸</span> Ergebnis <span class="layer-tag" id="result-mode-tag"></span></div>
+                    <div class="metric-grid" id="metrics"></div>
+                    <div class="results-wrap" id="results-table-wrap"></div>
+                    <div class="hint" id="recipient-note" style="margin-top:10px"></div>
+                    <div class="notes-out" id="notes-out" style="display:none"></div>
+                </div>
+            </div>
+        </div>
     </main>
 </div>
 
@@ -81,7 +194,7 @@
             <label>Betrag Automotive (Netto EUR)</label>
             <input type="number" step="0.01" id="input-betrag" class="mnau-input" required placeholder="0.00">
 
-            <label>Fremdkosten & Lieferanten (EUR)</label>
+            <label>Fremdkosten &amp; Lieferanten (EUR)</label>
             <div id="supplier-container" class="supplier-container"></div>
 
             <div class="supplier-actions">
@@ -89,7 +202,7 @@
                 <div class="supplier-total">Summe: <br>€ <span id="display-total-fremdkosten">0.00</span></div>
             </div>
 
-            <!-- NEU: Kommentarfeld für Änderungen (wird beim Editieren eingeblendet) -->
+            <!-- Kommentarfeld für Änderungen -->
             <div id="change-reason-group" style="display: none; margin-top: 14px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px;">
                 <label style="color: #00d2ff;">Änderungsgrund / Kommentar *</label>
                 <input type="text" id="input-change-reason" class="mnau-input" placeholder="z.B. Nachverhandlung mit Lieferant X..." style="border-color: rgba(0, 210, 255, 0.4);">
@@ -116,11 +229,11 @@
     </div>
 </div>
 
-<!-- NEU: Modal für den Auftrag-Changelog / Historie -->
+<!-- Modal für den Auftrag-Changelog / Historie -->
 <div id="modal-changelog-overlay" class="modal-overlay hidden">
     <div class="modal-card" style="max-width: 520px;">
         <h2 id="changelog-order-title" style="margin-bottom: 6px;">Änderungshistorie</h2>
-        <div style="font-size: 0.75rem; color: #a0aec0; margin-bottom: 16px;">Audit-Trail & Nachvollziehbarkeit</div>
+        <div style="font-size: 0.75rem; color: #a0aec0; margin-bottom: 16px;">Audit-Trail &amp; Nachvollziehbarkeit</div>
 
         <div id="changelog-timeline-list" class="changelog-timeline"></div>
 
@@ -131,10 +244,13 @@
 </div>
 
 <!-- JS-Module -->
+<script src="html2canvas.min.js"></script>
+<script src="jspdf.umd.min.js"></script>
 <script src="config.js"></script>
 <script src="api.js"></script>
 <script src="ui.js"></script>
 <script src="app.js"></script>
+<script src="kalkulator.js"></script>
 <script type="module" src="auth.js"></script>
 </body>
 </html>

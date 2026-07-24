@@ -29,6 +29,41 @@ body, html {
     -webkit-text-fill-color: initial;
 }
 
+/* TABS NAVIGATION */
+.mnau-tabs {
+    display: flex;
+    gap: 12px;
+    background: #1c1c1c;
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 102, 58, 0.4);
+}
+.mnau-tab-btn {
+    background: transparent;
+    border: none;
+    color: #a0aec0;
+    padding: 8px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 700;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.mnau-tab-btn.active {
+    background: #00663a;
+    color: white;
+    box-shadow: 0 0 10px rgba(0, 255, 115, 0.2);
+}
+.mnau-tab-btn:hover:not(.active) {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.05);
+}
+.tab-content.hidden {
+    display: none !important;
+}
+
 .header-controls-row {
     display: flex; width: 100%; gap: 10px; align-items: center;
 }
@@ -162,7 +197,7 @@ body, html {
 }
 .delete-btn:active { transform: scale(0.92); }
 
-/* Animationen mit dynamischer Höhe (max-height: 1000px) */
+/* Animationen mit dynamischer Höhe */
 @keyframes rowSlideIn {
     from { opacity: 0; transform: translateY(-12px) scale(0.98); max-height: 0; margin-bottom: 0; }
     to { opacity: 1; transform: translateY(0) scale(1); max-height: 1000px; }

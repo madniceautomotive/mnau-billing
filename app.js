@@ -2,6 +2,33 @@
 // app.js: USER ACTIONS & CONTROLLER HUB (OPTIMIZED)
 // ====================================================
 
+// Globales Tab-Switching
+window.switchTab = function(tabName) {
+    document.getElementById('view-billing').classList.add('hidden');
+    document.getElementById('view-calculator').classList.add('hidden');
+    document.getElementById('tab-btn-billing').classList.remove('active');
+    document.getElementById('tab-btn-calculator').classList.remove('active');
+
+    // Suchfeld und Buttons im Header nur im Billing Tab anzeigen
+    const searchRow = document.getElementById('billing-search-row');
+    const newOrderBtn = document.getElementById('btn-new-order');
+    const manageSuppliersBtn = document.getElementById('btn-manage-suppliers');
+
+    if (tabName === 'billing') {
+        document.getElementById('view-billing').classList.remove('hidden');
+        document.getElementById('tab-btn-billing').classList.add('active');
+        if (searchRow) searchRow.style.display = 'flex';
+        if (newOrderBtn) newOrderBtn.style.display = 'flex';
+        if (manageSuppliersBtn) manageSuppliersBtn.style.display = 'flex';
+    } else if (tabName === 'calculator') {
+        document.getElementById('view-calculator').classList.remove('hidden');
+        document.getElementById('tab-btn-calculator').classList.add('active');
+        if (searchRow) searchRow.style.display = 'none';
+        if (newOrderBtn) newOrderBtn.style.display = 'none';
+        if (manageSuppliersBtn) manageSuppliersBtn.style.display = 'none';
+    }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // Neues Projekt anlegen Modal öffnen
@@ -138,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         "Betrag_Automotive": betrag,
                         "Fremdkosten": totalFremdkosten,
                         "Fremdkosten_Details": suppliersJSON,
-                        "Flagged": true, // Flag setzen
+                        "Flagged": true,
                         "Changelog": JSON.stringify(existingChangelog)
                     }
                 };
@@ -484,7 +511,7 @@ window.deleteOrder = async function(recordId) {
     }
 };
 
-// 🔐 FIREBASE TRIGGER
+// FIREBASE TRIGGER
 window.initMNAUApp = function() {
     fetchOrders();
 };
