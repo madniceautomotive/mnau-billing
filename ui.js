@@ -1,5 +1,5 @@
 // ====================================================
-// ui.js: DOM RENDERING WITH PROJEKT-DETAILS, NOTIZEN & SPESEN-HINWEIS
+// ui.js: DOM RENDERING WITH RESTRICTED PARTNER STATUS
 // ====================================================
 
 window.toggleCardExpand = function(recordId, event) {
@@ -63,7 +63,7 @@ window.UI = {
                 const status = fields.Status || "Zu verrechnen";
                 const betragVal = parseFloat(fields.Betrag_Automotive) || 0;
                 const fremdkostenVal = parseFloat(fields.Fremdkosten) || 0;
-                const deckungsbeitragVal = betragVal - fremdkostenVal; // Spesen mindern den DB nicht!
+                const deckungsbeitragVal = betragVal - fremdkostenVal;
 
                 const betrag = betragVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
                 const fremdkosten = fremdkostenVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -90,7 +90,6 @@ window.UI = {
                 const isReadOnlyShare = groupMeta && groupMeta.isReadOnlyShare === true;
                 const creatorCompany = (groupMeta && groupMeta.originCompany) ? groupMeta.originCompany.toUpperCase() : (fields.Firma || "MNAU").toUpperCase();
 
-                // Extrahiere Spesen & Projektdetails aus GroupMeta
                 const spesenVal = groupMeta ? (parseFloat(groupMeta.spesen) || 0) : 0;
                 const spesenText = spesenVal > 0 ? ` <span style="font-size:0.72rem; color:var(--text-muted); font-weight:normal;">(davon Spesen: € ${spesenVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2})})</span>` : '';
 
@@ -153,7 +152,7 @@ window.UI = {
                     groupMetaHTML = `<div style="font-size:0.75rem; color:var(--text-muted);">Keine Group-Daten verfügbar.</div>`;
                 }
 
-                // 3. DETAIL PANEL: Projektdetails & Notizen (FALLS VORHANDEN)
+                // 3. DETAIL PANEL: Projektdetails & Notizen
                 let projectNotesPanelHTML = '';
                 if (projOffer || projInvoice || projNotes || entityNote) {
                     projectNotesPanelHTML = `
@@ -200,22 +199,40 @@ window.UI = {
                 else if(status === "An Group verrechnet") { cardStatusClass = "status-an-group-verrechnet"; }
                 else if(status === "Bezahlt") { cardStatusClass = "status-bezahlt"; }
 
-                const statusControlHTML = isReadOnlyShare ? `
-                    <span title="Schreibgeschützter Status" style="font-size:1rem; filter:grayscale(1);">🔒</span>
-                    <select class="status-select" disabled>
-                        <option value="Zu verrechnen" ${status === "Zu verrechnen" ? "selected" : ""}>Zu verrechnen</option>
-                        <option value="In Bearbeitung" ${status === "In Bearbeitung" ? "selected" : ""}>In Bearbeitung</option>
-                        <option value="An Group verrechnet" ${status === "An Group verrechnet" ? "selected" : ""}>An Group verrechnet</option>
-                        <option value="Bezahlt" ${status === "Bezahlt" ? "selected" : ""}>Bezahlt</option>
-                    </select>
-                ` : `
-                    <select class="status-select" onchange="changeOrderStatus('${id}', this.value)">
-                        <option value="Zu verrechnen" ${status === "Zu verrechnen" ? "selected" : ""}>Zu verrechnen</option>
-                        <option value="In Bearbeitung" ${status === "In Bearbeitung" ? "selected" : ""}>In Bearbeitung</option>
-                        <option value="An Group verrechnet" ${status === "An Group verrechnet" ? "selected" : ""}>An Group verrechnet</option>
-                        <option value="Bezahlt" ${status === "Bezahlt" ? "selected" : ""}>Bezahlt</option>
-                    </select>
-                `;
+                // STEUERUNG DER STATUS-OPTIONS JE NACH ROLLER/FREIGABE
+                let statusControlHTML = '';
+
+                if (isReadOnlyShare) {
+                    // PASSIVER AUFTRAG EINER SCHWESTERFIRMA:
+                    // Nur freigeschaltet, wenn Status "An Group verrechnet" oder "Bezahlt" ist!
+                    const isUnlocked = (status === "An Group verrechnet" || status === "Bezahlt");
+
+                    if (isUnlocked) {
+                        statusControlHTML = `
+                            <select class="status-select" onchange="changeOrderStatus('${id}', this.value)" title="Erlösanteil-Status verwalten">
+                                <option value="An Group verrechnet" ${status === "An Group verrechnet" ? "selected" : ""}>An Group verrechnet</option>
+                                <option value="Bezahlt" ${status === "Bezahlt" ? "selected" : ""}>Bezahlt</option>
+                            </select>
+                        `;
+                    } else {
+                        statusControlHTML = `
+                            <span title="Wartet auf Verrechnung an Group durch Ersteller" style="font-size:0.85rem; opacity:0.7;">🔒</span>
+                            <select class="status-select" disabled style="opacity:0.65; cursor:not-allowed;" title="Wird aktiv sobald Ersteller den Status auf 'An Group verrechnet' setzt">
+                                <option value="${status}" selected>${status}</option>
+                            </select>
+                        `;
+                    }
+                } else {
+                    // HAUPTAUFTRAG DER EIGENEN FIRMA (VOLLER ZUGRIFF)
+                    statusControlHTML = `
+                        <select class="status-select" onchange="changeOrderStatus('${id}', this.value)">
+                            <option value="Zu verrechnen" ${status === "Zu verrechnen" ? "selected" : ""}>Zu verrechnen</option>
+                            <option value="In Bearbeitung" ${status === "In Bearbeitung" ? "selected" : ""}>In Bearbeitung</option>
+                            <option value="An Group verrechnet" ${status === "An Group verrechnet" ? "selected" : ""}>An Group verrechnet</option>
+                            <option value="Bezahlt" ${status === "Bezahlt" ? "selected" : ""}>Bezahlt</option>
+                        </select>
+                    `;
+                }
 
                 const actionControlsHTML = isReadOnlyShare ? `
                     <button class="changelog-btn" onclick="window.openChangelogModal('${id}')" title="Änderungshistorie anzeigen">

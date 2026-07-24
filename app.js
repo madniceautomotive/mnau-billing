@@ -1,12 +1,10 @@
 // ==================================================== 
-// app.js: USER ACTIONS, CONTROLLER HUB, DYNAMIC LOGO & THEME
+// app.js: USER ACTIONS & ISOLATED STATUS UPDATES
 // ====================================================
 
-// SUBTILE FLAT VEKTOR-ICONS FÜR THEME TOGGLE
 const SUN_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
 const MOON_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
 
-// LOGO-PFAD DYNAMISCH JE NACH THEME BESTIMMEN
 window.updateHeaderLogo = function() {
     const cleanComp = (window.currentUserCompany || 'MNAU').toLowerCase();
     const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
@@ -16,8 +14,6 @@ window.updateHeaderLogo = function() {
     if (logoImg) {
         logoImg.style.display = 'block';
         if (logoText) logoText.style.display = 'none';
-
-        // Dark Theme nutzt _light.svg, Light Theme nutzt normale .svg
         const suffix = currentTheme === 'dark' ? '_light' : '';
         logoImg.src = `logos/${cleanComp}${suffix}.svg`;
     }
@@ -29,7 +25,7 @@ window.toggleTheme = function() {
     document.documentElement.setAttribute('data-theme', newTheme);
     localStorage.setItem('mnau_theme', newTheme);
     window.updateThemeIcon(newTheme);
-    window.updateHeaderLogo(); // Logo beim Theme-Wechsel direkt anpassen
+    window.updateHeaderLogo();
 };
 
 window.updateThemeIcon = function(theme) {
@@ -69,7 +65,7 @@ window.switchTab = function(tabName) {
     }
 };
 
-// FIRMEN WECHSELN VIA DROPDOWN (DYNAMIC COLOR & LOGO UPDATES)
+// FIRMEN WECHSELN VIA DROPDOWN
 window.switchCompany = function(newCompany) {
     if (!newCompany) return;
     const cleanComp = newCompany.toUpperCase();
@@ -77,7 +73,6 @@ window.switchCompany = function(newCompany) {
 
     document.documentElement.setAttribute('data-company', cleanComp);
 
-    // Dynamic Logo im Header
     window.updateHeaderLogo();
 
     const compNameText = document.getElementById('header-company-name');
@@ -111,7 +106,7 @@ window.switchCompany = function(newCompany) {
     }
 };
 
-// ZENTRALE FILTER LOGIK (SUCHE + STATUS)
+// ZENTRALE FILTER LOGIK
 window.applyFilters = function() {
     if (!window.loadedRecords || !window.UI) return;
 
@@ -177,7 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Haupt-Laderoutine
 async function fetchOrders() {
     if (!window.AIRTABLE_TOKEN || !window.BASE_ID) {
         window.UI.showSetupRequired();
@@ -211,7 +205,6 @@ async function fetchOrders() {
     }
 }
 
-// AUFTRAG IM KALKULATOR FÜR RE-KALKULATION LADEN
 window.openInKalkulator = function(recordId) {
     const record = window.loadedRecords.find(r => r.id === recordId);
     if (!record) return;
@@ -255,7 +248,6 @@ window.openInKalkulator = function(recordId) {
     window.calculate();
 };
 
-// BEARBEITUNG ABBRECHEN
 window.cancelKalkulatorEdit = function() {
     window.activeEditingGroupId = null;
     window.activeEditingRecordId = null;
@@ -270,7 +262,6 @@ window.cancelKalkulatorEdit = function() {
     window.switchTab('billing');
 };
 
-// Modal öffnen für Changelog-Verlauf
 window.openChangelogModal = function(recordId) {
     const record = window.loadedRecords.find(r => r.id === recordId);
     if (!record) return;
@@ -313,34 +304,49 @@ window.openChangelogModal = function(recordId) {
     document.getElementById('modal-changelog-overlay').classList.remove('hidden');
 };
 
-// STATUS UPDATE
+// STATUS UPDATE (PRÄZISE SCHWESTERFIRMEN-ISOLIERUNG)
 window.changeOrderStatus = async function(recordId, newStatus) {
     const targetRecord = window.loadedRecords.find(r => r.id === recordId);
     if (!targetRecord) return;
 
     let linkedRecordIds = [recordId];
-    let groupId = null;
-    const auftragName = targetRecord.fields.Auftrag;
 
+    let isReadOnlyShare = false;
     if (targetRecord.fields.Fremdkosten_Details) {
         try {
             const parsed = JSON.parse(targetRecord.fields.Fremdkosten_Details);
-            if (parsed && parsed.groupMeta && parsed.groupMeta.groupId) {
-                groupId = parsed.groupMeta.groupId;
-            }
+            isReadOnlyShare = parsed && parsed.groupMeta && parsed.groupMeta.isReadOnlyShare === true;
         } catch(e) {}
     }
 
-    if (groupId) {
-        linkedRecordIds = window.loadedRecords.filter(r => {
-            if (!r.fields.Fremdkosten_Details) return false;
+    // KASKADIERUNG:
+    // Wenn es ein EIGENER Hauptauftrag ist UND der neue Status NICHT "Bezahlt" ist,
+    // werden alle Schwesterfirmen mit auf den neuen Status gezogen (z.B. "An Group verrechnet" schaltet die Anteile bei den Schwesterfirmen frei).
+    // Wenn die Schwesterfirma ihren Status ändert OR auf "Bezahlt" gesetzt wird, betrifft es NUR [recordId].
+    if (!isReadOnlyShare && newStatus !== "Bezahlt") {
+        let groupId = null;
+        const auftragName = targetRecord.fields.Auftrag;
+
+        if (targetRecord.fields.Fremdkosten_Details) {
             try {
-                const p = JSON.parse(r.fields.Fremdkosten_Details);
-                return p && p.groupMeta && p.groupMeta.groupId === groupId;
-            } catch(e) { return false; }
-        }).map(r => r.id);
-    } else if (auftragName) {
-        linkedRecordIds = window.loadedRecords.filter(r => r.fields.Auftrag === auftragName).map(r => r.id);
+                const parsed = JSON.parse(targetRecord.fields.Fremdkosten_Details);
+                if (parsed && parsed.groupMeta && parsed.groupMeta.groupId) {
+                    groupId = parsed.groupMeta.groupId;
+                }
+            } catch(e) {}
+        }
+
+        if (groupId) {
+            linkedRecordIds = window.loadedRecords.filter(r => {
+                if (!r.fields.Fremdkosten_Details) return false;
+                try {
+                    const p = JSON.parse(r.fields.Fremdkosten_Details);
+                    return p && p.groupMeta && p.groupMeta.groupId === groupId;
+                } catch(e) { return false; }
+            }).map(r => r.id);
+        } else if (auftragName) {
+            linkedRecordIds = window.loadedRecords.filter(r => r.fields.Auftrag === auftragName).map(r => r.id);
+        }
     }
 
     const updates = [];
