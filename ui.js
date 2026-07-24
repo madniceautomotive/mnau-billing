@@ -1,5 +1,5 @@
 // ====================================================
-// ui.js: DOM RENDERING (PRESERVES EXPAND STATE)
+// ui.js: DOM RENDERING (LIVE BADGES & STABLE EXPAND STATE)
 // ====================================================
 
 window.toggleCardExpand = function(recordId, event) {
@@ -36,6 +36,14 @@ window.UI = {
         const activeExternalRecords = companyRecords.filter(r => (r.fields.Status || "Zu verrechnen") !== "Bezahlt" && isExternal(r));
         const archivedRecords = companyRecords.filter(r => r.fields.Status === "Bezahlt");
 
+        // AKTUALLISIERE DIE ANZAHL-BADGES AUF DEN SUB-TABS
+        const badgeOwn = document.getElementById('badge-count-own');
+        const badgeExt = document.getElementById('badge-count-external');
+        const badgeArc = document.getElementById('badge-count-archive');
+        if (badgeOwn) badgeOwn.textContent = activeOwnRecords.length;
+        if (badgeExt) badgeExt.textContent = activeExternalRecords.length;
+        if (badgeArc) badgeArc.textContent = archivedRecords.length;
+
         const renderContainer = (containerEl, listRecords, emptyMessage) => {
             if (!containerEl) return;
             if(!listRecords || listRecords.length === 0) {
@@ -63,7 +71,7 @@ window.UI = {
                 const status = fields.Status || "Zu verrechnen";
                 const betragVal = parseFloat(fields.Betrag_Automotive) || 0;
                 const fremdkostenVal = parseFloat(fields.Fremdkosten) || 0;
-                const deckungsbeitragVal = betragVal - fremdkostenVal; // Spesen mindern den DB nicht!
+                const deckungsbeitragVal = betragVal - fremdkostenVal;
 
                 const betrag = betragVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
                 const fremdkosten = fremdkostenVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -90,7 +98,6 @@ window.UI = {
                 const isReadOnlyShare = groupMeta && groupMeta.isReadOnlyShare === true;
                 const creatorCompany = (groupMeta && groupMeta.originCompany) ? groupMeta.originCompany.toUpperCase() : (fields.Firma || "MNAU").toUpperCase();
 
-                // Extrahiere Spesen & Projektdetails aus GroupMeta
                 const spesenVal = groupMeta ? (parseFloat(groupMeta.spesen) || 0) : 0;
                 const spesenText = spesenVal > 0 ? ` <span style="font-size:0.72rem; color:var(--text-muted); font-weight:normal;">(davon Spesen: € ${spesenVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2})})</span>` : '';
 
@@ -105,7 +112,6 @@ window.UI = {
                     suppliersHTML = `<div class="breakdown-list">`;
                     suppliers.forEach((d, dIdx) => {
                         const isPaid = d.paid === true;
-                        // EVENT PROPAGATION GESTOPPT, DAMIT DIE KARTE NICHT ZUKLAPPT
                         suppliersHTML += `
                             <div class="breakdown-row ${isPaid ? 'supplier-paid' : ''}" 
                                  onclick="event.stopPropagation(); window.toggleSupplierPaid('${id}', ${dIdx})" 
@@ -167,7 +173,7 @@ window.UI = {
                     groupMetaHTML = `<div style="font-size:0.75rem; color:var(--text-muted);">Keine Group-Daten verfügbar.</div>`;
                 }
 
-                // 3. NEUES DETAIL PANEL GRID: Projektdetails & Spesen/Notizen
+                // 3. DETAIL PANEL GRID: Projektdetails & Spesen/Notizen
                 let projectDetailsHTML = '';
                 if (projOffer || projInvoice || projNotes) {
                     projectDetailsHTML = `
@@ -211,7 +217,7 @@ window.UI = {
                             const tagText = isLatest ? `${vLabel} (Aktuell)` : vLabel;
                             pdfVersionsHTML += `
                                 <button type="button" class="btn-secondary btn-small pdf-v-btn ${isLatest ? 'active-v' : ''}" 
-                                        onclick="window.downloadKalkulatorPDFFromLog('${id}', ${sIdx})" 
+                                        onclick="event.stopPropagation(); window.downloadKalkulatorPDFFromLog('${id}', ${sIdx})" 
                                         title="Version ${vLabel} als PDF herunterladen">
                                     ⬇ ${tagText}
                                 </button>
@@ -350,7 +356,6 @@ window.UI = {
                     const cleanExisting = existingRow.innerHTML.replace(/\s+/g, ' ').trim();
                     const cleanIncoming = innerHTML.replace(/\s+/g, ' ').trim();
                     if (cleanExisting !== cleanIncoming) { existingRow.innerHTML = innerHTML; }
-                    // ERHÄLT DEN EXPAND-ZUSTAND BEIM NEU RENDERN!
                     existingRow.className = `billing-row ${cardStatusClass}${isExpanded ? ' is-expanded' : ''}`;
                 } else {
                     const newRow = document.createElement('div');
@@ -364,9 +369,9 @@ window.UI = {
             });
         };
 
-        renderContainer(window.DOM.orderList, activeOwnRecords, "Keine aktiven eigenen Aufträge im Log.");
-        renderContainer(window.DOM.externalOrderList, activeExternalRecords, "Keine passiven Partner-Aufträge vorhanden.");
-        renderContainer(window.DOM.archiveList, archivedRecords, "Archiv-Log leer.");
+        renderContainer(document.getElementById('order-list'), activeOwnRecords, "Keine aktiven eigenen Aufträge im Log.");
+        renderContainer(document.getElementById('external-order-list'), activeExternalRecords, "Keine passiven Partner-Aufträge vorhanden.");
+        renderContainer(document.getElementById('archive-list'), archivedRecords, "Archiv-Log leer.");
     },
 
     updateSummary(records) {

@@ -102,25 +102,35 @@
             <div id="loading" class="spinner hidden"></div>
             <div id="dashboard-summary" class="dashboard-summary"></div>
 
-            <!-- 1. EIGENE AUFTRÄGE -->
-            <div class="section-divider mnau-divider">AUFTRAGS_LOG</div>
-            <div id="order-list"></div>
+            <!-- ELEGANTE SUB-TABS STATT ACCORDIONS -->
+            <div class="sub-tabs">
+                <button id="subtab-btn-own" class="sub-tab-btn active" onclick="switchLogSubTab('own')">
+                    Eigene Aufträge <span id="badge-count-own" class="subtab-badge">0</span>
+                </button>
+                <button id="subtab-btn-external" class="sub-tab-btn" onclick="switchLogSubTab('external')">
+                    Passive Partner-Aufträge <span id="badge-count-external" class="subtab-badge">0</span>
+                </button>
+                <button id="subtab-btn-archive" class="sub-tab-btn" onclick="switchLogSubTab('archive')">
+                    Archiv (Bezahlt) <span id="badge-count-archive" class="subtab-badge">0</span>
+                </button>
+            </div>
 
-            <!-- 2. PASSIVE SCHWESTERFIRMEN-AUFTRÄGE -->
-            <details class="archive-details external-details" open>
-                <summary class="section-divider archive-divider external-divider">PASSIVE_PARTNER_AUFTRÄGE</summary>
-                <div id="external-order-list" style="margin-top: 16px; padding: 2px 0;"></div>
-            </details>
+            <!-- SUB-TAB CONTENT PANELS -->
+            <div id="log-panel-own" class="sub-tab-panel">
+                <div id="order-list"></div>
+            </div>
 
-            <!-- 3. OFFENE LIEFERANTEN POSTEN -->
-            <div class="section-divider red-divider">OFFENE_LIEFERANTEN_POSTEN</div>
-            <div id="supplier-summary-details" class="supplier-summary-details"></div>
+            <div id="log-panel-external" class="sub-tab-panel hidden">
+                <div id="external-order-list"></div>
+            </div>
 
-            <!-- 4. ARCHIV -->
-            <details class="archive-details">
-                <summary class="section-divider archive-divider">ARCHIV_LOG (BEZAHLT)</summary>
+            <div id="log-panel-archive" class="sub-tab-panel hidden">
                 <div id="archive-list"></div>
-            </details>
+            </div>
+
+            <!-- FIX DARUNTER: OFFENE LIEFERANTEN POSTEN -->
+            <div class="section-divider red-divider" style="margin-top: 36px;">OFFENE_LIEFERANTEN_POSTEN</div>
+            <div id="supplier-summary-details" class="supplier-summary-details"></div>
         </div>
 
         <!-- TAB 2: GROUP KALKULATOR -->
@@ -279,7 +289,7 @@
     </div>
 </div>
 
-<!-- STATE-OF-THE-ART DIALOG MODAL (Sleek Vector Icons & Glassmorphism) -->
+<!-- STATE-OF-THE-ART DIALOG MODAL -->
 <div id="custom-dialog-overlay" class="modal-overlay hidden">
     <div class="modal-card custom-dialog-card">
         <div class="dialog-icon-wrapper" id="custom-dialog-icon-wrap"></div>

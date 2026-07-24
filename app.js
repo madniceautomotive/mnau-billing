@@ -1,11 +1,10 @@
 // ==================================================== 
-// app.js: USER ACTIONS, CONTROLLER HUB & SLEEK MODALS
+// app.js: USER ACTIONS, CONTROLLER HUB & SUB-TAB SWITCHER
 // ====================================================
 
 const SUN_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
 const MOON_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
 
-// HIGH-END VEKTOR-ICONS FÜR STATE-OF-THE-ART MODAL DIALOGS
 const DIALOG_ICONS = {
     info: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
     success: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
@@ -14,8 +13,26 @@ const DIALOG_ICONS = {
 };
 
 // ====================================================
-// ZENTRALES AUTOMATISCHES SYSTEM-LOGGER ENGINE
+// LOG SUB-TAB SWITCHER (EIGENE / PASSIVE / ARCHIV)
 // ====================================================
+window.switchLogSubTab = function(subTabName) {
+    const tabs = ['own', 'external', 'archive'];
+    tabs.forEach(t => {
+        const panel = document.getElementById(`log-panel-${t}`);
+        const btn = document.getElementById(`subtab-btn-${t}`);
+        if (panel) panel.classList.add('hidden');
+        if (btn) btn.classList.remove('active');
+    });
+
+    const activePanel = document.getElementById(`log-panel-${subTabName}`);
+    const activeBtn = document.getElementById(`subtab-btn-${subTabName}`);
+    if (activePanel) activePanel.classList.remove('hidden');
+    if (activeBtn) activeBtn.classList.add('active');
+
+    localStorage.setItem('mngr_log_subtab', subTabName);
+};
+
+// SYSTEM LOGGER ENGINE
 window.Logger = {
     logs: [],
     init() {
@@ -102,14 +119,12 @@ window.downloadLogsFile = function() {
     URL.revokeObjectURL(url);
 };
 
-// ====================================================
-// STATE-OF-THE-ART MODAL CONTROLLER (GLASSMORPHISM & ANIMATED)
-// ====================================================
+// STATE-OF-THE-ART MODAL CONTROLLER
 window.showModal = function(id) {
     const el = document.getElementById(id);
     if (!el) return;
     el.classList.remove('hidden');
-    void el.offsetWidth; // Force CSS reflow
+    void el.offsetWidth;
     el.classList.add('modal-visible');
 };
 
@@ -321,6 +336,10 @@ window.applyFilters = function() {
 
 document.addEventListener('DOMContentLoaded', () => {
     window.initTheme();
+
+    // WIEDERHERSTELLUNG DES LETZTEN GESPEICHERTEN SUB-TABS
+    const savedSubTab = localStorage.getItem('mngr_log_subtab') || 'own';
+    window.switchLogSubTab(savedSubTab);
 
     if (window.DOM.btnManageSuppliers) {
         window.DOM.btnManageSuppliers.addEventListener('click', () => {
