@@ -1,5 +1,5 @@
 // ====================================================
-// ui.js: DOM RENDERING WITH SPESEN & NOTIZEN KÄSTCHEN
+// ui.js: DOM RENDERING (PRESERVES EXPAND STATE)
 // ====================================================
 
 window.toggleCardExpand = function(recordId, event) {
@@ -105,9 +105,10 @@ window.UI = {
                     suppliersHTML = `<div class="breakdown-list">`;
                     suppliers.forEach((d, dIdx) => {
                         const isPaid = d.paid === true;
+                        // EVENT PROPAGATION GESTOPPT, DAMIT DIE KARTE NICHT ZUKLAPPT
                         suppliersHTML += `
                             <div class="breakdown-row ${isPaid ? 'supplier-paid' : ''}" 
-                                 onclick="window.toggleSupplierPaid('${id}', ${dIdx})" 
+                                 onclick="event.stopPropagation(); window.toggleSupplierPaid('${id}', ${dIdx})" 
                                  title="Klicken zum Umschalten (Bezahlt / Offen)">
                                 <span>↳ ${d.name} ${isPaid ? '✓' : '◯'}</span>
                                 <span>€ ${(parseFloat(d.amount)||0).toFixed(2)}</span>
@@ -343,11 +344,14 @@ window.UI = {
                 `;
 
                 let existingRow = containerEl.querySelector(`.billing-row[data-id="${id}"]`);
+                let isExpanded = false;
                 if (existingRow) {
+                    isExpanded = existingRow.classList.contains('is-expanded');
                     const cleanExisting = existingRow.innerHTML.replace(/\s+/g, ' ').trim();
                     const cleanIncoming = innerHTML.replace(/\s+/g, ' ').trim();
                     if (cleanExisting !== cleanIncoming) { existingRow.innerHTML = innerHTML; }
-                    existingRow.className = `billing-row ${cardStatusClass}`;
+                    // ERHÄLT DEN EXPAND-ZUSTAND BEIM NEU RENDERN!
+                    existingRow.className = `billing-row ${cardStatusClass}${isExpanded ? ' is-expanded' : ''}`;
                 } else {
                     const newRow = document.createElement('div');
                     newRow.className = `billing-row ${cardStatusClass} row-enter-active`;

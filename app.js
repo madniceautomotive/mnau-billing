@@ -71,8 +71,7 @@ window.renderLogsModal = function() {
 
 window.openLogsModal = function() {
     window.renderLogsModal();
-    const overlay = document.getElementById('modal-logs-overlay');
-    if (overlay) overlay.classList.remove('hidden');
+    window.showModal('modal-logs-overlay');
 };
 
 window.copyLogsToClipboard = async function() {
@@ -96,27 +95,54 @@ window.downloadLogsFile = function() {
     URL.revokeObjectURL(url);
 };
 
-// PROMISE-BASED CUSTOM MODAL DIALOG HELPER
+// ====================================================
+// PROMISE-BASED CUSTOM MODAL DIALOG HELPER (ANIMIERT)
+// ====================================================
+window.showModal = function(id) {
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.classList.remove('hidden');
+    // Force CSS reflow für Animation
+    void el.offsetWidth;
+    el.classList.add('modal-visible');
+};
+
+window.hideModal = function(id) {
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.classList.remove('modal-visible');
+    // Warte auf CSS Transition (300ms) bevor Display None gesetzt wird
+    setTimeout(() => {
+        el.classList.add('hidden');
+    }, 300);
+};
+
 window.customAlert = function(message, title = "Hinweis") {
     return new Promise((resolve) => {
-        const overlay = document.getElementById('custom-dialog-overlay');
         const titleEl = document.getElementById('custom-dialog-title');
         const bodyEl = document.getElementById('custom-dialog-body');
         const btnOk = document.getElementById('custom-dialog-ok');
         const btnCancel = document.getElementById('custom-dialog-cancel');
 
-        if (!overlay || !titleEl || !bodyEl || !btnOk) {
+        if (!titleEl || !bodyEl || !btnOk) {
             alert(message);
             return resolve(true);
         }
 
+        let icon = "ℹ️";
+        if (title.toLowerCase().includes("erfolg")) icon = "✅";
+        if (title.toLowerCase().includes("fehler") || title.toLowerCase().includes("system")) icon = "❌";
+        if (title.toLowerCase().includes("achtung")) icon = "⚠️";
+        document.getElementById('custom-dialog-icon').textContent = icon;
+
         titleEl.textContent = title;
         bodyEl.innerHTML = message;
         if (btnCancel) btnCancel.classList.add('hidden');
-        overlay.classList.remove('hidden');
+
+        window.showModal('custom-dialog-overlay');
 
         const handleOk = () => {
-            overlay.classList.add('hidden');
+            window.hideModal('custom-dialog-overlay');
             btnOk.removeEventListener('click', handleOk);
             resolve(true);
         };
@@ -127,24 +153,25 @@ window.customAlert = function(message, title = "Hinweis") {
 
 window.customConfirm = function(message, title = "Bestätigung erforderlich") {
     return new Promise((resolve) => {
-        const overlay = document.getElementById('custom-dialog-overlay');
         const titleEl = document.getElementById('custom-dialog-title');
         const bodyEl = document.getElementById('custom-dialog-body');
         const btnOk = document.getElementById('custom-dialog-ok');
         const btnCancel = document.getElementById('custom-dialog-cancel');
 
-        if (!overlay || !titleEl || !bodyEl || !btnOk || !btnCancel) {
+        if (!titleEl || !bodyEl || !btnOk || !btnCancel) {
             const res = confirm(message);
             return resolve(res);
         }
 
+        document.getElementById('custom-dialog-icon').textContent = "❓";
         titleEl.textContent = title;
         bodyEl.innerHTML = message;
         btnCancel.classList.remove('hidden');
-        overlay.classList.remove('hidden');
+
+        window.showModal('custom-dialog-overlay');
 
         const cleanup = () => {
-            overlay.classList.add('hidden');
+            window.hideModal('custom-dialog-overlay');
             btnOk.removeEventListener('click', handleOk);
             btnCancel.removeEventListener('click', handleCancel);
         };
@@ -284,22 +311,10 @@ window.applyFilters = function() {
 document.addEventListener('DOMContentLoaded', () => {
     window.initTheme();
 
-    const btnCloseChangelog = document.getElementById('btn-close-changelog');
-    if (btnCloseChangelog) {
-        btnCloseChangelog.addEventListener('click', () => {
-            document.getElementById('modal-changelog-overlay').classList.add('hidden');
-        });
-    }
-
     if (window.DOM.btnManageSuppliers) {
         window.DOM.btnManageSuppliers.addEventListener('click', () => {
             window.UI.renderSuppliersManager();
-            window.DOM.modalSuppliers.classList.remove('hidden');
-        });
-    }
-    if (window.DOM.btnCloseSuppliers) {
-        window.DOM.btnCloseSuppliers.addEventListener('click', () => {
-            window.DOM.modalSuppliers.classList.add('hidden');
+            window.showModal('modal-suppliers-overlay');
         });
     }
 
@@ -460,7 +475,7 @@ window.openChangelogModal = function(recordId) {
         });
     }
 
-    document.getElementById('modal-changelog-overlay').classList.remove('hidden');
+    window.showModal('modal-changelog-overlay');
 };
 
 window.changeOrderStatus = async function(recordId, newStatus) {

@@ -1,5 +1,5 @@
 /* ==================================================== */
-/* style-billing.css: MULTI-BRAND & TERMINAL LOG STYLES  */
+/* style-billing.css: MULTI-BRAND & MODERN MODALS SYSTEM */
 /* ==================================================== */
 
 :root {
@@ -557,45 +557,72 @@ form label {
 .supplier-stat-total { color: #e74c3c; font-weight: 800; font-size: 0.95rem; }
 .supplier-stat-item { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-dim) !important; margin-bottom: 6px; }
 
-/* MODALS & DIALOG POPUPS */
+/* NEUES SCHICKES MODAL SYSTEM & ANIMATIONEN */
 .modal-overlay {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     background-color: rgba(0, 0, 0, 0.65);
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(8px);
     z-index: 9999;
     display: flex; align-items: center; justify-content: center;
-    opacity: 0; visibility: hidden; transition: opacity 0.25s ease, visibility 0.25s ease;
+    opacity: 0; visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
     padding: 16px; box-sizing: border-box;
 }
-.modal-overlay:not(.hidden) { opacity: 1 !important; visibility: visible !important; }
+/* Trigger-Klasse aus JavaScript ODER standard :not(.hidden) Fallback (zB Auth) */
+.modal-overlay.modal-visible, .modal-overlay:not(.hidden):not(.modal-visible) {
+    opacity: 1 !important; visibility: visible !important;
+}
 
 .modal-card {
     background: var(--bg-card) !important;
-    border: 1px solid var(--active-company-color) !important;
+    border: 1px solid var(--border-color-strong) !important;
     border-radius: 16px; padding: 24px; width: 100%; max-width: 460px;
     box-shadow: 0 12px 40px rgba(0,0,0,0.3); box-sizing: border-box;
     max-height: 90vh; overflow-y: auto; color: var(--text-main) !important;
-    animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: scale(0.95) translateY(15px);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.modal-overlay.modal-visible .modal-card, .modal-overlay:not(.hidden):not(.modal-visible) .modal-card {
+    transform: scale(1) translateY(0);
 }
 
-@keyframes modalPop {
-    from { transform: scale(0.95) translateY(10px); opacity: 0; }
-    to { transform: scale(1) translateY(0); opacity: 1; }
+/* CUSTOM DIALOG KARTEN (Alerts/Confirms) */
+.custom-dialog-card {
+    text-align: center;
+    padding: 32px 24px;
+    border-top: 4px solid var(--active-company-color) !important;
+    max-width: 400px;
+}
+.dialog-icon {
+    font-size: 3.5rem;
+    margin-bottom: 16px;
+    line-height: 1;
+}
+#custom-dialog-title {
+    font-size: 1.4rem;
+    margin-bottom: 8px;
+    color: var(--text-main) !important;
+    text-transform: none;
+}
+.dialog-body-text {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 26px;
+}
+.dialog-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 0;
+}
+.dialog-actions button {
+    min-width: 130px;
+    padding: 12px 20px;
+    font-size: 0.9rem;
 }
 
 .modal-card h2 { margin-top: 0; font-size: 1.35rem; font-weight: 800; color: var(--text-main) !important; text-transform: uppercase; margin-bottom: 10px; }
-
-.dialog-card {
-    max-width: 420px;
-    border-top: 4px solid var(--active-company-color) !important;
-}
-.dialog-body-text {
-    font-size: 0.9rem;
-    line-height: 1.5;
-    color: var(--text-main);
-    margin-top: 10px;
-}
-
 .modal-actions { display: flex; justify-content: flex-end; margin-top: 22px; gap: 10px; }
 
 .btn-remove-supplier {

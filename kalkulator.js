@@ -1,5 +1,5 @@
 // ====================================================
-// kalkulator.js: TRANSACTIONAL SAVING & VERSION CONTROL
+// kalkulator.js: DYNAMIC HISTORIC RE-CALCULATION & UNLIMITED VERSIONS
 // ====================================================
 
 const ENTITIES = ['MNAG','MNMH','MNWB','MNAT','MNAU','MNGR'];
@@ -160,40 +160,77 @@ function getRoles(){
 
 const FUL_KEY='fulfillment';
 
-window.calculate = function(){
-    const roles = getRoles();
+// ZENTRALE RECHENENGINE: BERECHNET AUS EINEM INPUTS-OBJEKT DAS EXAKTE RECHENERGEBNIS UND HTML
+function computeKalkulationFromInputs(inputs) {
+    const calcMode = inputs.mode || 'td';
+    const roles = inputs.roles || getRoles();
     const OTHER = COSTS.filter(c => c.key !== FUL_KEY);
     const COLS = ['MNAG','MNMH','MNWB','MNAT','MNAU','EXT','MNGR','OVERHEAD'];
 
     const D={}, FK={}, SP={}, FUL={}, FULp={}, COST={}, SALES={};
     let gBase=0, gRef=0, gFul=0, gFK=0, gSP=0, kundenpreis=0;
-    ENTITIES.forEach(e=>{
-        const baseInput=getNum('base-'+e), fk=getNum('fk-'+e), sp=getNum('sp-'+e);
-        const fulPct=getNum('cost-'+e+'-'+FUL_KEY);
-        const d = MODE==='bu' ? (fulPct>0?baseInput/(fulPct/100):baseInput) : (baseInput-fk-sp);
-        D[e]=d; FK[e]=fk; SP[e]=sp; FULp[e]=fulPct; FUL[e]=d*fulPct/100;
-        COST[e]=OTHER.map(c=>{const pct=getNum('cost-'+e+'-'+c.key);return {pct,amt:d*pct/100};});
-        SALES[e]=roles.map(r=>({rec:r.entity,pct:r.pct,amt:d*r.pct/100}));
-        gBase+=baseInput; gRef+=d; gFul+=FUL[e]; gFK+=fk; gSP+=sp; kundenpreis+=d+fk+sp;
-    });
-    const fkMNGR = getNum('fkmngr'); kundenpreis += fkMNGR;
 
-    const salesPool = roles.map((r,ri)=>({rec:r.entity,pct:r.pct,pool:ENTITIES.reduce((s,e)=>s+SALES[e][ri].amt,0)}));
-    const costPool  = OTHER.map((c,ci)=>({pool:ENTITIES.reduce((s,e)=>s+COST[e][ci].amt,0)}));
-    const salesByRec={}; salesPool.forEach(p=>salesByRec[p.rec]=(salesByRec[p.rec]||0)+p.pool);
-    const totalCostPool = costPool.reduce((s,p)=>s+p.pool,0);
-    const summe={};
-    COLS.forEach(c=>{
-        if(c==='OVERHEAD') summe[c]=totalCostPool;
-        else if(ENTITIES.includes(c)) summe[c]=FUL[c]+(salesByRec[c]||0)+FK[c]+SP[c];
-        else summe[c]=salesByRec[c]||0;
+    ENTITIES.forEach(e => {
+        const baseInput = (inputs.base && parseFloat(inputs.base[e])) || 0;
+        let fk = 0;
+        if (inputs.suppliers && inputs.suppliers[e]) {
+            inputs.suppliers[e].forEach(s => { fk += parseFloat(s.amount) || 0; });
+        }
+        const sp = (inputs.sp && parseFloat(inputs.sp[e])) || 0;
+
+        let fulPct = 70;
+        if (inputs.costs && inputs.costs[e] && inputs.costs[e][FUL_KEY] !== undefined) {
+            fulPct = parseFloat(inputs.costs[e][FUL_KEY]);
+        } else {
+            const sumSales = roles.reduce((s,r) => s + (parseFloat(r.pct) || 0), 0);
+            const others = ['backoffice','pm','overhead'].reduce((s,k) => s + (inputs.costs && inputs.costs[e] ? (parseFloat(inputs.costs[e][k])||0) : 5), 0);
+            fulPct = baseInput <= 0 ? 0 : Math.round((100 - others - sumSales) * 100) / 100;
+        }
+
+        const d = calcMode === 'bu' ? (fulPct > 0 ? baseInput / (fulPct / 100) : baseInput) : (baseInput - fk - sp);
+        D[e]=d; FK[e]=fk; SP[e]=sp; FULp[e]=fulPct; FUL[e]=d*fulPct/100;
+
+        COST[e] = OTHER.map(c => {
+            const pct = (inputs.costs && inputs.costs[e] && inputs.costs[e][c.key] !== undefined) ? parseFloat(inputs.costs[e][c.key]) : c.def;
+            return { pct, amt: d * pct / 100 };
+        });
+
+        SALES[e] = roles.map(r => ({ rec: r.entity, pct: parseFloat(r.pct) || 0, amt: d * (parseFloat(r.pct) || 0) / 100 }));
+        gBase += baseInput; gRef += d; gFul += FUL[e]; gFK += fk; gSP += sp; kundenpreis += d + fk + sp;
+    });
+
+    const fkMNGR = parseFloat(inputs.fkmngr) || 0;
+    kundenpreis += fkMNGR;
+
+    const salesPool = roles.map((r,ri) => ({ rec: r.entity, pct: parseFloat(r.pct)||0, pool: ENTITIES.reduce((s,e) => s + SALES[e][ri].amt, 0) }));
+    const costPool  = OTHER.map((c,ci) => ({ pool: ENTITIES.reduce((s,e) => s + COST[e][ci].amt, 0) }));
+    const salesByRec = {};
+    salesPool.forEach(p => salesByRec[p.rec] = (salesByRec[p.rec] || 0) + p.pool);
+    const totalCostPool = costPool.reduce((s,p) => s + p.pool, 0);
+
+    const summe = {};
+    COLS.forEach(c => {
+        if(c==='OVERHEAD') summe[c] = totalCostPool;
+        else if(ENTITIES.includes(c)) summe[c] = FUL[c] + (salesByRec[c] || 0) + FK[c] + SP[c];
+        else summe[c] = salesByRec[c] || 0;
     });
     summe['MNGR'] += fkMNGR;
 
-    const vn = n => Number(Math.round(n*100)/100).toLocaleString('de-AT',{minimumFractionDigits:2,maximumFractionDigits:2});
-    const ps = p => (p%1===0?p:(+p).toFixed(1))+'%';
+    const totalGroupAnteil = (summe['MNGR'] || 0) + totalCostPool;
 
-    const fc = (val,pct)=>{
+    const groupBreakdown = {
+        backoffice: Math.round((costPool[0] ? costPool[0].pool : 0) * 100) / 100,
+        pm: Math.round((costPool[1] ? costPool[1].pool : 0) * 100) / 100,
+        overhead: Math.round((costPool[2] ? costPool[2].pool : 0) * 100) / 100,
+        provisionen: Math.round((salesByRec['MNGR'] || 0) * 100) / 100,
+        fulfillment: Math.round((FUL['MNGR'] || 0) * 100) / 100,
+        fremdkosten: Math.round(((FK['MNGR'] || 0) + (SP['MNGR'] || 0) + fkMNGR) * 100) / 100
+    };
+
+    const vn = n => Number(Math.round((n || 0) * 100) / 100).toLocaleString('de-AT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const ps = p => (p % 1 === 0 ? p : (+p).toFixed(1)) + '%';
+
+    const fc = (val, pct) => {
         const z = Math.abs(val) < 0.005;
         const cls = z ? 'val-zero' : (val > 0 ? 'val-pos' : 'val-neg');
         const pre = (pct != null && pct > 0) ? `<span class="pct-badge">${ps(pct)}</span>` : '';
@@ -201,74 +238,88 @@ window.calculate = function(){
     };
     const nc = val => `<td class="val-neutral"><span class="num-val">${vn(val)}</span></td>`;
 
-    let h='<table class="results kalk-results-table">';
-    h+='<colgroup><col class="cg-label">'+COLS.map(()=>'<col class="cg-col">').join('')+'</colgroup>';
-    h+='<thead><tr>';
-    h+=`<th class="kundenpreis-cell"><div class="kp-title">Kundenpreis</div><div class="kp-amount">${fmt(kundenpreis)}</div></th>`;
-    COLS.forEach(c=>h+=`<th class="col-${c}">${c}</th>`);
-    h+='</tr></thead><tbody>';
+    let h = '<table class="results kalk-results-table">';
+    h += '<colgroup><col class="cg-label">' + COLS.map(() => '<col class="cg-col">').join('') + '</colgroup>';
+    h += '<thead><tr>';
+    h += `<th class="kundenpreis-cell"><div class="kp-title">Kundenpreis</div><div class="kp-amount">${fmt(kundenpreis)}</div></th>`;
+    COLS.forEach(c => h += `<th class="col-${c}">${c}</th>`);
+    h += '</tr></thead><tbody>';
 
-    h+=`<tr class="rg-base"><td class="rowlabel">${MODE==='td'?'Zu verteilendes Netto-Volumen (€)':'Endpreis · zu verteilen (€)'}</td>`+
-        COLS.map(c=>fc(ENTITIES.includes(c)?D[c]:0)).join('')+`</tr>`;
+    h += `<tr class="rg-base"><td class="rowlabel">${calcMode === 'td' ? 'Zu verteilendes Netto-Volumen (€)' : 'Endpreis · zu verteilen (€)'}</td>` +
+        COLS.map(c => fc(ENTITIES.includes(c) ? D[c] : 0)).join('') + `</tr>`;
 
-    roles.forEach((r,ri)=>{
-        h+=`<tr class="rg-sales"><td class="rowlabel">${r.label} (€)</td>`+
-            COLS.map(c=>{
-                if(c===r.entity) return fc(salesPool[ri].pool, r.pct>0?r.pct:null);
-                if(ENTITIES.includes(c)) return fc(-SALES[c][ri].amt, (D[c]>0&&r.pct>0)?r.pct:null);
+    roles.forEach((r, ri) => {
+        h += `<tr class="rg-sales"><td class="rowlabel">${r.label} (€)</td>` +
+            COLS.map(c => {
+                if(c === r.entity) return fc(salesPool[ri].pool, r.pct > 0 ? r.pct : null);
+                if(ENTITIES.includes(c)) return fc(-SALES[c][ri].amt, (D[c] > 0 && r.pct > 0) ? r.pct : null);
                 return fc(0);
-            }).join('')+`</tr>`;
+            }).join('') + `</tr>`;
     });
 
-    OTHER.forEach((co,ci)=>{
-        h+=`<tr class="rg-cost"><td class="rowlabel">${co.label} (€)</td>`+
-            COLS.map(c=>{
-                if(c==='OVERHEAD') return fc(costPool[ci].pool);
-                if(ENTITIES.includes(c)) return fc(-COST[c][ci].amt, (D[c]>0&&COST[c][ci].pct>0)?COST[c][ci].pct:null);
+    OTHER.forEach((co, ci) => {
+        h += `<tr class="rg-cost"><td class="rowlabel">${co.label} (€)</td>` +
+            COLS.map(c => {
+                if(c === 'OVERHEAD') return fc(costPool[ci].pool);
+                if(ENTITIES.includes(c)) return fc(-COST[c][ci].amt, (D[c] > 0 && COST[c][ci].pct > 0) ? COST[c][ci].pct : null);
                 return fc(0);
-            }).join('')+`</tr>`;
+            }).join('') + `</tr>`;
     });
 
-    h+=`<tr class="rg-fulfill"><td class="rowlabel">Fulfillment ohne Fremdkosten (€)</td>`+
-        COLS.map(c=>ENTITIES.includes(c)?fc(FUL[c], FULp[c]>0?FULp[c]:null):fc(0)).join('')+`</tr>`;
+    h += `<tr class="rg-fulfill"><td class="rowlabel">Fulfillment ohne Fremdkosten (€)</td>` +
+        COLS.map(c => ENTITIES.includes(c) ? fc(FUL[c], FULp[c] > 0 ? FULp[c] : null) : fc(0)).join('') + `</tr>`;
 
-    h+=`<tr class="rg-sales"><td class="rowlabel">Provision (€)</td>`+
-        COLS.map(c=>fc(salesByRec[c]||0)).join('')+`</tr>`;
+    h += `<tr class="rg-sales"><td class="rowlabel">Provision (€)</td>` +
+        COLS.map(c => fc(salesByRec[c] || 0)).join('') + `</tr>`;
 
-    h+=`<tr class="rg-cost"><td class="rowlabel">Support (€)</td>`+
-        COLS.map(c=>c==='OVERHEAD'?fc(totalCostPool):fc(0)).join('')+`</tr>`;
+    h += `<tr class="rg-cost"><td class="rowlabel">Support (€)</td>` +
+        COLS.map(c => c === 'OVERHEAD' ? fc(totalCostPool) : fc(0)).join('') + `</tr>`;
 
-    h+=`<tr class="rg-pass"><td class="rowlabel">Fremdkosten (€)</td>`+
-        COLS.map(c=>ENTITIES.includes(c)?nc(FK[c]):nc(0)).join('')+`</tr>`;
-    h+=`<tr class="rg-pass"><td class="rowlabel">Fremdkosten MNGR (€)</td>`+
-        COLS.map(c=>c==='MNGR'?nc(fkMNGR):nc(0)).join('')+`</tr>`;
-    h+=`<tr class="rg-pass"><td class="rowlabel">Spesen (€)</td>`+
-        COLS.map(c=>ENTITIES.includes(c)?nc(SP[c]):nc(0)).join('')+`</tr>`;
+    h += `<tr class="rg-pass"><td class="rowlabel">Fremdkosten (€)</td>` +
+        COLS.map(c => ENTITIES.includes(c) ? nc(FK[c]) : nc(0)).join('') + `</tr>`;
+    h += `<tr class="rg-pass"><td class="rowlabel">Fremdkosten MNGR (€)</td>` +
+        COLS.map(c => c === 'MNGR' ? nc(fkMNGR) : nc(0)).join('') + `</tr>`;
+    h += `<tr class="rg-pass"><td class="rowlabel">Spesen (€)</td>` +
+        COLS.map(c => ENTITIES.includes(c) ? nc(SP[c]) : nc(0)).join('') + `</tr>`;
 
-    h+=`<tr class="rg-sum"><td class="rowlabel">Summe (€)</td>`+
-        COLS.map(c=>fc(summe[c])).join('')+`</tr>`;
+    h += `<tr class="rg-sum"><td class="rowlabel">Summe (€)</td>` +
+        COLS.map(c => fc(summe[c])).join('') + `</tr>`;
 
-    h+=`<tr class="rg-stunden"><td class="rowlabel">Stunden</td>`+
-        COLS.map(c=>{
+    h += `<tr class="rg-stunden"><td class="rowlabel">Stunden</td>` +
+        COLS.map(c => {
             if(!ENTITIES.includes(c)) return `<td class="val-zero"><span class="num-val">${vn(0)}</span></td>`;
-            const rate=getNum('hp-'+c);
-            const hrs=rate>0?D[c]/rate:0;
-            const pre=rate>0?`<span class="pct-badge">${vn(rate)} €</span>`:'';
+            const rate = (inputs.hp && inputs.hp[c] !== undefined) ? parseFloat(inputs.hp[c]) : 150;
+            const hrs = rate > 0 ? D[c] / rate : 0;
+            const pre = rate > 0 ? `<span class="pct-badge">${vn(rate)} €</span>` : '';
             return `<td class="val-zero">${pre}<span class="num-val">${vn(hrs)}</span></td>`;
-        }).join('')+`</tr>`;
+        }).join('') + `</tr>`;
 
-    h+='</tbody></table>';
-    document.getElementById('results-table-wrap').innerHTML=h;
+    h += '</tbody></table>';
+
+    return {
+        tableHtml: h,
+        kundenpreis,
+        summe,
+        FK,
+        totalGroupAnteil,
+        groupBreakdown
+    };
+}
+
+window.calculate = function(){
+    const inputs = exportKalkulatorInputs();
+    const res = computeKalkulationFromInputs(inputs);
+
+    document.getElementById('results-table-wrap').innerHTML = res.tableHtml;
 
     const myCompany = window.currentUserCompany || "MNAU";
-    const userUmsatz = summe[myCompany] || 0;
-    const userEchteFremdkosten = FK[myCompany] || 0;
+    const userUmsatz = res.summe[myCompany] || 0;
+    const userEchteFremdkosten = res.FK[myCompany] || 0;
     const userErtrag = userUmsatz - userEchteFremdkosten;
-    const totalGroupAnteil = (summe['MNGR'] || 0) + totalCostPool;
 
     let totalSisterShares = 0;
     ['MNAG','MNMH','MNWB','MNAT','MNAU','EXT'].forEach(comp => {
-        if (comp !== myCompany) totalSisterShares += (summe[comp] || 0);
+        if (comp !== myCompany) totalSisterShares += (res.summe[comp] || 0);
     });
 
     const btnSave = document.getElementById('btn-save-to-log');
@@ -295,12 +346,12 @@ window.calculate = function(){
     </div>
     <div class="metric">
       <div class="ml">Gesamt-Projektvolumen</div>
-      <div class="mv">${fmt(kundenpreis)}</div>
+      <div class="mv">${fmt(res.kundenpreis)}</div>
       <div class="sub-info">Kundenpreis Brutto</div>
     </div>
     <div class="metric">
       <div class="ml">Group &amp; Schwesterfirmen</div>
-      <div class="mv">${fmt(totalGroupAnteil + totalSisterShares)}</div>
+      <div class="mv">${fmt(res.totalGroupAnteil + totalSisterShares)}</div>
       <div class="sub-info">Direkt abgewickelt v. Group</div>
     </div>
   `;
@@ -514,7 +565,7 @@ async function executeBatchOrFallbackUpdates(updates) {
 }
 
 // ====================================================
-// AUFTRAG IM LOG ERFASSEN / AKTUALISIEREN (TRANSAKTIONAL)
+// AUFTRAG IM LOG ERFASSEN / AKTUALISIEREN (SCHLANK & TRANSAKTIONAL)
 // ====================================================
 window.saveMNAUOrderToLog = async function() {
     const myCompany = (window.currentUserCompany || "MNAU").trim().toUpperCase();
@@ -528,46 +579,8 @@ window.saveMNAUOrderToLog = async function() {
         calcGroupId = "grp_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
     }
 
-    const roles = getRoles();
-    const OTHER = COSTS.filter(c => c.key !== FUL_KEY);
-    const COLS = ['MNAG','MNMH','MNWB','MNAT','MNAU','EXT','MNGR','OVERHEAD'];
-
-    const D={}, FK={}, SP={}, FUL={}, FULp={}, COST={}, SALES={};
-    let gBase=0, gRef=0, gFul=0, gFK=0, gSP=0, kundenpreis=0;
-    ENTITIES.forEach(e=>{
-        const baseInput=getNum('base-'+e), fk=getNum('fk-'+e), sp=getNum('sp-'+e);
-        const fulPct=getNum('cost-'+e+'-'+FUL_KEY);
-        const d = MODE==='bu' ? (fulPct>0?baseInput/(fulPct/100):baseInput) : (baseInput-fk-sp);
-        D[e]=d; FK[e]=fk; SP[e]=sp; FULp[e]=fulPct; FUL[e]=d*fulPct/100;
-        COST[e]=OTHER.map(c=>{const pct=getNum('cost-'+e+'-'+c.key);return {pct,amt:d*pct/100};});
-        SALES[e]=roles.map(r=>({rec:r.entity,pct:r.pct,amt:d*r.pct/100}));
-        gBase+=baseInput; gRef+=d; gFul+=FUL[e]; gFK+=fk; gSP+=sp; kundenpreis+=d+fk+sp;
-    });
-    const fkMNGR = getNum('fkmngr'); kundenpreis += fkMNGR;
-
-    const salesPool = roles.map((r,ri)=>({rec:r.entity,pct:r.pct,pool:ENTITIES.reduce((s,e)=>s+SALES[e][ri].amt,0)}));
-    const costPool  = OTHER.map((c,ci)=>({pool:ENTITIES.reduce((s,e)=>s+COST[e][ci].amt,0)}));
-    const salesByRec={}; salesPool.forEach(p=>salesByRec[p.rec]=(salesByRec[p.rec]||0)+p.pool);
-    const totalCostPool = costPool.reduce((s,p)=>s+p.pool,0);
-
-    const summe={};
-    COLS.forEach(c=>{
-        if(c==='OVERHEAD') summe[c]=totalCostPool;
-        else if(ENTITIES.includes(c)) summe[c]=FUL[c]+(salesByRec[c]||0)+FK[c]+SP[c];
-        else summe[c]=salesByRec[c]||0;
-    });
-    summe['MNGR'] += fkMNGR;
-
-    const totalGroupAnteil = (summe['MNGR'] || 0) + totalCostPool;
-
-    const groupBreakdown = {
-        backoffice: Math.round((costPool[0] ? costPool[0].pool : 0) * 100) / 100,
-        pm: Math.round((costPool[1] ? costPool[1].pool : 0) * 100) / 100,
-        overhead: Math.round((costPool[2] ? costPool[2].pool : 0) * 100) / 100,
-        provisionen: Math.round((salesByRec['MNGR'] || 0) * 100) / 100,
-        fulfillment: Math.round((FUL['MNGR'] || 0) * 100) / 100,
-        fremdkosten: Math.round(((FK['MNGR'] || 0) + (SP['MNGR'] || 0) + fkMNGR) * 100) / 100
-    };
+    const kalkInputs = exportKalkulatorInputs();
+    const currentCalc = computeKalkulationFromInputs(kalkInputs);
 
     const getSuppliersForCompany = (compName) => {
         const compSuppliers = [];
@@ -586,7 +599,9 @@ window.saveMNAUOrderToLog = async function() {
         return compSuppliers;
     };
 
-    const userUmsatz = Math.round((summe[myCompany] || 0) * 100) / 100;
+    const safeAmt = (v) => isNaN(v) ? 0 : Math.round(v * 100) / 100;
+
+    const userUmsatz = safeAmt(currentCalc.summe[myCompany]);
     if (userUmsatz <= 0) {
         await window.customAlert(`Der ${myCompany}-Umsatz beträgt 0.00 €. Es wurde kein Auftrag erfasst.`, "Hinweis");
         return;
@@ -597,11 +612,10 @@ window.saveMNAUOrderToLog = async function() {
 
     const allSharesDetail = {};
     ['MNAG','MNMH','MNWB','MNAT','MNAU','EXT'].forEach(comp => {
-        const amt = summe[comp] || 0;
-        if (amt > 0) allSharesDetail[comp] = Math.round(amt * 100) / 100;
+        const amt = currentCalc.summe[comp] || 0;
+        if (amt > 0) allSharesDetail[comp] = safeAmt(amt);
     });
 
-    const kalkInputs = exportKalkulatorInputs();
     const btn = document.getElementById('btn-save-to-log');
 
     try {
@@ -637,10 +651,10 @@ window.saveMNAUOrderToLog = async function() {
                 } catch(e) {}
             }
 
-            // NUR WENN DER SPEICHERVORGANG KLAPPT, WIRD DIE VERSION NUMMER HÖHER!
             const newVersionNum = existingSnapshots.length + 1;
             if (btn) { btn.disabled = true; btn.textContent = "Speichere Version v" + newVersionNum + "..."; }
 
+            // NATIVE SCHLANKE SNAPSHOTS OHNE ROHE HTML-STRINGS!
             const newSnapshot = {
                 version: newVersionNum,
                 timestamp: new Date().toISOString(),
@@ -649,8 +663,7 @@ window.saveMNAUOrderToLog = async function() {
                 projName: projName,
                 projOffer: getVal('proj-offer'),
                 projInvoice: getVal('proj-invoice'),
-                projNotes: getVal('proj-notes'),
-                resultsTableHtml: document.getElementById('results-table-wrap').innerHTML
+                projNotes: getVal('proj-notes')
             };
 
             const updatedSnapshots = [...existingSnapshots, newSnapshot];
@@ -663,7 +676,7 @@ window.saveMNAUOrderToLog = async function() {
                 handledCompanies.add(comp);
                 const compSuppliers = getSuppliersForCompany(comp);
                 const compFremdkosten = compSuppliers.reduce((s, item) => s + item.amount, 0);
-                const compUmsatz = Math.round((summe[comp] || 0) * 100) / 100;
+                const compUmsatz = safeAmt(currentCalc.summe[comp]);
 
                 if (compUmsatz <= 0 && comp !== myCompany) {
                     recordsToDelete.push(rec.id);
@@ -699,11 +712,11 @@ window.saveMNAUOrderToLog = async function() {
                     projInvoice: getVal('proj-invoice'),
                     projNotes: getVal('proj-notes'),
                     entityNote: (kalkInputs.notes && kalkInputs.notes[comp]) || '',
-                    spesen: SP[comp] || 0,
-                    kundenpreis: Math.round(kundenpreis * 100) / 100,
-                    groupAnteil: Math.round(totalGroupAnteil * 100) / 100,
-                    mngrAbgabe: Math.round(totalGroupAnteil * 100) / 100,
-                    groupBreakdown: groupBreakdown,
+                    spesen: (kalkInputs.sp && parseFloat(kalkInputs.sp[comp])) || 0,
+                    kundenpreis: safeAmt(currentCalc.kundenpreis),
+                    groupAnteil: safeAmt(currentCalc.totalGroupAnteil),
+                    mngrAbgabe: safeAmt(currentCalc.totalGroupAnteil),
+                    groupBreakdown: currentCalc.groupBreakdown,
                     allSharesDetail: allSharesDetail,
                     snapshots: updatedSnapshots
                 };
@@ -712,12 +725,12 @@ window.saveMNAUOrderToLog = async function() {
 
                 updates.push({
                     id: rec.id,
-                    targetRecordRef: rec, // Für In-Memory Mutation nach Erfolg
+                    targetRecordRef: rec,
                     compUmsatz, compFremdkosten, updatedDetails, updatedChangelog, orderTitle,
                     fields: {
                         "Auftrag": orderTitle,
                         "Betrag_Automotive": compUmsatz,
-                        "Fremdkosten": Math.round(compFremdkosten * 100) / 100,
+                        "Fremdkosten": safeAmt(compFremdkosten),
                         "Fremdkosten_Details": updatedDetails,
                         "Flagged": true,
                         "Changelog": JSON.stringify(updatedChangelog)
@@ -725,7 +738,6 @@ window.saveMNAUOrderToLog = async function() {
                 });
             }
 
-            // ENTFERNTE FIRMEN ZUERST LÖSCHEN
             if (recordsToDelete.length > 0) {
                 for (const idToDelete of recordsToDelete) {
                     await window.API.deleteOrder(idToDelete);
@@ -741,14 +753,14 @@ window.saveMNAUOrderToLog = async function() {
                     const groupMeta = {
                         groupId: calcGroupId, isReadOnlyShare: (comp !== myCompany), originCompany: myCompany, originProject: projName,
                         projOffer: getVal('proj-offer'), projInvoice: getVal('proj-invoice'), projNotes: getVal('proj-notes'),
-                        entityNote: (kalkInputs.notes && kalkInputs.notes[comp]) || '', spesen: SP[comp] || 0,
-                        kundenpreis: Math.round(kundenpreis * 100) / 100, groupAnteil: Math.round(totalGroupAnteil * 100) / 100,
-                        mngrAbgabe: Math.round(totalGroupAnteil * 100) / 100, groupBreakdown: groupBreakdown,
+                        entityNote: (kalkInputs.notes && kalkInputs.notes[comp]) || '', spesen: (kalkInputs.sp && parseFloat(kalkInputs.sp[comp])) || 0,
+                        kundenpreis: safeAmt(currentCalc.kundenpreis), groupAnteil: safeAmt(currentCalc.totalGroupAnteil),
+                        mngrAbgabe: safeAmt(currentCalc.totalGroupAnteil), groupBreakdown: currentCalc.groupBreakdown,
                         allSharesDetail: allSharesDetail, snapshots: updatedSnapshots
                     };
                     newCompanyRecordsToCreate.push({
                         fields: {
-                            "Auftrag": orderTitle, "Betrag_Automotive": amt, "Fremdkosten": Math.round(compFremdkosten * 100) / 100,
+                            "Auftrag": orderTitle, "Betrag_Automotive": amt, "Fremdkosten": safeAmt(compFremdkosten),
                             "Fremdkosten_Details": JSON.stringify({ suppliers: compSuppliers, groupMeta: groupMeta }),
                             "Status": "In Bearbeitung", "Firma": comp, "Flagged": false,
                             "Changelog": JSON.stringify([{ user: window.currentUserEmail, timestamp: new Date().toISOString(), action: "Projektupdate", comment: "Neu hinzugekommen in v" + newVersionNum, details: [] }])
@@ -757,14 +769,14 @@ window.saveMNAUOrderToLog = async function() {
                 }
             });
 
-            // ERST HIER WIRD DIE DATENBANK AKTUALLISIERT! (WENN DIES FEHLERSCHLÄGT, BLEIBT DIE VERSION INTAT)
+            // ERST DIE API ERFOLGREICH BESTÄTIGEN LASSEN
             await executeBatchOrFallbackUpdates(updates.map(u => ({ id: u.id, fields: u.fields })));
 
-            // ERST NACH ERFOLGREICHEM API-SPEICHERN DIE LOKALEN IN-MEMORY RECORDS MUTIEREN:
+            // ERST NACH ERFOLG IN-MEMORY SPEICHER ANPASSEN:
             updates.forEach(u => {
                 u.targetRecordRef.fields.Auftrag = u.orderTitle;
                 u.targetRecordRef.fields.Betrag_Automotive = u.compUmsatz;
-                u.targetRecordRef.fields.Fremdkosten = Math.round(u.compFremdkosten * 100) / 100;
+                u.targetRecordRef.fields.Fremdkosten = safeAmt(u.compFremdkosten);
                 u.targetRecordRef.fields.Fremdkosten_Details = u.updatedDetails;
                 u.targetRecordRef.fields.Flagged = true;
                 u.targetRecordRef.fields.Changelog = JSON.stringify(u.updatedChangelog);
@@ -793,8 +805,7 @@ window.saveMNAUOrderToLog = async function() {
                 projName: projName,
                 projOffer: getVal('proj-offer'),
                 projInvoice: getVal('proj-invoice'),
-                projNotes: getVal('proj-notes'),
-                resultsTableHtml: document.getElementById('results-table-wrap').innerHTML
+                projNotes: getVal('proj-notes')
             };
 
             const recordsToCreate = [];
@@ -803,19 +814,19 @@ window.saveMNAUOrderToLog = async function() {
             const groupMetaMain = {
                 groupId: calcGroupId, originCompany: myCompany,
                 projOffer: getVal('proj-offer'), projInvoice: getVal('proj-invoice'), projNotes: getVal('proj-notes'),
-                entityNote: (kalkInputs.notes && kalkInputs.notes[myCompany]) || '', spesen: SP[myCompany] || 0,
-                kundenpreis: Math.round(kundenpreis * 100) / 100, groupAnteil: Math.round(totalGroupAnteil * 100) / 100,
-                mngrAbgabe: Math.round(totalGroupAnteil * 100) / 100, groupBreakdown: groupBreakdown,
+                entityNote: (kalkInputs.notes && kalkInputs.notes[myCompany]) || '', spesen: (kalkInputs.sp && parseFloat(kalkInputs.sp[myCompany])) || 0,
+                kundenpreis: safeAmt(currentCalc.kundenpreis), groupAnteil: safeAmt(currentCalc.totalGroupAnteil),
+                mngrAbgabe: safeAmt(currentCalc.totalGroupAnteil), groupBreakdown: currentCalc.groupBreakdown,
                 allSharesDetail: allSharesDetail, snapshots: [newSnapshot]
             };
 
             const initialChangelog = [{
                 user: window.currentUserEmail || "Unbekannt", timestamp: new Date().toISOString(), action: "Hauptauftrag aus Group Kalkulator erfasst", comment: `Ersterstellung (Version v1)`,
-                details: [`Auftrag "${orderTitle}" angelegt:`, `• ${myCompany} Umsatz: € ${userUmsatz.toFixed(2)}`, `• ${myCompany} Fremdkosten: € ${totalFremdkosten.toFixed(2)}`, `• Gesamt-Projektvolumen: € ${kundenpreis.toFixed(2)}`]
+                details: [`Auftrag "${orderTitle}" angelegt:`, `• ${myCompany} Umsatz: € ${userUmsatz.toFixed(2)}`, `• ${myCompany} Fremdkosten: € ${totalFremdkosten.toFixed(2)}`, `• Gesamt-Projektvolumen: € ${currentCalc.kundenpreis.toFixed(2)}`]
             }];
 
             recordsToCreate.push({
-                fields: { "Auftrag": orderTitle, "Betrag_Automotive": userUmsatz, "Fremdkosten": Math.round(totalFremdkosten * 100) / 100, "Fremdkosten_Details": JSON.stringify({ suppliers: mainSuppliers, groupMeta: groupMetaMain }), "Status": INITIAL_STATUS, "Firma": myCompany, "Flagged": false, "Changelog": JSON.stringify(initialChangelog) }
+                fields: { "Auftrag": orderTitle, "Betrag_Automotive": userUmsatz, "Fremdkosten": safeAmt(totalFremdkosten), "Fremdkosten_Details": JSON.stringify({ suppliers: mainSuppliers, groupMeta: groupMetaMain }), "Status": INITIAL_STATUS, "Firma": myCompany, "Flagged": false, "Changelog": JSON.stringify(initialChangelog) }
             });
 
             Object.entries(allSharesDetail).forEach(([comp, amt]) => {
@@ -825,9 +836,9 @@ window.saveMNAUOrderToLog = async function() {
                     const shareGroupMeta = {
                         groupId: calcGroupId, isReadOnlyShare: true, originCompany: myCompany, originProject: projName,
                         projOffer: getVal('proj-offer'), projInvoice: getVal('proj-invoice'), projNotes: getVal('proj-notes'),
-                        entityNote: (kalkInputs.notes && kalkInputs.notes[comp]) || '', spesen: SP[comp] || 0,
-                        kundenpreis: Math.round(kundenpreis * 100) / 100, groupAnteil: Math.round(totalGroupAnteil * 100) / 100,
-                        mngrAbgabe: Math.round(totalGroupAnteil * 100) / 100, groupBreakdown: groupBreakdown,
+                        entityNote: (kalkInputs.notes && kalkInputs.notes[comp]) || '', spesen: (kalkInputs.sp && parseFloat(kalkInputs.sp[comp])) || 0,
+                        kundenpreis: safeAmt(currentCalc.kundenpreis), groupAnteil: safeAmt(currentCalc.totalGroupAnteil),
+                        mngrAbgabe: safeAmt(currentCalc.totalGroupAnteil), groupBreakdown: currentCalc.groupBreakdown,
                         allSharesDetail: allSharesDetail, snapshots: [newSnapshot]
                     };
                     const shareChangelog = [{
@@ -835,7 +846,7 @@ window.saveMNAUOrderToLog = async function() {
                         details: [`Erlösanteil für ${comp} aus Projekt "${projName}" (${myCompany}):`, `• Anteil ${comp}: € ${amt.toFixed(2)}`]
                     }];
                     recordsToCreate.push({
-                        fields: { "Auftrag": orderTitle, "Betrag_Automotive": amt, "Fremdkosten": Math.round(compFremdkosten * 100) / 100, "Fremdkosten_Details": JSON.stringify({ suppliers: compSuppliers, groupMeta: shareGroupMeta }), "Status": INITIAL_STATUS, "Firma": comp, "Flagged": false, "Changelog": JSON.stringify(shareChangelog) }
+                        fields: { "Auftrag": orderTitle, "Betrag_Automotive": amt, "Fremdkosten": safeAmt(compFremdkosten), "Fremdkosten_Details": JSON.stringify({ suppliers: compSuppliers, groupMeta: shareGroupMeta }), "Status": INITIAL_STATUS, "Firma": comp, "Flagged": false, "Changelog": JSON.stringify(shareChangelog) }
                     });
                 }
             });
@@ -858,6 +869,9 @@ window.saveMNAUOrderToLog = async function() {
     }
 };
 
+// ====================================================
+// PDF DOWNLOAD DIREKT AUS DEM LOG (DYNAMISCHE RE-KALKULATION)
+// ====================================================
 window.downloadKalkulatorPDFFromLog = async function(recordId, snapshotIndex = null) {
     const record = (window.loadedRecords || []).find(r => r.id === recordId);
     if (!record || !record.fields.Fremdkosten_Details) {
@@ -894,6 +908,9 @@ window.downloadKalkulatorPDFFromLog = async function(recordId, snapshotIndex = n
         await window.customAlert("PDF-Bibliotheken nicht geladen.", "Systemfehler");
         return;
     }
+
+    // DYNAMISCHE NEUBERECHNUNG DER HISTORISCHEN ERGEBNISTABELLE AUS DEN INPUTS
+    const historicCalc = computeKalkulationFromInputs(snap.kalkInputs || {});
 
     const d = new Date(snap.timestamp || record.createdTime || Date.now()), p = n => String(n).padStart(2,'0');
     const ts = `${p(d.getDate())}.${p(d.getMonth()+1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
@@ -956,7 +973,7 @@ window.downloadKalkulatorPDFFromLog = async function(recordId, snapshotIndex = n
         ${notesSectionHtml}
         
         <div class="pdf-table-container">
-            ${snap.resultsTableHtml}
+            ${historicCalc.tableHtml}
         </div>
     </div>
   `;
@@ -1035,9 +1052,10 @@ window.exportPDF = async function(){
         projOffer: getVal('proj-offer'),
         projInvoice: getVal('proj-invoice'),
         projNotes: getVal('proj-notes'),
-        kalkInputs: kalkInputs,
-        resultsTableHtml: document.getElementById('results-table-wrap').innerHTML
+        kalkInputs: kalkInputs
     };
+
+    const currentCalc = computeKalkulationFromInputs(kalkInputs);
 
     const d = new Date(), p = n => String(n).padStart(2,'0');
     const ts = `${p(d.getDate())}.${p(d.getMonth()+1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
@@ -1098,7 +1116,7 @@ window.exportPDF = async function(){
         ${notesSectionHtml}
 
         <div class="pdf-table-container">
-            ${snap.resultsTableHtml}
+            ${currentCalc.tableHtml}
         </div>
     </div>
   `;

@@ -243,7 +243,7 @@
         <h2>Lieferanten-Datenbank</h2>
         <div id="suppliers-manager-list" class="suppliers-manager-list"></div>
         <div class="modal-actions" style="margin-top: 16px;">
-            <button type="button" id="btn-close-suppliers" class="btn-secondary" style="width: 100%;">Schließen</button>
+            <button type="button" id="btn-close-suppliers" class="btn-secondary" style="width: 100%;" onclick="window.hideModal('modal-suppliers-overlay')">Schließen</button>
         </div>
     </div>
 </div>
@@ -257,7 +257,7 @@
         <div id="changelog-timeline-list" class="changelog-timeline"></div>
 
         <div class="modal-actions" style="margin-top: 20px;">
-            <button type="button" id="btn-close-changelog" class="btn-secondary" style="width: 100%;">Schließen</button>
+            <button type="button" id="btn-close-changelog" class="btn-secondary" style="width: 100%;" onclick="window.hideModal('modal-changelog-overlay')">Schließen</button>
         </div>
     </div>
 </div>
@@ -274,17 +274,18 @@
             <button type="button" class="btn-secondary btn-small" onclick="window.Logger.clear(); window.renderLogsModal();">🗑️ Logs leeren</button>
             <button type="button" class="btn-secondary btn-small" onclick="window.downloadLogsFile()">💾 Als Textdatei speichern</button>
             <button type="button" class="btn-primary btn-small" onclick="window.copyLogsToClipboard()">📋 In Zwischenablage kopieren</button>
-            <button type="button" class="btn-secondary btn-small" onclick="document.getElementById('modal-logs-overlay').classList.add('hidden')">Schließen</button>
+            <button type="button" class="btn-secondary btn-small" onclick="window.hideModal('modal-logs-overlay')">Schließen</button>
         </div>
     </div>
 </div>
 
-<!-- ZENTRALES DIALOG MODAL -->
+<!-- ZENTRALES DIALOG MODAL (ERSETZT BROWSER ALERTS & CONFIRMS) -->
 <div id="custom-dialog-overlay" class="modal-overlay hidden">
-    <div class="modal-card dialog-card">
+    <div class="modal-card custom-dialog-card">
+        <div class="dialog-icon" id="custom-dialog-icon">ℹ️</div>
         <h2 id="custom-dialog-title">Hinweis</h2>
         <div id="custom-dialog-body" class="dialog-body-text"></div>
-        <div class="modal-actions" style="margin-top: 22px;">
+        <div class="modal-actions dialog-actions">
             <button type="button" id="custom-dialog-cancel" class="btn-secondary hidden">Abbrechen</button>
             <button type="button" id="custom-dialog-ok" class="btn-primary">OK</button>
         </div>
