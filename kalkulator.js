@@ -149,11 +149,20 @@ window.calculate = function(){
 
     const vn = n => Number(Math.round(n*100)/100).toLocaleString('de-AT',{minimumFractionDigits:2,maximumFractionDigits:2});
     const ps = p => (p%1===0?p:(+p).toFixed(1))+'%';
-    const fc = (val,pct)=>{ const z=Math.abs(val)<0.005; const cls=z?'val-zero':(val>0?'val-pos':'val-neg'); const pre=(pct!=null&&pct>0)?`<span class="pct-pre">(${ps(pct)})</span>`:''; return `<td class="${cls}">${pre}${vn(val)}</td>`; };
-    const nc = val => `<td class="val-neutral">${vn(val)}</td>`;
 
-    let h='<table class="results flow"><thead><tr>';
-    h+=`<th class="kundenpreis-cell">Kundenpreis: ${fmt(kundenpreis)}</th>`;
+    // PERFEKTES ZELLEN-ALIGNMENT MIT FLEXBOX
+    const fc = (val,pct)=>{
+        const z = Math.abs(val) < 0.005;
+        const cls = z ? 'val-zero' : (val > 0 ? 'val-pos' : 'val-neg');
+        const pre = (pct != null && pct > 0) ? `<span class="pct-badge">${ps(pct)}</span>` : '';
+        return `<td class="${cls}"><div class="cell-content">${pre}<span class="num-val">${vn(val)}</span></div></td>`;
+    };
+    const nc = val => `<td class="val-neutral"><div class="cell-content"><span class="num-val">${vn(val)}</span></div></td>`;
+
+    let h='<table class="results flow">';
+    h+='<colgroup><col class="cg-label">'+COLS.map(()=>'<col class="cg-col">').join('')+'</colgroup>';
+    h+='<thead><tr>';
+    h+=`<th class="kundenpreis-cell"><div class="kp-title">Kundenpreis</div><div class="kp-amount">${fmt(kundenpreis)}</div></th>`;
     COLS.forEach(c=>h+=`<th class="col-${c}">${c}</th>`);
     h+='</tr></thead><tbody>';
 
@@ -199,11 +208,11 @@ window.calculate = function(){
 
     h+=`<tr class="rg-stunden"><td class="rowlabel">Stunden</td>`+
         COLS.map(c=>{
-            if(!ENTITIES.includes(c)) return `<td class="val-zero">${vn(0)}</td>`;
+            if(!ENTITIES.includes(c)) return `<td class="val-zero"><div class="cell-content"><span class="num-val">${vn(0)}</span></div></td>`;
             const rate=getNum('hp-'+c);
             const hrs=rate>0?D[c]/rate:0;
-            const pre=rate>0?`<span class="pct-pre">(${vn(rate)} €)</span>`:'';
-            return `<td class="val-zero">${pre}${vn(hrs)}</td>`;
+            const pre=rate>0?`<span class="pct-badge">${vn(rate)} €</span>`:'';
+            return `<td class="val-zero"><div class="cell-content">${pre}<span class="num-val">${vn(hrs)}</span></div></td>`;
         }).join('')+`</tr>`;
 
     h+='</tbody></table>';

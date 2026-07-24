@@ -227,5 +227,3 @@ body, html {
 .auth-overlay.hidden {
     opacity: 0; visibility: hidden; pointer-events: none;
 }
-
-<!-- test -->
