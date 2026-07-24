@@ -5,7 +5,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-// 🚀 HIER DEINE FIREBASE CONFIG:
+// 🚀 DEINE FIREBASE CONFIG:
 const firebaseConfig = {
     apiKey: "AIzaSyD8OZrn6RFNtljaAtWoBi0VEHMiSaAholo",
     authDomain: "mnau-billing.firebaseapp.com",
@@ -18,13 +18,16 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
+// Globale Variable für den eingeloggten Nutzer
+window.currentUserEmail = "Unbekannt";
+
 // DOM Elemente
 const authOverlay = document.getElementById('auth-overlay');
 const authForm = document.getElementById('auth-form');
 const authEmail = document.getElementById('auth-email');
 const authPassword = document.getElementById('auth-password');
 const btnAuthSubmit = document.getElementById('btn-auth-submit');
-const btnAuthReset = document.getElementById('btn-auth-reset'); // NEU
+const btnAuthReset = document.getElementById('btn-auth-reset');
 const authError = document.getElementById('auth-error');
 const btnLogout = document.getElementById('btn-logout');
 
@@ -32,7 +35,7 @@ const btnLogout = document.getElementById('btn-logout');
 authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     authError.style.display = 'none';
-    authError.style.color = '#e74c3c'; // Rot für Fehler
+    authError.style.color = '#e74c3c';
     btnAuthSubmit.disabled = true;
     btnAuthSubmit.textContent = "Anmeldung läuft...";
 
@@ -50,7 +53,7 @@ authForm.addEventListener('submit', async (e) => {
     }
 });
 
-// NEU: Passwort-Reset E-Mail senden
+// Passwort-Reset E-Mail senden
 if (btnAuthReset) {
     btnAuthReset.addEventListener('click', async () => {
         const email = authEmail.value.trim();
@@ -65,7 +68,7 @@ if (btnAuthReset) {
         try {
             await sendPasswordResetEmail(auth, email);
             authError.style.display = 'block';
-            authError.style.color = '#00ff73'; // Grün für Erfolg!
+            authError.style.color = '#00ff73';
             authError.textContent = "E-Mail zum Setzen deines Passworts wurde versendet!";
         } catch (error) {
             authError.style.display = 'block';
@@ -85,16 +88,17 @@ if (btnLogout) {
 // 🔐 Der Wächter: Prüft permanent den Login-Status
 onAuthStateChanged(auth, (user) => {
     if (user) {
+        window.currentUserEmail = user.email || "Unbekannt";
         authOverlay.classList.add('hidden');
         if (typeof window.initMNAUApp === "function") {
             window.initMNAUApp();
         }
     } else {
+        window.currentUserEmail = "Unbekannt";
         authOverlay.classList.remove('hidden');
         btnAuthSubmit.disabled = false;
         btnAuthSubmit.textContent = "Anmelden";
 
-        // App leeren beim Ausloggen
         if (window.DOM && window.DOM.orderList) {
             window.DOM.orderList.innerHTML = '';
             window.DOM.archiveList.innerHTML = '';

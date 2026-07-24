@@ -10,6 +10,9 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('edit-record-id').value = '';
             document.getElementById('modal-main-title').textContent = "Neuen Auftrag erfassen";
             document.getElementById('supplier-container').innerHTML = '';
+            document.getElementById('change-reason-group').style.display = 'none';
+            document.getElementById('input-change-reason').value = '';
+
             window.DOM.formNewOrder.reset();
             window.UI.addSupplierRow();
             window.UI.calculateTotalFremdkosten();
@@ -17,11 +20,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Neues Projekt Modal abbrechen
+    // Modal abbrechen
     if (window.DOM.btnCancel) {
         window.DOM.btnCancel.addEventListener('click', () => {
             window.DOM.modal.classList.add('hidden');
             window.DOM.formNewOrder.reset();
+        });
+    }
+
+    // Modal Changelog schließen
+    const btnCloseChangelog = document.getElementById('btn-close-changelog');
+    if (btnCloseChangelog) {
+        btnCloseChangelog.addEventListener('click', () => {
+            document.getElementById('modal-changelog-overlay').classList.add('hidden');
         });
     }
 
@@ -46,12 +57,27 @@ document.addEventListener('DOMContentLoaded', () => {
             const editId = document.getElementById('edit-record-id').value;
             const name = document.getElementById('input-name').value;
             const betrag = parseFloat(document.getElementById('input-betrag').value || 0);
+            const changeReason = document.getElementById('input-change-reason').value.trim();
 
+            if (editId && !changeReason) {
+                alert("Bitte gib einen kurzen Grund / Kommentar für die Änderung an.");
+                document.getElementById('input-change-reason').focus();
+                return;
+            }
+
+            let existingRecord = null;
             let existingDetails = [];
+            let existingChangelog = [];
+
             if (editId) {
-                const existingRecord = window.loadedRecords.find(r => r.id === editId);
-                if (existingRecord && existingRecord.fields.Fremdkosten_Details) {
-                    try { existingDetails = JSON.parse(existingRecord.fields.Fremdkosten_Details); } catch(e) {}
+                existingRecord = window.loadedRecords.find(r => r.id === editId);
+                if (existingRecord) {
+                    if (existingRecord.fields.Fremdkosten_Details) {
+                        try { existingDetails = JSON.parse(existingRecord.fields.Fremdkosten_Details); } catch(e) {}
+                    }
+                    if (existingRecord.fields.Changelog) {
+                        try { existingChangelog = JSON.parse(existingRecord.fields.Changelog); } catch(e) {}
+                    }
                 }
             }
 
@@ -91,9 +117,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (editId) {
                 // -> UPDATE MODUS
-                const updatePayload = {
-                    fields: { "Auftrag": name, "Betrag_Automotive": betrag, "Fremdkosten": totalFremdkosten, "Fremdkosten_Details": suppliersJSON }
+                const changes = [];
+                if (existingRecord.fields.Auftrag !== name) changes.push(`Name: "${existingRecord.fields.Auftrag}" ➔ "${name}"`);
+                if (parseFloat(existingRecord.fields.Betrag_Automotive || 0) !== betrag) changes.push(`Betrag: € ${existingRecord.fields.Betrag_Automotive || 0} ➔ € ${betrag}`);
+                if (parseFloat(existingRecord.fields.Fremdkosten || 0) !== totalFremdkosten) changes.push(`Fremdkosten: € ${existingRecord.fields.Fremdkosten || 0} ➔ € ${totalFremdkosten}`);
+
+                const newLogEntry = {
+                    user: window.currentUserEmail,
+                    timestamp: new Date().toISOString(),
+                    action: "Auftrag bearbeitet",
+                    comment: changeReason,
+                    details: changes.length > 0 ? changes : ["Lieferanten-Details angepasst"]
                 };
+
+                existingChangelog.unshift(newLogEntry);
+
+                const updatePayload = {
+                    fields: {
+                        "Auftrag": name,
+                        "Betrag_Automotive": betrag,
+                        "Fremdkosten": totalFremdkosten,
+                        "Fremdkosten_Details": suppliersJSON,
+                        "Flagged": true, // Flag setzen
+                        "Changelog": JSON.stringify(existingChangelog)
+                    }
+                };
+
                 try {
                     await window.API.updateOrder(editId, updatePayload);
                     const idx = window.loadedRecords.findIndex(r => r.id === editId);
@@ -111,8 +160,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
             } else {
                 // -> NEU ERSTELLEN MODUS
+                const initialChangelog = [{
+                    user: window.currentUserEmail,
+                    timestamp: new Date().toISOString(),
+                    action: "Auftrag erstellt",
+                    comment: "Erstansetzung des Auftrags",
+                    details: [`Auftrag "${name}" für € ${betrag.toFixed(2)} angelegt`]
+                }];
+
                 const payload = {
-                    records: [{ fields: { "Auftrag": name, "Betrag_Automotive": betrag, "Fremdkosten": totalFremdkosten, "Fremdkosten_Details": suppliersJSON, "Status": "Zu verrechnen" } }]
+                    records: [{
+                        fields: {
+                            "Auftrag": name,
+                            "Betrag_Automotive": betrag,
+                            "Fremdkosten": totalFremdkosten,
+                            "Fremdkosten_Details": suppliersJSON,
+                            "Status": "Zu verrechnen",
+                            "Flagged": false,
+                            "Changelog": JSON.stringify(initialChangelog)
+                        }
+                    }]
                 };
                 try {
                     const createdData = await window.API.saveOrder(payload);
@@ -189,13 +256,6 @@ async function fetchOrders() {
         window.UI.renderOrders(window.loadedRecords);
     } catch (error) {
         console.error("Kritischer Terminal-Fehler:", error);
-        window.DOM.orderList.innerHTML = `
-            <div style="padding: 24px; background: rgba(231, 76, 60, 0.03); border: 1px dashed rgba(231, 76, 60, 0.3); border-radius: 12px;">
-                <h3 style="color: #e74c3c; margin: 0 0 8px 0; font-size: 1rem; font-weight: 800; letter-spacing: 0.5px;">SYSTEM_CRASH // DIAGNOSTIC_ALERT</h3>
-                <p style="color: #a0aec0; font-size: 0.82rem; margin: 0 0 16px 0; line-height: 1.4;">Der Abruf wurde blockiert. Das kann an fehlerhaften Keys liegen, oder an einem unhandled JavaScript-Fehler im Renderer:</p>
-                <code style="display: block; background: #1c1c1c; border: 1px solid rgba(255,255,255,0.05); padding: 12px; color: #ef4444; font-size: 0.75rem; border-left: 3px solid #e74c3c; overflow-x: auto; white-space: pre-wrap; font-family: monospace;">${error.stack || error.message}</code>
-            </div>
-        `;
     } finally {
         window.DOM.loading.classList.add('hidden');
     }
@@ -208,6 +268,8 @@ window.openEditModal = function(recordId) {
 
     document.getElementById('edit-record-id').value = recordId;
     document.getElementById('modal-main-title').textContent = "Auftrag bearbeiten";
+    document.getElementById('change-reason-group').style.display = 'block';
+    document.getElementById('input-change-reason').value = '';
 
     document.getElementById('input-name').value = record.fields.Auftrag || "";
     document.getElementById('input-betrag').value = record.fields.Betrag_Automotive || "";
@@ -230,7 +292,50 @@ window.openEditModal = function(recordId) {
     window.DOM.modal.classList.remove('hidden');
 };
 
-// Sparsames Status-Update: Genau 1 PATCH Call, 0 GET Calls
+// Modal öffnen für Changelog-Verlauf
+window.openChangelogModal = function(recordId) {
+    const record = window.loadedRecords.find(r => r.id === recordId);
+    if (!record) return;
+
+    document.getElementById('changelog-order-title').textContent = record.fields.Auftrag || "Changelog";
+    const timelineContainer = document.getElementById('changelog-timeline-list');
+    timelineContainer.innerHTML = '';
+
+    let logs = [];
+    if (record.fields.Changelog) {
+        try { logs = JSON.parse(record.fields.Changelog); } catch(e) {}
+    }
+
+    if (logs.length === 0) {
+        timelineContainer.innerHTML = '<p style="color:#666; font-size:0.8rem; text-align:center; padding:16px;">Keine Historieneinträge vorhanden.</p>';
+    } else {
+        logs.forEach(log => {
+            const dateStr = new Date(log.timestamp).toLocaleString('de-DE');
+            let detailsHtml = '';
+            if (log.details && log.details.length > 0) {
+                detailsHtml = '<ul class="changelog-details-list">';
+                log.details.forEach(d => { detailsHtml += `<li>${d}</li>`; });
+                detailsHtml += '</ul>';
+            }
+
+            const logCard = document.createElement('div');
+            logCard.className = 'changelog-card';
+            logCard.innerHTML = `
+                <div class="changelog-header">
+                    <span class="changelog-user">👤 ${log.user}</span>
+                    <span class="changelog-date">${dateStr}</span>
+                </div>
+                ${log.comment ? `<div class="changelog-comment">💬 "${log.comment}"</div>` : ''}
+                ${detailsHtml}
+            `;
+            timelineContainer.appendChild(logCard);
+        });
+    }
+
+    document.getElementById('modal-changelog-overlay').classList.remove('hidden');
+};
+
+// Status-Update
 window.changeOrderStatus = async function(recordId, newStatus) {
     const record = window.loadedRecords.find(r => r.id === recordId);
     if (record) {
@@ -246,22 +351,45 @@ window.changeOrderStatus = async function(recordId, newStatus) {
     }
 };
 
-// Sparsamer Checkbox-Toggle
+// Checkbox-Toggle (mit Changelog-Eintrag & Flagging)
 window.toggleSupplierPaid = async function(orderId, supplierIndex) {
     const record = window.loadedRecords.find(r => r.id === orderId);
     if (!record || !record.fields.Fremdkosten_Details) return;
 
     try {
         const details = JSON.parse(record.fields.Fremdkosten_Details);
-        details[supplierIndex].paid = !details[supplierIndex].paid;
+        const newState = !details[supplierIndex].paid;
+        details[supplierIndex].paid = newState;
+
+        let changelog = [];
+        if (record.fields.Changelog) {
+            try { changelog = JSON.parse(record.fields.Changelog); } catch(e) {}
+        }
+
+        changelog.unshift({
+            user: window.currentUserEmail,
+            timestamp: new Date().toISOString(),
+            action: "Lieferantenstatus geändert",
+            comment: `Lieferant "${details[supplierIndex].name}" auf ${newState ? 'BEZAHLT ✓' : 'OFFEN ◯'} gesetzt`,
+            details: [`Betrag: € ${details[supplierIndex].amount.toFixed(2)}`]
+        });
 
         record.fields.Fremdkosten_Details = JSON.stringify(details);
+        record.fields.Flagged = true;
+        record.fields.Changelog = JSON.stringify(changelog);
+
         window.UI.renderOrders(window.loadedRecords);
 
         await fetch(`${window.API_URL_ORDERS}/${orderId}`, {
             method: 'PATCH',
             headers: window.HEADERS,
-            body: JSON.stringify({ fields: { "Fremdkosten_Details": record.fields.Fremdkosten_Details } })
+            body: JSON.stringify({
+                fields: {
+                    "Fremdkosten_Details": record.fields.Fremdkosten_Details,
+                    "Flagged": true,
+                    "Changelog": record.fields.Changelog
+                }
+            })
         });
     } catch (error) {
         alert("Fehler beim Aktualisieren des Lieferanten-Zahlungsstatus.");
@@ -269,7 +397,7 @@ window.toggleSupplierPaid = async function(orderId, supplierIndex) {
     }
 };
 
-// Effiziente Massen-Abgeltung
+// Massen-Abgeltung
 window.bulkPaySupplier = async function(supplierName) {
     if (!confirm(`Möchtest du wirklich alle offenen Rechnungen für "${supplierName}" auf einmal als erledigt markieren?`)) return;
 
@@ -289,9 +417,23 @@ window.bulkPaySupplier = async function(supplierName) {
                 });
 
                 if (mutated) {
+                    let changelog = [];
+                    if (record.fields.Changelog) { try { changelog = JSON.parse(record.fields.Changelog); } catch(e) {} }
+                    changelog.unshift({
+                        user: window.currentUserEmail,
+                        timestamp: new Date().toISOString(),
+                        action: "Massen-Abgeltung",
+                        comment: `Alle Rechnungen für Lieferant "${supplierName}" als Bezahlt markiert.`,
+                        details: []
+                    });
+
                     const jsonStr = JSON.stringify(details);
-                    updates.push({ id: record.id, fields: { "Fremdkosten_Details": jsonStr } });
+                    const logStr = JSON.stringify(changelog);
+                    updates.push({ id: record.id, fields: { "Fremdkosten_Details": jsonStr, "Flagged": true, "Changelog": logStr } });
+
                     record.fields.Fremdkosten_Details = jsonStr;
+                    record.fields.Flagged = true;
+                    record.fields.Changelog = logStr;
                 }
             } catch (e) {}
         }

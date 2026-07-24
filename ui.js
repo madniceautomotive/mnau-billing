@@ -37,6 +37,10 @@ window.UI = {
                 const betrag = fields.Betrag_Automotive ? fields.Betrag_Automotive.toFixed(2) : "0.00";
                 const fremdkosten = fields.Fremdkosten ? fields.Fremdkosten.toFixed(2) : "0.00";
 
+                // Flagged Badge
+                const isFlagged = fields.Flagged === true;
+                const flagBadgeHTML = isFlagged ? `<span class="flag-badge">🚩 Geändert</span>` : '';
+
                 let breakdownHTML = '';
                 if (fields.Fremdkosten_Details) {
                     try {
@@ -65,7 +69,7 @@ window.UI = {
 
                 const innerHTML = `
                     <div class="billing-info-block">
-                        <div class="billing-row-title">${fields.Auftrag || "Unbenannt"}</div>
+                        <div class="billing-row-title">${fields.Auftrag || "Unbenannt"} ${flagBadgeHTML}</div>
                         <div class="billing-row-meta">Erstellt: ${new Date(record.createdTime).toLocaleDateString('de-DE')}</div>
                     </div>
                     
@@ -81,6 +85,9 @@ window.UI = {
                             <option value="An Group verrechnet" ${status === "An Group verrechnet" ? "selected" : ""}>An Group verrechnet</option>
                             <option value="Bezahlt" ${status === "Bezahlt" ? "selected" : ""}>Bezahlt</option>
                         </select>
+                        <button class="changelog-btn" onclick="window.openChangelogModal('${id}')" title="Änderungshistorie anzeigen">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.25 2.52.77-1.28-3.52-2.09V8z"/></svg>
+                        </button>
                         <button class="edit-btn" onclick="window.openEditModal('${id}')" title="Auftrag bearbeiten">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
                         </button>

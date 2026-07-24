@@ -89,6 +89,12 @@
                 <div class="supplier-total">Summe: <br>€ <span id="display-total-fremdkosten">0.00</span></div>
             </div>
 
+            <!-- NEU: Kommentarfeld für Änderungen (wird beim Editieren eingeblendet) -->
+            <div id="change-reason-group" style="display: none; margin-top: 14px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px;">
+                <label style="color: #00d2ff;">Änderungsgrund / Kommentar *</label>
+                <input type="text" id="input-change-reason" class="mnau-input" placeholder="z.B. Nachverhandlung mit Lieferant X..." style="border-color: rgba(0, 210, 255, 0.4);">
+            </div>
+
             <datalist id="supplier-list"></datalist>
 
             <div class="modal-actions">
@@ -106,6 +112,20 @@
         <div id="suppliers-manager-list" class="suppliers-manager-list"></div>
         <div class="modal-actions" style="margin-top: 16px;">
             <button type="button" id="btn-close-suppliers" class="btn-secondary" style="width: 100%;">Schließen</button>
+        </div>
+    </div>
+</div>
+
+<!-- NEU: Modal für den Auftrag-Changelog / Historie -->
+<div id="modal-changelog-overlay" class="modal-overlay hidden">
+    <div class="modal-card" style="max-width: 520px;">
+        <h2 id="changelog-order-title" style="margin-bottom: 6px;">Änderungshistorie</h2>
+        <div style="font-size: 0.75rem; color: #a0aec0; margin-bottom: 16px;">Audit-Trail & Nachvollziehbarkeit</div>
+
+        <div id="changelog-timeline-list" class="changelog-timeline"></div>
+
+        <div class="modal-actions" style="margin-top: 20px;">
+            <button type="button" id="btn-close-changelog" class="btn-secondary" style="width: 100%;">Schließen</button>
         </div>
     </div>
 </div>

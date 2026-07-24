@@ -108,6 +108,45 @@ body, html {
 }
 .edit-btn:active { transform: scale(0.92); }
 
+/* Violetter Changelog / History Button */
+.changelog-btn {
+    background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(168, 85, 247, 0.3); color: #a855f7;
+    width: 41px; height: 41px; border-radius: 10px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-sizing: border-box;
+}
+.changelog-btn svg { width: 16px; height: 16px; fill: currentColor; }
+.changelog-btn:hover {
+    background: #a855f7; color: #ffffff; border-color: #a855f7;
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.45);
+}
+.changelog-btn:active { transform: scale(0.92); }
+
+/* Flagged Badge */
+.flag-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(255, 123, 0, 0.15); border: 1px solid #ff7b00; color: #ff7b00;
+    font-size: 0.65rem; font-weight: 800; padding: 2px 8px; border-radius: 6px;
+    text-transform: uppercase; margin-left: 8px; vertical-align: middle;
+}
+
+/* Changelog Timeline Items */
+.changelog-timeline {
+    max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 4px;
+}
+.changelog-card {
+    background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06);
+    border-left: 3px solid #a855f7; border-radius: 8px; padding: 12px; font-size: 0.8rem;
+}
+.changelog-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;
+}
+.changelog-user { font-weight: 700; color: #00d2ff; font-size: 0.78rem; }
+.changelog-date { color: #666; font-size: 0.7rem; }
+.changelog-comment { color: #f6e05e; font-style: italic; margin-bottom: 6px; font-size: 0.78rem; }
+.changelog-details-list { margin: 0; padding-left: 16px; color: #a0aec0; font-size: 0.75rem; }
+
 /* Roter Lösch-Button */
 .delete-btn {
     background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(231, 76, 60, 0.25); color: #e74c3c;
