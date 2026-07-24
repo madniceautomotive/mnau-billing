@@ -1,5 +1,5 @@
 /* ==================================================== */
-/* style-billing.css: MULTI-BRAND & MODAL DIALOG STYLES */
+/* style-billing.css: MULTI-BRAND & TERMINAL LOG STYLES  */
 /* ==================================================== */
 
 :root {
@@ -55,7 +55,6 @@ body, html {
     padding: 0;
 }
 
-/* ALLGEMEINE HIDDEN KLASSE HAS STRICT DISPLAY NONE */
 .hidden {
     display: none !important;
 }
@@ -310,6 +309,33 @@ form label {
     background: #0f172a !important;
     color: #ffffff !important;
 }
+
+/* LOG TERMINAL STYLING FÜR DIAGNOSE MODAL */
+.log-terminal {
+    background: #090d16 !important;
+    border: 1px solid var(--border-color-strong) !important;
+    border-radius: 8px;
+    padding: 12px;
+    max-height: 360px;
+    overflow-y: auto;
+    font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.72rem;
+    color: #cbd5e1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.log-entry {
+    padding: 6px 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.03);
+    border-left: 3px solid #64748b;
+    word-break: break-all;
+}
+.log-entry.log-ERROR { border-left-color: #ef4444; background: rgba(239, 68, 68, 0.1); color: #fca5a5; }
+.log-entry.log-WARN  { border-left-color: #eab308; background: rgba(234, 179, 8, 0.1); color: #fef08a; }
+.log-entry.log-INFO  { border-left-color: #3b82f6; background: rgba(59, 130, 246, 0.1); color: #93c5fd; }
+.log-time { color: #64748b; font-size: 0.65rem; margin-bottom: 2px; }
 
 /* LEERE STATUS BEHÄLTER */
 #order-list p, #external-order-list p, #archive-list p {

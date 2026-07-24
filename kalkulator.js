@@ -1,5 +1,5 @@
 // ====================================================
-// kalkulator.js: FULLY SYNCHRONIZED LOGIC (ADD & REMOVE)
+// kalkulator.js: TRANSACTIONAL SAVING & VERSION CONTROL
 // ====================================================
 
 const ENTITIES = ['MNAG','MNMH','MNWB','MNAT','MNAU','MNGR'];
@@ -483,11 +483,41 @@ function buildPdfNotesSectionHtml(snap) {
     return '';
 }
 
+async function executeBatchOrFallbackUpdates(updates) {
+    if (!updates || updates.length === 0) return;
+
+    try {
+        for (let i = 0; i < updates.length; i += 10) {
+            const batch = updates.slice(i, i + 10);
+            if (window.API && typeof window.API.batchUpdateOrders === 'function') {
+                await window.API.batchUpdateOrders(batch);
+            } else {
+                throw new Error("Batch API nicht verfügbar.");
+            }
+        }
+        window.Logger.info(`Batch-Update für ${updates.length} Datensätze erfolgreich.`);
+    } catch (batchErr) {
+        window.Logger.warn("Batch-Update fehlgeschlagen, schalte auf Einzel-Updates um...", batchErr);
+        for (const item of updates) {
+            const res = await fetch(`${window.API_URL_ORDERS}/${item.id}`, {
+                method: 'PATCH',
+                headers: window.HEADERS,
+                body: JSON.stringify({ fields: item.fields, typecast: true })
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(`Einzel-Update für ID ${item.id} fehlgeschlagen: HTTP ${res.status} - ${errText}`);
+            }
+        }
+        window.Logger.info(`Einzel-Fallback-Updates für ${updates.length} Datensätze erfolgreich.`);
+    }
+}
+
 // ====================================================
-// AUFTRAG IM LOG ERFASSEN / AKTUALISIEREN
+// AUFTRAG IM LOG ERFASSEN / AKTUALISIEREN (TRANSAKTIONAL)
 // ====================================================
 window.saveMNAUOrderToLog = async function() {
-    const myCompany = window.currentUserCompany || "MNAU";
+    const myCompany = (window.currentUserCompany || "MNAU").trim().toUpperCase();
     const projNameRaw = getVal('proj-name');
     const projName = projNameRaw ? projNameRaw : "Unbenanntes Projekt";
     const orderTitle = `${projName} (${myCompany})`;
@@ -544,21 +574,12 @@ window.saveMNAUOrderToLog = async function() {
         const container = document.getElementById(`suppliers-list-${compName}`);
         if (container) {
             container.querySelectorAll('.kalk-supplier-row').forEach(row => {
-                const sName = (row.querySelector('.kalk-supp-name').value || '').trim();
-                const sAmount = parseFloat(row.querySelector('.kalk-supp-amount').value) || 0;
+                const nameInput = row.querySelector('.kalk-supp-name');
+                const amountInput = row.querySelector('.kalk-supp-amount');
+                const sName = (nameInput ? nameInput.value : '').trim();
+                const sAmount = parseFloat(amountInput ? amountInput.value : 0) || 0;
                 if (sName !== '' || sAmount > 0) {
                     compSuppliers.push({ name: sName || `Lieferant ${compName}`, amount: Math.round(sAmount * 100) / 100, paid: false });
-                    if (sName !== '' && window.globalSuppliers && window.API && window.API.saveSuppliers) {
-                        const exists = window.globalSuppliers.some(g => g.name.toLowerCase() === sName.toLowerCase());
-                        if (!exists) {
-                            window.API.saveSuppliers([{ fields: { "Name": sName } }]).then(res => {
-                                if (res && res.records) {
-                                    res.records.forEach(r => window.globalSuppliers.push({ id: r.id, name: r.fields.Name }));
-                                    if (window.UI && window.UI.updateSupplierDatalist) window.UI.updateSupplierDatalist();
-                                }
-                            }).catch(e => console.warn("Lieferant Fehler:", e));
-                        }
-                    }
                 }
             });
         }
@@ -616,6 +637,7 @@ window.saveMNAUOrderToLog = async function() {
                 } catch(e) {}
             }
 
+            // NUR WENN DER SPEICHERVORGANG KLAPPT, WIRD DIE VERSION NUMMER HÖHER!
             const newVersionNum = existingSnapshots.length + 1;
             if (btn) { btn.disabled = true; btn.textContent = "Speichere Version v" + newVersionNum + "..."; }
 
@@ -637,13 +659,12 @@ window.saveMNAUOrderToLog = async function() {
             const handledCompanies = new Set();
 
             for (const rec of linkedRecords) {
-                const comp = rec.fields.Firma;
+                const comp = (rec.fields.Firma || myCompany).trim().toUpperCase();
                 handledCompanies.add(comp);
                 const compSuppliers = getSuppliersForCompany(comp);
                 const compFremdkosten = compSuppliers.reduce((s, item) => s + item.amount, 0);
                 const compUmsatz = Math.round((summe[comp] || 0) * 100) / 100;
 
-                // WENN DIE FIRMA IM KALKULATOR ENTFERNT WURDE (UMSATZ <= 0 UND NICHT DIE HAUPTFIRMA)
                 if (compUmsatz <= 0 && comp !== myCompany) {
                     recordsToDelete.push(rec.id);
                     continue;
@@ -654,7 +675,7 @@ window.saveMNAUOrderToLog = async function() {
                     try { existingChangelog = JSON.parse(rec.fields.Changelog); } catch(e) {}
                 }
 
-                existingChangelog.unshift({
+                const logEntry = {
                     user: window.currentUserEmail,
                     timestamp: new Date().toISOString(),
                     action: `Kalkulator Version v${newVersionNum} erstellt`,
@@ -664,7 +685,9 @@ window.saveMNAUOrderToLog = async function() {
                         `• ${comp} Umsatz: € ${compUmsatz.toFixed(2)}`,
                         `• Fremdkosten: € ${compFremdkosten.toFixed(2)}`
                     ]
-                });
+                };
+
+                const updatedChangelog = [logEntry, ...existingChangelog];
 
                 const isMain = (comp === myCompany);
                 const groupMeta = {
@@ -687,27 +710,22 @@ window.saveMNAUOrderToLog = async function() {
 
                 const updatedDetails = JSON.stringify({ suppliers: compSuppliers, groupMeta: groupMeta });
 
-                rec.fields.Auftrag = orderTitle;
-                rec.fields.Betrag_Automotive = compUmsatz;
-                rec.fields.Fremdkosten = Math.round(compFremdkosten * 100) / 100;
-                rec.fields.Fremdkosten_Details = updatedDetails;
-                rec.fields.Flagged = true;
-                rec.fields.Changelog = JSON.stringify(existingChangelog);
-
                 updates.push({
                     id: rec.id,
+                    targetRecordRef: rec, // Für In-Memory Mutation nach Erfolg
+                    compUmsatz, compFremdkosten, updatedDetails, updatedChangelog, orderTitle,
                     fields: {
                         "Auftrag": orderTitle,
                         "Betrag_Automotive": compUmsatz,
                         "Fremdkosten": Math.round(compFremdkosten * 100) / 100,
                         "Fremdkosten_Details": updatedDetails,
                         "Flagged": true,
-                        "Changelog": rec.fields.Changelog
+                        "Changelog": JSON.stringify(updatedChangelog)
                     }
                 });
             }
 
-            // ENTFERNTE FIRMEN-DATENSÄTZE AUS DATENBANK UND LOKALEM SPEICHER LÖSCHEN
+            // ENTFERNTE FIRMEN ZUERST LÖSCHEN
             if (recordsToDelete.length > 0) {
                 for (const idToDelete of recordsToDelete) {
                     await window.API.deleteOrder(idToDelete);
@@ -739,12 +757,19 @@ window.saveMNAUOrderToLog = async function() {
                 }
             });
 
-            for (let i = 0; i < updates.length; i += 10) {
-                const batch = updates.slice(i, i + 10);
-                await window.API.batchUpdateOrders(batch);
-            }
+            // ERST HIER WIRD DIE DATENBANK AKTUALLISIERT! (WENN DIES FEHLERSCHLÄGT, BLEIBT DIE VERSION INTAT)
+            await executeBatchOrFallbackUpdates(updates.map(u => ({ id: u.id, fields: u.fields })));
 
-            // NEU HINZUGEFÜGTE FIRMEN-RECORDS SOFORT IN DEN LOKALEN SPEICHER AUFNEHMEN
+            // ERST NACH ERFOLGREICHEM API-SPEICHERN DIE LOKALEN IN-MEMORY RECORDS MUTIEREN:
+            updates.forEach(u => {
+                u.targetRecordRef.fields.Auftrag = u.orderTitle;
+                u.targetRecordRef.fields.Betrag_Automotive = u.compUmsatz;
+                u.targetRecordRef.fields.Fremdkosten = Math.round(u.compFremdkosten * 100) / 100;
+                u.targetRecordRef.fields.Fremdkosten_Details = u.updatedDetails;
+                u.targetRecordRef.fields.Flagged = true;
+                u.targetRecordRef.fields.Changelog = JSON.stringify(u.updatedChangelog);
+            });
+
             if (newCompanyRecordsToCreate.length > 0) {
                 const createdData = await window.API.saveOrder({ records: newCompanyRecordsToCreate });
                 if (createdData && createdData.records && createdData.records.length > 0) {
@@ -826,6 +851,7 @@ window.saveMNAUOrderToLog = async function() {
         }
 
     } catch (err) {
+        window.Logger.error("Fehler beim Erfassen des Auftrags im Log:", err);
         await window.customAlert("Fehler beim Erfassen des Auftrags im Log: " + (err.message || err), "Systemfehler");
     } finally {
         if (btn) { btn.disabled = false; btn.innerHTML = `<span class="ti">➔</span> ${myCompany} Auftrag im Log erfassen`; }
@@ -957,7 +983,7 @@ window.downloadKalkulatorPDFFromLog = async function(recordId, snapshotIndex = n
                 const safeName = (snap.projName || record.fields.Auftrag || 'Group-Kalkulator').replace(/[^\wäöüÄÖÜ\- ]+/g,'').trim().replace(/\s+/g,'_');
                 pdf.save(`Group-Kalkulator_${safeName}_${versionTag}.pdf`);
                 cleanup();
-            }).catch(async err => { cleanup(); await window.customAlert('PDF-Fehler: ' + err.message, "Systemfehler"); });
+            }).catch(async err => { cleanup(); window.Logger.error("PDF-Renderfehler:", err); await window.customAlert('PDF-Fehler: ' + err.message, "Systemfehler"); });
     }, 300);
 };
 
@@ -1097,7 +1123,7 @@ window.exportPDF = async function(){
                 pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', x, y, iw, ih);
                 pdf.save(`Group-Kalkulator_${name}.pdf`);
                 cleanup();
-            }).catch(async err => { cleanup(); await window.customAlert('PDF-Fehler: ' + err.message, "Systemfehler"); });
+            }).catch(async err => { cleanup(); window.Logger.error("PDF-Export Fehler:", err); await window.customAlert('PDF-Fehler: ' + err.message, "Systemfehler"); });
     }, 300);
 };
 

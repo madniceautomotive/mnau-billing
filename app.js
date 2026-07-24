@@ -1,13 +1,102 @@
 // ==================================================== 
-// app.js: USER ACTIONS, CONTROLLER HUB & CUSTOM MODAL DIALOGS
+// app.js: USER ACTIONS, CONTROLLER HUB & LOGGER SYSTEM
 // ====================================================
 
 const SUN_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
 const MOON_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
 
 // ====================================================
-// PROMISE-BASED CUSTOM MODAL DIALOG HELPER (REPLACES ALERT & CONFIRM)
+// ZENTRALES AUTOMATISCHES SYSTEM-LOGGER ENGINE (BETA-TESTING)
 // ====================================================
+window.Logger = {
+    logs: [],
+    init() {
+        try {
+            const saved = localStorage.getItem('mngr_debug_logs');
+            if (saved) this.logs = JSON.parse(saved);
+        } catch(e) {}
+
+        window.addEventListener('error', (e) => {
+            this.add('ERROR', `JavaScript Exception: ${e.message}`, `${e.filename}:${e.lineno}:${e.colno}`);
+        });
+        window.addEventListener('unhandledrejection', (e) => {
+            this.add('ERROR', `Unhandled Promise Rejection`, e.reason ? (e.reason.stack || e.reason) : e);
+        });
+        this.info("MNAU/MNGR Hub initialisiert.");
+    },
+    add(type, message, details = '') {
+        const entry = {
+            timestamp: new Date().toISOString(),
+            company: window.currentUserCompany || 'N/A',
+            user: window.currentUserEmail || 'System',
+            type: type,
+            message: String(message),
+            details: typeof details === 'object' ? JSON.stringify(details, null, 2) : String(details)
+        };
+        this.logs.unshift(entry);
+        if (this.logs.length > 200) this.logs.pop(); // Max 200 Einträge
+        try {
+            localStorage.setItem('mngr_debug_logs', JSON.stringify(this.logs));
+        } catch(e) {}
+    },
+    error(msg, details) { this.add('ERROR', msg, details); },
+    warn(msg, details) { this.add('WARN', msg, details); },
+    info(msg, details) { this.add('INFO', msg, details); },
+    clear() {
+        this.logs = [];
+        localStorage.removeItem('mngr_debug_logs');
+    }
+};
+
+window.Logger.init();
+
+// MODAL CONTROLLER FÜR DIE SYSTEM-LOGS
+window.renderLogsModal = function() {
+    const container = document.getElementById('debug-log-terminal');
+    if (!container) return;
+
+    if (window.Logger.logs.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">Keine Log-Einträge vorhanden.</div>';
+        return;
+    }
+
+    container.innerHTML = window.Logger.logs.map(l => `
+        <div class="log-entry log-${l.type}">
+            <div class="log-time">[${new Date(l.timestamp).toLocaleTimeString('de-DE')}] [${l.type}] [${l.company}] (${l.user})</div>
+            <strong>${l.message}</strong>
+            ${l.details ? `<div style="margin-top:4px; white-space:pre-wrap; opacity:0.9;">${l.details}</div>` : ''}
+        </div>
+    `).join('');
+};
+
+window.openLogsModal = function() {
+    window.renderLogsModal();
+    const overlay = document.getElementById('modal-logs-overlay');
+    if (overlay) overlay.classList.remove('hidden');
+};
+
+window.copyLogsToClipboard = async function() {
+    const logText = window.Logger.logs.map(l => `[${l.timestamp}] [${l.type}] [${l.company}] ${l.message} | ${l.details}`).join('\n');
+    try {
+        await navigator.clipboard.writeText(logText);
+        window.customAlert("System-Logs wurden erfolgreich in die Zwischenablage kopiert!", "Erfolg");
+    } catch(e) {
+        window.customAlert("Kopieren fehlgeschlagen.", "Fehler");
+    }
+};
+
+window.downloadLogsFile = function() {
+    const logText = window.Logger.logs.map(l => `[${l.timestamp}] [${l.type}] [${l.company}] [${l.user}]\nMessage: ${l.message}\nDetails: ${l.details}\n----------------------------------------`).join('\n\n');
+    const blob = new Blob([logText], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `MNGR_System_Logs_${new Date().toISOString().slice(0,10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+};
+
+// PROMISE-BASED CUSTOM MODAL DIALOG HELPER
 window.customAlert = function(message, title = "Hinweis") {
     return new Promise((resolve) => {
         const overlay = document.getElementById('custom-dialog-overlay');
@@ -253,13 +342,13 @@ async function fetchOrders() {
                 window.globalSuppliers = dataSuppliers.records.map(r => ({ id: r.id, name: r.fields.Name })).filter(s => s.name);
             }
         } catch (e) {
-            console.warn("Lieferanten-Tabelle konnte nicht geladen werden.");
+            window.Logger.warn("Lieferanten-Tabelle konnte nicht geladen werden.", e);
         }
 
         window.UI.updateSupplierDatalist();
         window.applyFilters();
     } catch (error) {
-        console.error("Kritischer Terminal-Fehler:", error);
+        window.Logger.error("Kritischer Terminal-Fehler beim Laden:", error);
     } finally {
         window.DOM.loading.classList.add('hidden');
     }
@@ -428,10 +517,25 @@ window.changeOrderStatus = async function(recordId, newStatus) {
     try {
         for (let i = 0; i < updates.length; i += 10) {
             const batch = updates.slice(i, i + 10);
-            await window.API.batchUpdateOrders(batch);
+            if (window.API && typeof window.API.batchUpdateOrders === 'function') {
+                try {
+                    await window.API.batchUpdateOrders(batch);
+                } catch (bErr) {
+                    window.Logger.warn("Batch-Update fehlgeschlagen, versuche Einzel-Updates...", bErr);
+                    for (const item of batch) {
+                        await fetch(`${window.API_URL_ORDERS}/${item.id}`, {
+                            method: 'PATCH',
+                            headers: window.HEADERS,
+                            body: JSON.stringify({ fields: item.fields, typecast: true })
+                        });
+                    }
+                }
+            }
         }
+        window.Logger.info(`Status-Update erfolgreich auf "${newStatus}" gesetzt.`);
     } catch (error) {
-        await window.customAlert("Fehler beim Status-Update.", "Systemfehler");
+        window.Logger.error("Fehler beim Status-Update:", error);
+        await window.customAlert("Fehler beim Status-Update. Details in den System-Logs.", "Systemfehler");
         fetchOrders();
     }
 };
@@ -479,10 +583,13 @@ window.toggleSupplierPaid = async function(orderId, supplierIndex) {
                     "Fremdkosten_Details": record.fields.Fremdkosten_Details,
                     "Flagged": true,
                     "Changelog": record.fields.Changelog
-                }
+                },
+                typecast: true
             })
         });
+        window.Logger.info(`Lieferantenstatus für ID ${orderId} geändert.`);
     } catch (error) {
+        window.Logger.error("Fehler beim Lieferantenstatus-Toggle:", error);
         await window.customAlert("Fehler beim Aktualisieren des Lieferanten-Zahlungsstatus.", "Systemfehler");
         fetchOrders();
     }
@@ -538,9 +645,23 @@ window.bulkPaySupplier = async function(supplierName) {
     try {
         for (let i = 0; i < updates.length; i += 10) {
             const batch = updates.slice(i, i + 10);
-            await window.API.batchUpdateOrders(batch);
+            if (window.API && typeof window.API.batchUpdateOrders === 'function') {
+                try {
+                    await window.API.batchUpdateOrders(batch);
+                } catch(bErr) {
+                    for (const item of batch) {
+                        await fetch(`${window.API_URL_ORDERS}/${item.id}`, {
+                            method: 'PATCH',
+                            headers: window.HEADERS,
+                            body: JSON.stringify({ fields: item.fields, typecast: true })
+                        });
+                    }
+                }
+            }
         }
+        window.Logger.info(`Massenabgeltung für ${supplierName} durchgeführt.`);
     } catch (error) {
+        window.Logger.error("Massen-Update Fehler:", error);
         await window.customAlert("Massen-Update fehlgeschlagen.", "Systemfehler");
         fetchOrders();
     }
@@ -556,7 +677,9 @@ window.deleteSupplier = async function(supplierId, supplierName) {
         window.UI.renderSuppliersManager();
         window.UI.updateSupplierDatalist();
         window.applyFilters();
+        window.Logger.info(`Lieferant ${supplierName} gelöscht.`);
     } catch (error) {
+        window.Logger.error("Fehler beim Löschen des Lieferanten:", error);
         await window.customAlert("Lieferant konnte nicht gelöscht werden.", "Systemfehler");
     }
 };
@@ -610,7 +733,9 @@ window.deleteOrder = async function(recordId) {
 
         window.loadedRecords = window.loadedRecords.filter(r => !linkedRecordIds.includes(r.id));
         window.applyFilters();
+        window.Logger.info(`Auftrag/Projekte gelöscht: ${linkedRecordIds.join(', ')}`);
     } catch (error) {
+        window.Logger.error("Fehler beim Löschen des Auftrags:", error);
         await window.customAlert("Fehler beim Löschen des Auftrags/der Aufträge.", "Systemfehler");
         fetchOrders();
     }
