@@ -1,11 +1,11 @@
 // ====================================================
-// auth.js: SECURE LOGIN ONLY (ADMIN-CREATED ACCOUNTS)
+// auth.js: SECURE LOGIN ONLY & PASSWORD RESET
 // ====================================================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-// 🚀 DEINE FIREBASE CONFIG (Unverändert lassen)
+// 🚀 HIER DEINE FIREBASE CONFIG:
 const firebaseConfig = {
     apiKey: "AIzaSyD8OZrn6RFNtljaAtWoBi0VEHMiSaAholo",
     authDomain: "mnau-billing.firebaseapp.com",
@@ -24,6 +24,7 @@ const authForm = document.getElementById('auth-form');
 const authEmail = document.getElementById('auth-email');
 const authPassword = document.getElementById('auth-password');
 const btnAuthSubmit = document.getElementById('btn-auth-submit');
+const btnAuthReset = document.getElementById('btn-auth-reset'); // NEU
 const authError = document.getElementById('auth-error');
 const btnLogout = document.getElementById('btn-logout');
 
@@ -31,6 +32,7 @@ const btnLogout = document.getElementById('btn-logout');
 authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     authError.style.display = 'none';
+    authError.style.color = '#e74c3c'; // Rot für Fehler
     btnAuthSubmit.disabled = true;
     btnAuthSubmit.textContent = "Anmeldung läuft...";
 
@@ -47,6 +49,31 @@ authForm.addEventListener('submit', async (e) => {
         btnAuthSubmit.textContent = "Anmelden";
     }
 });
+
+// NEU: Passwort-Reset E-Mail senden
+if (btnAuthReset) {
+    btnAuthReset.addEventListener('click', async () => {
+        const email = authEmail.value.trim();
+
+        if (!email) {
+            authError.style.display = 'block';
+            authError.style.color = '#e74c3c';
+            authError.textContent = "Bitte gib zuerst deine E-Mail-Adresse oben ein.";
+            return;
+        }
+
+        try {
+            await sendPasswordResetEmail(auth, email);
+            authError.style.display = 'block';
+            authError.style.color = '#00ff73'; // Grün für Erfolg!
+            authError.textContent = "E-Mail zum Setzen deines Passworts wurde versendet!";
+        } catch (error) {
+            authError.style.display = 'block';
+            authError.style.color = '#e74c3c';
+            authError.textContent = "Fehler: E-Mail-Adresse nicht gefunden.";
+        }
+    });
+}
 
 // Logout Button oben rechts
 if (btnLogout) {
@@ -67,6 +94,7 @@ onAuthStateChanged(auth, (user) => {
         btnAuthSubmit.disabled = false;
         btnAuthSubmit.textContent = "Anmelden";
 
+        // App leeren beim Ausloggen
         if (window.DOM && window.DOM.orderList) {
             window.DOM.orderList.innerHTML = '';
             window.DOM.archiveList.innerHTML = '';
