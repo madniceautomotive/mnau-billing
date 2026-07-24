@@ -1,5 +1,5 @@
 // ====================================================
-// kalkulator.js: VERSIONED GROUP KALKULATOR & PDF EXPORT WITH ALL NOTES
+// kalkulator.js: VERSIONED GROUP KALKULATOR & GROUP ANTEIL BREAKDOWN
 // ====================================================
 
 const ENTITIES = ['MNAG','MNMH','MNWB','MNAT','MNAU','MNGR'];
@@ -263,7 +263,7 @@ window.calculate = function(){
     const userUmsatz = summe[myCompany] || 0;
     const userEchteFremdkosten = FK[myCompany] || 0;
     const userErtrag = userUmsatz - userEchteFremdkosten;
-    const mngrAbgabe = summe['MNGR'] || 0;
+    const groupAnteilTotal = (summe['MNGR'] || 0) + totalCostPool;
 
     let totalSisterShares = 0;
     ['MNAG','MNMH','MNWB','MNAT','MNAU','EXT'].forEach(comp => {
@@ -299,7 +299,7 @@ window.calculate = function(){
     </div>
     <div class="metric">
       <div class="ml">Group &amp; Schwesterfirmen</div>
-      <div class="mv">${fmt(mngrAbgabe + totalSisterShares)}</div>
+      <div class="mv">${fmt(groupAnteilTotal + totalSisterShares)}</div>
       <div class="sub-info">Direkt abgewickelt v. Group</div>
     </div>
   `;
@@ -411,14 +411,12 @@ function exportKalkulatorInputs() {
     return inputs;
 }
 
-// HELPER: BUILD COMPLETE HTML FOR ALL NOTES & DETAILS IN PDF
 function buildPdfNotesSectionHtml(snap) {
     const kalkInputs = snap.kalkInputs;
     const generalNotes = snap.projNotes || (kalkInputs && kalkInputs.projNotes);
 
     let html = '';
 
-    // 1. Allgemeine Projektnotiz
     if (generalNotes && generalNotes.trim()) {
         html += `
       <div class="pdf-notes-box">
@@ -427,7 +425,6 @@ function buildPdfNotesSectionHtml(snap) {
       </div>`;
     }
 
-    // 2. Entitäts-Spezifische Notizen
     if (kalkInputs && kalkInputs.notes) {
         const validEntityNotes = Object.entries(kalkInputs.notes).filter(([ent, note]) => note && note.trim());
         if (validEntityNotes.length > 0) {
@@ -442,7 +439,6 @@ function buildPdfNotesSectionHtml(snap) {
         }
     }
 
-    // 3. Lieferanten & Spesen Aufschlüsselung
     if (kalkInputs) {
         const detailsList = [];
         ENTITIES.forEach(e => {
@@ -521,6 +517,18 @@ window.saveMNAUOrderToLog = async function() {
     });
     summe['MNGR'] += fkMNGR;
 
+    const totalGroupAnteil = (summe['MNGR'] || 0) + totalCostPool;
+
+    // DETAILLIERTE AUFSCHLÜSSELUNG DES GROUP-ANTEILS
+    const groupBreakdown = {
+        backoffice: Math.round((costPool[0] ? costPool[0].pool : 0) * 100) / 100,
+        pm: Math.round((costPool[1] ? costPool[1].pool : 0) * 100) / 100,
+        overhead: Math.round((costPool[2] ? costPool[2].pool : 0) * 100) / 100,
+        provisionen: Math.round((salesByRec['MNGR'] || 0) * 100) / 100,
+        fulfillment: Math.round((FUL['MNGR'] || 0) * 100) / 100,
+        fremdkosten: Math.round(((FK['MNGR'] || 0) + (SP['MNGR'] || 0) + fkMNGR) * 100) / 100
+    };
+
     const getSuppliersForCompany = (compName) => {
         const compSuppliers = [];
         const container = document.getElementById(`suppliers-list-${compName}`);
@@ -553,7 +561,6 @@ window.saveMNAUOrderToLog = async function() {
     const mainSuppliers = getSuppliersForCompany(myCompany);
     const totalFremdkosten = mainSuppliers.reduce((s, item) => s + item.amount, 0);
 
-    const mngrAbgabe = summe['MNGR'] || 0;
     const allSharesDetail = {};
     ['MNAG','MNMH','MNWB','MNAT','MNAU','EXT'].forEach(comp => {
         const amt = summe[comp] || 0;
@@ -651,7 +658,9 @@ window.saveMNAUOrderToLog = async function() {
                     entityNote: (kalkInputs.notes && kalkInputs.notes[comp]) || '',
                     spesen: SP[comp] || 0,
                     kundenpreis: Math.round(kundenpreis * 100) / 100,
-                    mngrAbgabe: Math.round(mngrAbgabe * 100) / 100,
+                    groupAnteil: Math.round(totalGroupAnteil * 100) / 100,
+                    mngrAbgabe: Math.round(totalGroupAnteil * 100) / 100,
+                    groupBreakdown: groupBreakdown,
                     allSharesDetail: allSharesDetail,
                     snapshots: updatedSnapshots
                 };
@@ -687,7 +696,8 @@ window.saveMNAUOrderToLog = async function() {
                         groupId: calcGroupId, isReadOnlyShare: (comp !== myCompany), originCompany: myCompany, originProject: projName,
                         projOffer: getVal('proj-offer'), projInvoice: getVal('proj-invoice'), projNotes: getVal('proj-notes'),
                         entityNote: (kalkInputs.notes && kalkInputs.notes[comp]) || '', spesen: SP[comp] || 0,
-                        kundenpreis: Math.round(kundenpreis * 100) / 100, mngrAbgabe: Math.round(mngrAbgabe * 100) / 100,
+                        kundenpreis: Math.round(kundenpreis * 100) / 100, groupAnteil: Math.round(totalGroupAnteil * 100) / 100,
+                        mngrAbgabe: Math.round(totalGroupAnteil * 100) / 100, groupBreakdown: groupBreakdown,
                         allSharesDetail: allSharesDetail, snapshots: updatedSnapshots
                     };
                     newCompanyRecordsToCreate.push({
@@ -736,8 +746,9 @@ window.saveMNAUOrderToLog = async function() {
                 groupId: calcGroupId, originCompany: myCompany,
                 projOffer: getVal('proj-offer'), projInvoice: getVal('proj-invoice'), projNotes: getVal('proj-notes'),
                 entityNote: (kalkInputs.notes && kalkInputs.notes[myCompany]) || '', spesen: SP[myCompany] || 0,
-                kundenpreis: Math.round(kundenpreis * 100) / 100,
-                mngrAbgabe: Math.round(mngrAbgabe * 100) / 100, allSharesDetail: allSharesDetail, snapshots: [newSnapshot]
+                kundenpreis: Math.round(kundenpreis * 100) / 100, groupAnteil: Math.round(totalGroupAnteil * 100) / 100,
+                mngrAbgabe: Math.round(totalGroupAnteil * 100) / 100, groupBreakdown: groupBreakdown,
+                allSharesDetail: allSharesDetail, snapshots: [newSnapshot]
             };
 
             const initialChangelog = [{
@@ -757,7 +768,8 @@ window.saveMNAUOrderToLog = async function() {
                         groupId: calcGroupId, isReadOnlyShare: true, originCompany: myCompany, originProject: projName,
                         projOffer: getVal('proj-offer'), projInvoice: getVal('proj-invoice'), projNotes: getVal('proj-notes'),
                         entityNote: (kalkInputs.notes && kalkInputs.notes[comp]) || '', spesen: SP[comp] || 0,
-                        kundenpreis: Math.round(kundenpreis * 100) / 100, mngrAbgabe: Math.round(mngrAbgabe * 100) / 100,
+                        kundenpreis: Math.round(kundenpreis * 100) / 100, groupAnteil: Math.round(totalGroupAnteil * 100) / 100,
+                        mngrAbgabe: Math.round(totalGroupAnteil * 100) / 100, groupBreakdown: groupBreakdown,
                         allSharesDetail: allSharesDetail, snapshots: [newSnapshot]
                     };
                     const shareChangelog = [{

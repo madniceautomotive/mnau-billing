@@ -1,5 +1,5 @@
 // ====================================================
-// ui.js: DOM RENDERING WITH CLEAN THEME-AWARE UI
+// ui.js: DOM RENDERING WITH GROUP-ANTEIL BREAKDOWN
 // ====================================================
 
 window.toggleCardExpand = function(recordId, event) {
@@ -63,7 +63,7 @@ window.UI = {
                 const status = fields.Status || "Zu verrechnen";
                 const betragVal = parseFloat(fields.Betrag_Automotive) || 0;
                 const fremdkostenVal = parseFloat(fields.Fremdkosten) || 0;
-                const deckungsbeitragVal = betragVal - fremdkostenVal; // Spesen mindern den DB nicht!
+                const deckungsbeitragVal = betragVal - fremdkostenVal;
 
                 const betrag = betragVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
                 const fremdkosten = fremdkostenVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -90,7 +90,6 @@ window.UI = {
                 const isReadOnlyShare = groupMeta && groupMeta.isReadOnlyShare === true;
                 const creatorCompany = (groupMeta && groupMeta.originCompany) ? groupMeta.originCompany.toUpperCase() : (fields.Firma || "MNAU").toUpperCase();
 
-                // Extrahiere Spesen & Projektdetails aus GroupMeta
                 const spesenVal = groupMeta ? (parseFloat(groupMeta.spesen) || 0) : 0;
                 const spesenText = spesenVal > 0 ? ` <span style="font-size:0.72rem; color:var(--text-muted); font-weight:normal;">(davon Spesen: € ${spesenVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2})})</span>` : '';
 
@@ -119,12 +118,24 @@ window.UI = {
                     suppliersHTML = `<div style="font-size:0.75rem; color:var(--text-muted);">Keine externen Lieferanten.</div>`;
                 }
 
-                // 2. DETAIL PANEL: Erlösverteilung (Group Info)
+                // 2. DETAIL PANEL: Erlösverteilung & Group-Anteil Breakdown
                 let groupMetaHTML = '';
                 let kp = "0,00";
                 if (groupMeta) {
                     kp = (parseFloat(groupMeta.kundenpreis)||0).toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
-                    const mngr = (parseFloat(groupMeta.mngrAbgabe)||0).toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
+                    const groupAnteilVal = parseFloat(groupMeta.groupAnteil || groupMeta.mngrAbgabe || 0);
+                    const mngrFormatted = groupAnteilVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+                    let groupBreakdownHTML = '';
+                    const bd = groupMeta.groupBreakdown;
+                    if (bd) {
+                        if (bd.backoffice > 0) groupBreakdownHTML += `<div style="font-size:0.7rem; color:var(--text-muted); padding-left:12px; margin-top:2px;">↳ Backoffice: € ${bd.backoffice.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>`;
+                        if (bd.pm > 0) groupBreakdownHTML += `<div style="font-size:0.7rem; color:var(--text-muted); padding-left:12px; margin-top:1px;">↳ Projektmanagement: € ${bd.pm.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>`;
+                        if (bd.overhead > 0) groupBreakdownHTML += `<div style="font-size:0.7rem; color:var(--text-muted); padding-left:12px; margin-top:1px;">↳ Overhead & Marketing: € ${bd.overhead.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>`;
+                        if (bd.provisionen > 0) groupBreakdownHTML += `<div style="font-size:0.7rem; color:var(--text-muted); padding-left:12px; margin-top:1px;">↳ Provisionen: € ${bd.provisionen.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>`;
+                        if (bd.fulfillment > 0) groupBreakdownHTML += `<div style="font-size:0.7rem; color:var(--text-muted); padding-left:12px; margin-top:1px;">↳ Fulfillment: € ${bd.fulfillment.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>`;
+                        if (bd.fremdkosten > 0) groupBreakdownHTML += `<div style="font-size:0.7rem; color:var(--text-muted); padding-left:12px; margin-top:1px;">↳ Fremdkosten/Spesen: € ${bd.fremdkosten.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>`;
+                    }
 
                     let sistersHTML = '';
                     const sharesDict = groupMeta.allSharesDetail || groupMeta.sisterSharesDetail || {};
@@ -134,7 +145,7 @@ window.UI = {
                             const upperComp = comp.toUpperCase();
                             if (upperComp !== myCompany) {
                                 sistersHTML += `
-                                    <div class="group-info-row">
+                                    <div class="group-info-row" style="margin-top:4px;">
                                         <span>↳ Anteil <span class="comp-badge badge-${upperComp}">${upperComp}</span></span>
                                         <strong>€ ${(parseFloat(amt)||0).toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2})}</strong>
                                     </div>`;
@@ -145,7 +156,8 @@ window.UI = {
                     groupMetaHTML = `
                         <div class="breakdown-list">
                             <div class="group-info-row"><span>Gesamt Projektvolumen</span><strong>€ ${kp}</strong></div>
-                            <div class="group-info-row" style="margin-bottom:6px;"><span>Group-Abgabe (<span class="comp-badge badge-MNGR">MNGR</span>)</span><span>€ ${mngr}</span></div>
+                            <div class="group-info-row" style="margin-top:4px;"><span>Group-Anteil (<span class="comp-badge badge-MNGR">MNGR</span>)</span><strong>€ ${mngrFormatted}</strong></div>
+                            ${groupBreakdownHTML}
                             ${sistersHTML}
                         </div>
                     `;
