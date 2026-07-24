@@ -166,7 +166,7 @@
 #view-calculator .actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
 
 /* ==================================================== */
-/* MNAU DARK THEME ERGEBNISTABELLE                      */
+/* MNAU DARK THEME ERGEBNISTABELLE (PERFEKT EXAKT)       */
 /* ==================================================== */
 #view-calculator .results-wrap {
     width: 100%;
@@ -179,22 +179,31 @@
 
 #view-calculator table.results.flow {
     width: 100%;
-    min-width: 900px;
+    min-width: 950px;
     border-collapse: collapse;
-    table-layout: auto;
+    table-layout: fixed; /* GARANTIERT EXAKTE SPALTEN-AUSRICHTUNG */
     font-variant-numeric: tabular-nums;
 }
 
-#view-calculator table.results.flow thead th {
+#view-calculator table.results.flow col.cg-label { width: 22%; }
+#view-calculator table.results.flow col.cg-col { width: 9.75%; }
+
+#view-calculator table.results.flow thead tr {
     background: #1c1c1c;
-    font-size: 0.82rem;
-    padding: 12px 10px;
+}
+
+#view-calculator table.results.flow thead th {
+    font-size: 0.8rem;
+    padding: 12px 6px;
     text-align: right;
     border: none;
     color: #ffffff;
     font-weight: 800;
     text-transform: uppercase;
     border-bottom: 1px solid rgba(0, 102, 58, 0.5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 #view-calculator table.results.flow thead th.kundenpreis-cell {
@@ -218,44 +227,40 @@
     color: #00ff73;
 }
 
-#view-calculator table.results.flow td {
-    padding: 10px 12px;
+#view-calculator table.results.flow tbody tr td {
+    padding: 10px 8px;
     border: none;
     border-bottom: 1px solid rgba(255,255,255,0.03);
     white-space: nowrap;
-    font-size: 0.82rem;
+    font-size: 0.8rem;
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-#view-calculator table.results.flow td.rowlabel {
+#view-calculator table.results.flow tbody tr td.rowlabel {
     text-align: left;
     color: #ffffff;
     font-weight: 600;
     padding-left: 14px;
     border-right: 1px solid rgba(255,255,255,0.05);
-    min-width: 220px;
-}
-
-#view-calculator table.results.flow .cell-content {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 6px;
-    width: 100%;
 }
 
 #view-calculator table.results.flow .pct-badge {
+    display: inline-block;
     font-size: 0.68rem;
     color: #a0aec0;
     background: rgba(255,255,255,0.05);
-    padding: 2px 6px;
+    padding: 1px 5px;
     border-radius: 4px;
     font-weight: 700;
+    margin-right: 4px;
 }
 
-#view-calculator table.results.flow .val-pos .num-val { color: #00ff73; font-weight: 700; }
-#view-calculator table.results.flow .val-neg .num-val { color: #e74c3c; font-weight: 700; }
-#view-calculator table.results.flow .val-zero .num-val { color: #666666; }
-#view-calculator table.results.flow .val-neutral .num-val { color: #ffffff; }
+#view-calculator table.results.flow .val-pos { color: #00ff73; font-weight: 700; }
+#view-calculator table.results.flow .val-neg { color: #e74c3c; font-weight: 700; }
+#view-calculator table.results.flow .val-zero { color: #666666; }
+#view-calculator table.results.flow .val-neutral { color: #ffffff; }
 
 /* Zeilenhintergründe MNAU Style */
 #view-calculator .rg-base { background: rgba(255, 255, 255, 0.01); }

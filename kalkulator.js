@@ -1,5 +1,5 @@
 // ====================================================
-// kalkulator.js: GROUP KALKULATOR LOGIC
+// kalkulator.js: GROUP KALKULATOR LOGIC & MNAU LOG INTEGRATION
 // ====================================================
 
 const ENTITIES = ['MNAG','MNMH','MNWB','MNAT','MNAU','MNGR'];
@@ -154,9 +154,9 @@ window.calculate = function(){
         const z = Math.abs(val) < 0.005;
         const cls = z ? 'val-zero' : (val > 0 ? 'val-pos' : 'val-neg');
         const pre = (pct != null && pct > 0) ? `<span class="pct-badge">${ps(pct)}</span>` : '';
-        return `<td class="${cls}"><div class="cell-content">${pre}<span class="num-val">${vn(val)}</span></div></td>`;
+        return `<td class="${cls}">${pre}<span class="num-val">${vn(val)}</span></td>`;
     };
-    const nc = val => `<td class="val-neutral"><div class="cell-content"><span class="num-val">${vn(val)}</span></div></td>`;
+    const nc = val => `<td class="val-neutral"><span class="num-val">${vn(val)}</span></td>`;
 
     let h='<table class="results flow">';
     h+='<colgroup><col class="cg-label">'+COLS.map(()=>'<col class="cg-col">').join('')+'</colgroup>';
@@ -207,11 +207,11 @@ window.calculate = function(){
 
     h+=`<tr class="rg-stunden"><td class="rowlabel">Stunden</td>`+
         COLS.map(c=>{
-            if(!ENTITIES.includes(c)) return `<td class="val-zero"><div class="cell-content"><span class="num-val">${vn(0)}</span></div></td>`;
+            if(!ENTITIES.includes(c)) return `<td class="val-zero"><span class="num-val">${vn(0)}</span></td>`;
             const rate=getNum('hp-'+c);
             const hrs=rate>0?D[c]/rate:0;
             const pre=rate>0?`<span class="pct-badge">${vn(rate)} €</span>`:'';
-            return `<td class="val-zero"><div class="cell-content">${pre}<span class="num-val">${vn(hrs)}</span></div></td>`;
+            return `<td class="val-zero">${pre}<span class="num-val">${vn(hrs)}</span></td>`;
         }).join('')+`</tr>`;
 
     h+='</tbody></table>';
@@ -254,6 +254,125 @@ window.calculate = function(){
 
     document.getElementById('results-section').style.display='block';
     document.getElementById('results-section').scrollIntoView({behavior:'smooth',block:'nearest'});
+};
+
+// ====================================================
+// NEU: MNAU AUFTRAG IM LOG ERFASSEN
+// ====================================================
+window.saveMNAUOrderToLog = async function() {
+    const projNameRaw = getVal('proj-name');
+    const projName = projNameRaw ? projNameRaw : "Unbenanntes Projekt";
+    const orderTitle = `${projName} (MNAU)`;
+
+    const roles = getRoles();
+    const OTHER = COSTS.filter(c => c.key !== FUL_KEY);
+
+    const baseInput = getNum('base-MNAU');
+    const fk = getNum('fk-MNAU');
+    const sp = getNum('sp-MNAU');
+    const fulPct = getNum('cost-MNAU-' + FUL_KEY);
+    const d = MODE === 'bu' ? (fulPct > 0 ? baseInput / (fulPct / 100) : baseInput) : (baseInput - fk - sp);
+
+    const fulAmt = d * fulPct / 100;
+    const costAmts = OTHER.map(c => ({ label: c.label, pct: getNum('cost-MNAU-' + c.key), amt: d * getNum('cost-MNAU-' + c.key) / 100 }));
+    const salesAmts = roles.map(r => ({ label: r.label, entity: r.entity, pct: r.pct, amt: d * r.pct / 100 }));
+
+    let mnauSalesReceived = 0;
+    ENTITIES.forEach(e => {
+        const eBase = getNum('base-' + e);
+        const eFk = getNum('fk-' + e);
+        const eSp = getNum('sp-' + e);
+        const eFulPct = getNum('cost-' + e + '-' + FUL_KEY);
+        const eD = MODE === 'bu' ? (eFulPct > 0 ? eBase / (eFulPct / 100) : eBase) : (eBase - eFk - eSp);
+
+        roles.forEach(r => {
+            if (r.entity === 'MNAU') {
+                mnauSalesReceived += eD * r.pct / 100;
+            }
+        });
+    });
+
+    const mnauSumme = fulAmt + mnauSalesReceived + fk + sp;
+
+    if (mnauSumme <= 0) {
+        alert("Der berechnete Betrag (Summe) für MNAU beträgt 0.00 € oder weniger. Es wurde kein Auftrag erfasst.");
+        return;
+    }
+
+    // Fremdkosten & Lieferanten für MNAU aufbauen
+    const suppliers = [];
+
+    if (fk > 0) {
+        suppliers.push({ name: "Fremdkosten MNAU", amount: Math.round(fk * 100) / 100, paid: false });
+    }
+
+    if (sp > 0) {
+        suppliers.push({ name: "Spesen MNAU", amount: Math.round(sp * 100) / 100, paid: false });
+    }
+
+    salesAmts.forEach(s => {
+        if (s.amt > 0) {
+            suppliers.push({ name: `Provision ${s.entity}`, amount: Math.round(s.amt * 100) / 100, paid: false });
+        }
+    });
+
+    costAmts.forEach(c => {
+        if (c.amt > 0) {
+            suppliers.push({ name: `${c.label} OVERHEAD`, amount: Math.round(c.amt * 100) / 100, paid: false });
+        }
+    });
+
+    const totalFremdkosten = suppliers.reduce((sum, item) => sum + item.amount, 0);
+
+    const btn = document.getElementById('btn-save-to-log');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Speichere im Log...";
+    }
+
+    try {
+        const initialChangelog = [{
+            user: window.currentUserEmail || "Unbekannt",
+            timestamp: new Date().toISOString(),
+            action: "Auftrag aus Group Kalkulator erstellt",
+            comment: "Automatisch aus Group Kalkulator erfasst",
+            details: [`Auftrag "${orderTitle}" mit Betrag € ${mnauSumme.toFixed(2)} und € ${totalFremdkosten.toFixed(2)} Fremdkosten angelegt`]
+        }];
+
+        const payload = {
+            records: [{
+                fields: {
+                    "Auftrag": orderTitle,
+                    "Betrag_Automotive": Math.round(mnauSumme * 100) / 100,
+                    "Fremdkosten": Math.round(totalFremdkosten * 100) / 100,
+                    "Fremdkosten_Details": JSON.stringify(suppliers),
+                    "Status": "An Group verrechnet",
+                    "Flagged": false,
+                    "Changelog": JSON.stringify(initialChangelog)
+                }
+            }]
+        };
+
+        const createdData = await window.API.saveOrder(payload);
+        if (createdData && createdData.records && createdData.records.length > 0) {
+            window.loadedRecords.unshift(createdData.records[0]);
+            window.UI.updateSupplierDatalist();
+            window.UI.renderOrders(window.loadedRecords);
+            alert(`Erfolg! Auftrag "${orderTitle}" über € ${mnauSumme.toFixed(2)} wurde im Auftrags-Log erfasst.`);
+
+            if (typeof window.switchTab === 'function') {
+                window.switchTab('billing');
+            }
+        }
+    } catch (err) {
+        console.error("Fehler beim Speichern im Log:", err);
+        alert("Fehler beim Erfassen des Auftrags im Log: " + (err.message || err));
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<span class="ti">➔</span> MNAU Auftrag im Log erfassen';
+        }
+    }
 };
 
 window.resetAll = function(){
