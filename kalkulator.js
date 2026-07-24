@@ -118,7 +118,7 @@ const FUL_KEY='fulfillment';
 
 window.calculate = function(){
     const roles = getRoles();
-    const OTHER = COSTS.filter(c=>c.key!==FUL_KEY);
+    const OTHER = COSTS.filter(c => c.key !== FUL_KEY);
     const COLS = ['MNAG','MNMH','MNWB','MNAT','MNAU','EXT','MNGR','OVERHEAD'];
 
     const D={}, FK={}, SP={}, FUL={}, FULp={}, COST={}, SALES={};
@@ -211,7 +211,7 @@ window.calculate = function(){
             const rate=getNum('hp-'+c);
             const hrs=rate>0?D[c]/rate:0;
             const pre=rate>0?`<span class="pct-badge">${vn(rate)} €</span>`:'';
-            return `<td class="val-zero">${pre}<span class="num-val">${vn(hrs)}</span></td>`;
+            return `<td class="val-zero">${pre}<span class="num-val">${vn(hrs)}</span></div></td>`;
         }).join('')+`</tr>`;
 
     h+='</tbody></table>';
@@ -257,7 +257,7 @@ window.calculate = function(){
 };
 
 // ====================================================
-// MNAU AUFTRAG IM LOG ERFASSEN (NEUE REGEL)
+// MNAU AUFTRAG IM LOG ERFASSEN
 // ====================================================
 window.saveMNAUOrderToLog = async function() {
     const projNameRaw = getVal('proj-name');
@@ -294,8 +294,8 @@ window.saveMNAUOrderToLog = async function() {
     });
     summe['MNGR'] += fkMNGR;
 
-    // NEU: Fremdkosten im Log sind NUR die Volumen/Summen der ANDEREN Firmen (nicht MNAU)
-    const OTHER_COMPANIES = ['MNAG','MNMH','MNWB','MNAT','MNGR','EXT'];
+    // NEU: Fremdkosten sind NUR die Summen der anderen operativen Schwesterfirmen / Extern (OHNE MNGR)
+    const OTHER_COMPANIES = ['MNAG','MNMH','MNWB','MNAT','EXT'];
     const suppliers = [];
 
     OTHER_COMPANIES.forEach(comp => {
@@ -310,10 +310,14 @@ window.saveMNAUOrderToLog = async function() {
     });
 
     const totalFremdkosten = suppliers.reduce((s, item) => s + item.amount, 0);
-    const totalBetrag = Math.round(kundenpreis * 100) / 100;
+    const mnauEigenerBetrag = summe['MNAU'] || 0;
+    const mngrAbgabe = summe['MNGR'] || 0;
+
+    // Der Gesamtbetrag für den MNAU-Auftrag ist die eigene MNAU-Summe zzgl. der Fremdkosten für Schwesterfirmen (ohne MNGR)
+    const totalBetrag = Math.round((mnauEigenerBetrag + totalFremdkosten) * 100) / 100;
 
     if (totalBetrag <= 0) {
-        alert("Der Kundenpreis beträgt 0.00 €. Es wurde kein Auftrag erfasst.");
+        alert("Der berechnete Betrag für MNAU beträgt 0.00 €. Es wurde kein Auftrag erfasst.");
         return;
     }
 
@@ -328,8 +332,14 @@ window.saveMNAUOrderToLog = async function() {
             user: window.currentUserEmail || "Unbekannt",
             timestamp: new Date().toISOString(),
             action: "Auftrag aus Group Kalkulator erstellt",
-            comment: "Automatisch aus Group Kalkulator erfasst",
-            details: [`Auftrag "${orderTitle}" mit Gesamtbetrag € ${totalBetrag.toFixed(2)} und € ${totalFremdkosten.toFixed(2)} Fremdkosten (Volume anderer Firmen) angelegt`]
+            comment: `Aus Group Kalkulator erfasst (MNGR Group-Abgabe: € ${mngrAbgabe.toFixed(2)})`,
+            details: [
+                `Auftrag "${orderTitle}" angelegt:`,
+                `• Gesamtbetrag: € ${totalBetrag.toFixed(2)}`,
+                `• MNAU Eigenanteil: € ${mnauEigenerBetrag.toFixed(2)}`,
+                `• Fremdkosten (Schwesterfirmen): € ${totalFremdkosten.toFixed(2)}`,
+                `• MNGR Group-Abgabe (exkludiert): € ${mngrAbgabe.toFixed(2)}`
+            ]
         }];
 
         const payload = {
