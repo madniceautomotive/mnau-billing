@@ -323,7 +323,6 @@ window.loadKalkulatorInputs = function(inputs) {
         if (el) el.value = val !== undefined && val !== null ? val : '';
     };
 
-    // Unterstützt sowohl projName als auch proj-name Schlüssel!
     setVal('proj-name', inputs.projName || inputs['proj-name']);
     setVal('proj-offer', inputs.projOffer || inputs['proj-offer']);
     setVal('proj-invoice', inputs.projInvoice || inputs['proj-invoice']);
@@ -343,7 +342,6 @@ window.loadKalkulatorInputs = function(inputs) {
         const noteEl = document.getElementById('note-' + e);
         if (noteEl) noteEl.value = (inputs.notes && inputs.notes[e]) || '';
 
-        // Lieferanten wiederherstellen
         const container = document.getElementById(`suppliers-list-${e}`);
         if (container) {
             container.innerHTML = '';
@@ -355,7 +353,6 @@ window.loadKalkulatorInputs = function(inputs) {
             }
         }
 
-        // Kostenanteile
         COSTS.forEach(c => {
             const cEl = document.getElementById(`cost-${e}-${c.key}`);
             if (cEl && inputs.costs && inputs.costs[e] && inputs.costs[e][c.key] !== undefined) {
@@ -364,7 +361,6 @@ window.loadKalkulatorInputs = function(inputs) {
         });
     });
 
-    // Rollen & Provisionen
     if (inputs.roles && Array.isArray(inputs.roles)) {
         inputs.roles.forEach((r, idx) => {
             const roleDef = ROLES[idx];
@@ -511,7 +507,6 @@ window.saveMNAUOrderToLog = async function() {
 
     try {
         if (isEditing) {
-            // ===== 1. UPDATE MODUS =====
             let linkedRecords = [];
             if (window.activeEditingGroupId) {
                 linkedRecords = window.loadedRecords.filter(r => {
@@ -522,7 +517,6 @@ window.saveMNAUOrderToLog = async function() {
                 });
             }
 
-            // Fallback falls Datensatz älter ist und keine groupId besaß
             if (linkedRecords.length === 0 && window.activeEditingRecordId) {
                 const targetRec = window.loadedRecords.find(r => r.id === window.activeEditingRecordId);
                 if (targetRec) {
@@ -601,7 +595,6 @@ window.saveMNAUOrderToLog = async function() {
 
                 const updatedDetails = JSON.stringify({ suppliers: compSuppliers, groupMeta: groupMeta });
 
-                // SOFORT IM LOKALEN SPEICHER UPDATEN
                 rec.fields.Auftrag = orderTitle;
                 rec.fields.Betrag_Automotive = compUmsatz;
                 rec.fields.Fremdkosten = Math.round(compFremdkosten * 100) / 100;
@@ -622,7 +615,6 @@ window.saveMNAUOrderToLog = async function() {
                 });
             }
 
-            // Falls Firmen neu hinzugekommen sind
             const newCompanyRecordsToCreate = [];
             Object.entries(allSharesDetail).forEach(([comp, amt]) => {
                 if (!handledCompanies.has(comp) && amt > 0) {
@@ -644,7 +636,6 @@ window.saveMNAUOrderToLog = async function() {
                 }
             });
 
-            // Airtable Batch Updates durchführen
             for (let i = 0; i < updates.length; i += 10) {
                 const batch = updates.slice(i, i + 10);
                 await window.API.batchUpdateOrders(batch);
@@ -659,7 +650,6 @@ window.saveMNAUOrderToLog = async function() {
             alert(`Erfolg! Neue Version v${newVersionNum} für "${orderTitle}" wurde erfasst.`);
 
         } else {
-            // ===== 2. ERSTSTELLUNG MODUS =====
             if (btn) { btn.disabled = true; btn.textContent = "Speichere Version v1..."; }
 
             const newSnapshot = {
@@ -724,7 +714,7 @@ window.saveMNAUOrderToLog = async function() {
 };
 
 // ====================================================
-// PDF DOWNLOAD DIREKT AUS DEM AUFTRAGS-LOG (VERSIONEN-AWARE)
+// PDF DOWNLOAD DIREKT AUS DEM AUFTRAGS-LOG
 // ====================================================
 window.downloadKalkulatorPDFFromLog = function(recordId, snapshotIndex = null) {
     const record = (window.loadedRecords || []).find(r => r.id === recordId);
