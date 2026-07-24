@@ -58,6 +58,7 @@ function buildBaseCards(){
       <div class="entity-name col-${e}">${e}</div>
       <div class="field"><label id="base-label-${e}">Volumen (€)</label><input type="number" id="base-${e}" class="mnau-input" value="0" min="0" step="100" oninput="syncCostsToVolume()"></div>
       <div class="field" style="margin-top:6px"><label>Fremdkosten (€)</label><input type="number" id="fk-${e}" class="mnau-input" value="0" min="0" step="10"></div>
+      <div class="field" style="margin-top:6px"><label>Lieferant Fremdkosten</label><input type="text" id="fk-supplier-${e}" class="mnau-input" list="supplier-list" placeholder="Lieferant..."></div>
       ${e==='MNGR'?`<div class="field" style="margin-top:6px"><label>Fremdkosten MNGR (€)</label><input type="number" id="fkmngr" class="mnau-input" value="0" min="0" step="10"></div>`:''}
       <div class="field" style="margin-top:6px"><label>Spesen (€)</label><input type="number" id="sp-${e}" class="mnau-input" value="0" min="0" step="10"></div>
       <div class="field" style="margin-top:6px"><label>Stundenpreis (€)</label><input type="number" id="hp-${e}" class="mnau-input" value="150" min="0" step="5"></div>
@@ -326,9 +327,12 @@ window.saveMNAUOrderToLog = async function() {
     const mnauFK = FK['MNAU'] || 0;
     const mnauSP = SP['MNAU'] || 0;
 
+    const customSupplierName = getVal('fk-supplier-MNAU');
+    const supplierName = customSupplierName ? customSupplierName : "Fremdkosten MNAU";
+
     if (mnauFK > 0) {
         suppliers.push({
-            name: "Fremdkosten MNAU",
+            name: supplierName,
             amount: Math.round(mnauFK * 100) / 100,
             paid: false
         });
@@ -340,6 +344,24 @@ window.saveMNAUOrderToLog = async function() {
             amount: Math.round(mnauSP * 100) / 100,
             paid: false
         });
+    }
+
+    // LIEFERANTEN-CHECK: Falls ein neuer Lieferantenname eingegeben wurde, in Airtable speichern!
+    if (customSupplierName && window.globalSuppliers && window.API && window.API.saveSuppliers) {
+        const exists = window.globalSuppliers.some(s => s.name.toLowerCase() === customSupplierName.toLowerCase());
+        if (!exists) {
+            try {
+                const newSuppRes = await window.API.saveSuppliers([{ fields: { "Name": customSupplierName } }]);
+                if (newSuppRes && newSuppRes.records) {
+                    newSuppRes.records.forEach(r => window.globalSuppliers.push({ id: r.id, name: r.fields.Name }));
+                    if (window.UI && window.UI.updateSupplierDatalist) {
+                        window.UI.updateSupplierDatalist();
+                    }
+                }
+            } catch (suppErr) {
+                console.warn("Lieferant konnte nicht automatisch in Airtable gespeichert werden:", suppErr);
+            }
+        }
     }
 
     const totalFremdkosten = suppliers.reduce((s, item) => s + item.amount, 0);
@@ -377,7 +399,6 @@ window.saveMNAUOrderToLog = async function() {
             ]
         }];
 
-        // Paketiert Fremdkosten & Group Meta sauber in JSON
         const detailsPayload = JSON.stringify({
             suppliers: suppliers,
             groupMeta: groupMeta
@@ -422,6 +443,7 @@ window.saveMNAUOrderToLog = async function() {
 window.resetAll = function(){
     ENTITIES.forEach(e=>{
         ['base','fk','sp'].forEach(p=>{const el=document.getElementById(p+'-'+e);if(el)el.value=0;});
+        const suppEl = document.getElementById('fk-supplier-'+e); if(suppEl) suppEl.value='';
         const hp=document.getElementById('hp-'+e); if(hp) hp.value=150;
         const nt=document.getElementById('note-'+e); if(nt) nt.value='';
         COSTS.forEach(c=>{const el=document.getElementById('cost-'+e+'-'+c.key);if(el){el.value=c.def;el.disabled=false;delete el.dataset.prev;}});
