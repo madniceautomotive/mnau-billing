@@ -1,5 +1,5 @@
 // ====================================================
-// kalkulator.js: VERSIONED GROUP KALKULATOR & GROUP ANTEIL BREAKDOWN
+// kalkulator.js: VERSIONED GROUP KALKULATOR & PDF EXPORT WITH ALL NOTES
 // ====================================================
 
 const ENTITIES = ['MNAG','MNMH','MNWB','MNAT','MNAU','MNGR'];
@@ -263,7 +263,7 @@ window.calculate = function(){
     const userUmsatz = summe[myCompany] || 0;
     const userEchteFremdkosten = FK[myCompany] || 0;
     const userErtrag = userUmsatz - userEchteFremdkosten;
-    const groupAnteilTotal = (summe['MNGR'] || 0) + totalCostPool;
+    const totalGroupAnteil = (summe['MNGR'] || 0) + totalCostPool;
 
     let totalSisterShares = 0;
     ['MNAG','MNMH','MNWB','MNAT','MNAU','EXT'].forEach(comp => {
@@ -299,7 +299,7 @@ window.calculate = function(){
     </div>
     <div class="metric">
       <div class="ml">Group &amp; Schwesterfirmen</div>
-      <div class="mv">${fmt(groupAnteilTotal + totalSisterShares)}</div>
+      <div class="mv">${fmt(totalGroupAnteil + totalSisterShares)}</div>
       <div class="sub-info">Direkt abgewickelt v. Group</div>
     </div>
   `;
@@ -411,6 +411,7 @@ function exportKalkulatorInputs() {
     return inputs;
 }
 
+// HELPER: BUILD COMPLETE HTML FOR ALL NOTES & DETAILS IN PDF
 function buildPdfNotesSectionHtml(snap) {
     const kalkInputs = snap.kalkInputs;
     const generalNotes = snap.projNotes || (kalkInputs && kalkInputs.projNotes);
@@ -420,20 +421,33 @@ function buildPdfNotesSectionHtml(snap) {
     if (generalNotes && generalNotes.trim()) {
         html += `
       <div class="pdf-notes-box">
-        <strong>Allgemeine Projektnotiz:</strong><br>
+        <strong>Allgemeine Projektinformationen & Notizen:</strong><br>
         ${esc(generalNotes)}
       </div>`;
     }
 
-    if (kalkInputs && kalkInputs.notes) {
-        const validEntityNotes = Object.entries(kalkInputs.notes).filter(([ent, note]) => note && note.trim());
-        if (validEntityNotes.length > 0) {
+    if (kalkInputs) {
+        const spesenNotesList = [];
+        ENTITIES.forEach(e => {
+            const sp = (kalkInputs.sp && kalkInputs.sp[e]) || 0;
+            const nt = (kalkInputs.notes && kalkInputs.notes[e]) || '';
+            if (sp > 0 || (nt && nt.trim())) {
+                let text = `<strong>${e}:</strong> `;
+                if (sp > 0) text += `Spesen: € ${Number(sp).toFixed(2)}`;
+                if (sp > 0 && nt.trim()) text += ` | Notiz: `;
+                else if (nt.trim()) text += `Notiz: `;
+                if (nt.trim()) text += `${esc(nt)}`;
+                spesenNotesList.push(text);
+            }
+        });
+
+        if (spesenNotesList.length > 0) {
             html += `
-        <div class="pdf-notes-box">
-          <strong>Firmennotizen:</strong>
-          <ul style="margin: 4px 0 0 0; padding-left: 18px;">`;
-            validEntityNotes.forEach(([ent, note]) => {
-                html += `<li><strong>${ent}:</strong> ${esc(note)}</li>`;
+          <div class="pdf-notes-box" style="border-left-color: #eab308;">
+            <strong>Spesen & Firmennotizen:</strong>
+            <ul style="margin: 4px 0 0 0; padding-left: 18px;">`;
+            spesenNotesList.forEach(item => {
+                html += `<li>${item}</li>`;
             });
             html += `</ul></div>`;
         }
@@ -443,21 +457,19 @@ function buildPdfNotesSectionHtml(snap) {
         const detailsList = [];
         ENTITIES.forEach(e => {
             const supps = (kalkInputs.suppliers && kalkInputs.suppliers[e]) || [];
-            const spesen = (kalkInputs.sp && kalkInputs.sp[e]) || 0;
             const validSupps = supps.filter(s => (s.name && s.name.trim()) || s.amount > 0);
 
-            if (validSupps.length > 0 || spesen > 0) {
+            if (validSupps.length > 0) {
                 const items = [];
                 validSupps.forEach(s => items.push(`${esc(s.name || 'Lieferant')}: € ${Number(s.amount).toFixed(2)}`));
-                if (spesen > 0) items.push(`Spesen: € ${Number(spesen).toFixed(2)}`);
                 detailsList.push(`<strong>${e}:</strong> ${items.join(' • ')}`);
             }
         });
 
         if (detailsList.length > 0) {
             html += `
-        <div class="pdf-notes-box">
-          <strong>Lieferanten & Spesen Details:</strong>
+        <div class="pdf-notes-box" style="border-left-color: #ef4444;">
+          <strong>Externe Lieferanten:</strong>
           <ul style="margin: 4px 0 0 0; padding-left: 18px;">`;
             detailsList.forEach(item => {
                 html += `<li>${item}</li>`;
@@ -519,7 +531,6 @@ window.saveMNAUOrderToLog = async function() {
 
     const totalGroupAnteil = (summe['MNGR'] || 0) + totalCostPool;
 
-    // DETAILLIERTE AUFSCHLÜSSELUNG DES GROUP-ANTEILS
     const groupBreakdown = {
         backoffice: Math.round((costPool[0] ? costPool[0].pool : 0) * 100) / 100,
         pm: Math.round((costPool[1] ? costPool[1].pool : 0) * 100) / 100,
@@ -799,9 +810,6 @@ window.saveMNAUOrderToLog = async function() {
     }
 };
 
-// ====================================================
-// PDF DOWNLOAD DIREKT AUS DEM AUFTRAGS-LOG
-// ====================================================
 window.downloadKalkulatorPDFFromLog = function(recordId, snapshotIndex = null) {
     const record = (window.loadedRecords || []).find(r => r.id === recordId);
     if (!record || !record.fields.Fremdkosten_Details) { alert("Kein Kalkulator-Datensatz gefunden."); return; }
@@ -1005,7 +1013,6 @@ window.exportPDF = function(){
       table.kalk-results-table tr.rg-cost td { background: #f0f9ff; }
       table.kalk-results-table tr.rg-fulfill td { background: #dcfce7; font-weight: 800; color: #064e3b; }
       table.kalk-results-table tr.rg-sum td { background: #e6f4ea; border-top: 2px solid #10b981; border-bottom: 2px solid #10b981; font-weight: 800; font-size: 13px; color: #064e3b; }
-      .metric-grid { display: none; }
     </style>
     <div class="pdf-wrapper">
         <div class="pdf-header">

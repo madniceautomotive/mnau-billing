@@ -1,5 +1,5 @@
 // ====================================================
-// ui.js: DOM RENDERING WITH GROUP-ANTEIL BREAKDOWN
+// ui.js: DOM RENDERING WITH SPESEN & NOTIZEN KÄSTCHEN
 // ====================================================
 
 window.toggleCardExpand = function(recordId, event) {
@@ -63,7 +63,7 @@ window.UI = {
                 const status = fields.Status || "Zu verrechnen";
                 const betragVal = parseFloat(fields.Betrag_Automotive) || 0;
                 const fremdkostenVal = parseFloat(fields.Fremdkosten) || 0;
-                const deckungsbeitragVal = betragVal - fremdkostenVal;
+                const deckungsbeitragVal = betragVal - fremdkostenVal; // Spesen mindern den DB nicht!
 
                 const betrag = betragVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
                 const fremdkosten = fremdkostenVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -90,6 +90,7 @@ window.UI = {
                 const isReadOnlyShare = groupMeta && groupMeta.isReadOnlyShare === true;
                 const creatorCompany = (groupMeta && groupMeta.originCompany) ? groupMeta.originCompany.toUpperCase() : (fields.Firma || "MNAU").toUpperCase();
 
+                // Extrahiere Spesen & Projektdetails aus GroupMeta
                 const spesenVal = groupMeta ? (parseFloat(groupMeta.spesen) || 0) : 0;
                 const spesenText = spesenVal > 0 ? ` <span style="font-size:0.72rem; color:var(--text-muted); font-weight:normal;">(davon Spesen: € ${spesenVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2})})</span>` : '';
 
@@ -165,20 +166,37 @@ window.UI = {
                     groupMetaHTML = `<div style="font-size:0.75rem; color:var(--text-muted);">Keine Group-Daten verfügbar.</div>`;
                 }
 
-                // 3. DETAIL PANEL: Projektdetails & Notizen
-                let projectNotesPanelHTML = '';
-                if (projOffer || projInvoice || projNotes || entityNote) {
-                    projectNotesPanelHTML = `
-                        <div class="oc-detail-panel" style="margin-bottom: 14px;">
-                            <h5>Projektdetails &amp; Notizen</h5>
+                // 3. NEUES DETAIL PANEL GRID: Projektdetails & Spesen/Notizen
+                let projectDetailsHTML = '';
+                if (projOffer || projInvoice || projNotes) {
+                    projectDetailsHTML = `
+                        <div class="oc-detail-panel">
+                            <h5>Projekt-Infos &amp; Allg. Notizen</h5>
                             <div style="font-size:0.78rem; color:var(--text-main); display:flex; flex-direction:column; gap:6px;">
                                 ${projOffer ? `<div><strong style="color:var(--text-muted);">Angebots-Nr.:</strong> ${projOffer}</div>` : ''}
                                 ${projInvoice ? `<div><strong style="color:var(--text-muted);">Rechnungs-Nr.:</strong> ${projInvoice}</div>` : ''}
-                                ${projNotes ? `<div><strong style="color:var(--text-muted);">Allg. Notizen:</strong> ${projNotes}</div>` : ''}
-                                ${entityNote ? `<div style="padding-top:4px; border-top:1px dashed var(--border-color); color:var(--active-company-color); font-weight:600;"><strong>Notiz (${myCompany}):</strong> ${entityNote}</div>` : ''}
+                                ${projNotes ? `<div><strong style="color:var(--text-muted);">Allgemein:</strong> ${projNotes}</div>` : ''}
                             </div>
                         </div>
                     `;
+                }
+
+                let spesenNotesHTML = '';
+                if (spesenVal > 0 || entityNote) {
+                    spesenNotesHTML = `
+                        <div class="oc-detail-panel" style="border-left: 3px solid #eab308; background: rgba(234, 179, 8, 0.05);">
+                            <h5 style="color: #ca8a04; border-bottom: 1px solid rgba(234, 179, 8, 0.2);">Spesen &amp; Notizen (${myCompany})</h5>
+                            <div style="font-size:0.78rem; color:var(--text-main); display:flex; flex-direction:column; gap:6px;">
+                                ${spesenVal > 0 ? `<div><strong style="color:var(--text-muted);">Erfasste Spesen:</strong> € ${spesenVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>` : ''}
+                                ${entityNote ? `<div><strong style="color:var(--text-muted);">Erklärung / Notiz:</strong> ${entityNote}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                let topGridHTML = '';
+                if (projectDetailsHTML || spesenNotesHTML) {
+                    topGridHTML = `<div class="oc-details-grid" style="margin-bottom: 14px;">${projectDetailsHTML}${spesenNotesHTML}</div>`;
                 }
 
                 // 4. FOOTER: PDF Versions Buttons
@@ -299,7 +317,7 @@ window.UI = {
                                 </div>
                             </div>
 
-                            ${projectNotesPanelHTML}
+                            ${topGridHTML}
 
                             <div class="oc-details-grid">
                                 <div class="oc-detail-panel">
