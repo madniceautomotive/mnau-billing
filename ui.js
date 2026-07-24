@@ -1,5 +1,5 @@
 // ====================================================
-// ui.js: DOM RENDERING WITH RESTRICTED PARTNER STATUS
+// ui.js: DOM RENDERING WITH CLEAN THEME-AWARE UI
 // ====================================================
 
 window.toggleCardExpand = function(recordId, event) {
@@ -63,7 +63,7 @@ window.UI = {
                 const status = fields.Status || "Zu verrechnen";
                 const betragVal = parseFloat(fields.Betrag_Automotive) || 0;
                 const fremdkostenVal = parseFloat(fields.Fremdkosten) || 0;
-                const deckungsbeitragVal = betragVal - fremdkostenVal;
+                const deckungsbeitragVal = betragVal - fremdkostenVal; // Spesen mindern den DB nicht!
 
                 const betrag = betragVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
                 const fremdkosten = fremdkostenVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -90,6 +90,7 @@ window.UI = {
                 const isReadOnlyShare = groupMeta && groupMeta.isReadOnlyShare === true;
                 const creatorCompany = (groupMeta && groupMeta.originCompany) ? groupMeta.originCompany.toUpperCase() : (fields.Firma || "MNAU").toUpperCase();
 
+                // Extrahiere Spesen & Projektdetails aus GroupMeta
                 const spesenVal = groupMeta ? (parseFloat(groupMeta.spesen) || 0) : 0;
                 const spesenText = spesenVal > 0 ? ` <span style="font-size:0.72rem; color:var(--text-muted); font-weight:normal;">(davon Spesen: € ${spesenVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2})})</span>` : '';
 
@@ -199,12 +200,9 @@ window.UI = {
                 else if(status === "An Group verrechnet") { cardStatusClass = "status-an-group-verrechnet"; }
                 else if(status === "Bezahlt") { cardStatusClass = "status-bezahlt"; }
 
-                // STEUERUNG DER STATUS-OPTIONS JE NACH ROLLER/FREIGABE
                 let statusControlHTML = '';
 
                 if (isReadOnlyShare) {
-                    // PASSIVER AUFTRAG EINER SCHWESTERFIRMA:
-                    // Nur freigeschaltet, wenn Status "An Group verrechnet" oder "Bezahlt" ist!
                     const isUnlocked = (status === "An Group verrechnet" || status === "Bezahlt");
 
                     if (isUnlocked) {
@@ -223,7 +221,6 @@ window.UI = {
                         `;
                     }
                 } else {
-                    // HAUPTAUFTRAG DER EIGENEN FIRMA (VOLLER ZUGRIFF)
                     statusControlHTML = `
                         <select class="status-select" onchange="changeOrderStatus('${id}', this.value)">
                             <option value="Zu verrechnen" ${status === "Zu verrechnen" ? "selected" : ""}>Zu verrechnen</option>
@@ -248,7 +245,6 @@ window.UI = {
                     </button>
                 `;
 
-                // ERSTELLUNG DER AUFKLAPPBAREN MINI-KARTE
                 const innerHTML = `
                     <div class="oc-compact-bar" onclick="window.toggleCardExpand('${id}', event)">
                         <div class="oc-title-col">
@@ -306,7 +302,7 @@ window.UI = {
                             
                             <div class="oc-footer">
                                 <div class="oc-footer-pdfs">
-                                    ${pdfVersionsHTML ? `<span style="font-size:0.7rem; color:var(--text-muted); font-weight:700; margin-right:4px;">PDFs:</span> ${pdfVersionsHTML}` : `<span style="font-size:0.7rem; color:var(--text-muted);">Kein PDF generiert.</span>`}
+                                    ${pdfVersionsHTML ? `<span style="font-size:0.7rem; color:var(--text-muted); font-weight:700; margin-right:4px;">Group-Kalkulator PDFs:</span> ${pdfVersionsHTML}` : `<span style="font-size:0.7rem; color:var(--text-muted);">Kein PDF generiert.</span>`}
                                 </div>
                                 <div class="oc-footer-actions" onclick="event.stopPropagation()">
                                     ${actionControlsHTML}
