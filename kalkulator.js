@@ -201,7 +201,8 @@ window.calculate = function(){
     };
     const nc = val => `<td class="val-neutral"><span class="num-val">${vn(val)}</span></td>`;
 
-    let h='<table class="results flow">';
+    // WICHTIG: Tabelle nutzt jetzt kalk-results-table statt der flexbox-behafteten .flow Klasse!
+    let h='<table class="results kalk-results-table">';
     h+='<colgroup><col class="cg-label">'+COLS.map(()=>'<col class="cg-col">').join('')+'</colgroup>';
     h+='<thead><tr>';
     h+=`<th class="kundenpreis-cell"><div class="kp-title">Kundenpreis</div><div class="kp-amount">${fmt(kundenpreis)}</div></th>`;
