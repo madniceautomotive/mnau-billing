@@ -39,6 +39,29 @@
 .amount-title-label { font-size: 0.72rem; color: #a0aec0; font-weight: 600; text-transform: uppercase; margin-right: 4px; }
 .amount-fremdkosten { font-size: 0.82rem; color: #e74c3c; margin-top: 2px; font-weight: 500; }
 
+/* Read-Only Hinweis Banner */
+.read-only-banner {
+    margin-top: 8px;
+    background: rgba(0, 210, 255, 0.08);
+    border: 1px solid rgba(0, 210, 255, 0.3);
+    color: #00d2ff;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.read-only-badge {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #a0aec0;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
 /* Group Erlös-Info Badge/Box auf der Karte */
 .group-info-box {
     margin-top: 10px;
@@ -46,7 +69,7 @@
     border: 1px solid rgba(0, 210, 255, 0.2);
     border-radius: 8px;
     padding: 10px 12px;
-    max-width: 360px;
+    max-width: 380px;
     font-size: 0.75rem;
 }
 .group-info-header {

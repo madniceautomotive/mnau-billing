@@ -1,10 +1,9 @@
 // ====================================================
-// ui.js: DOM RENDERING & STATS COMPILING (MULTI-TENANT)
+// ui.js: DOM RENDERING & STATS COMPILING (MULTI-TENANT & SCHWESTERFIRMEN-SUPPORT)
 // ====================================================
 
 window.UI = {
     renderOrders(records) {
-        // ZUORDNUNG: Zeige nur Aufträge der eigenen Firma des eingeloggten Users
         const myCompany = (window.currentUserCompany || "MNAU").toUpperCase();
 
         const companyRecords = records.filter(r => {
@@ -69,6 +68,8 @@ window.UI = {
                     } catch(e) {}
                 }
 
+                const isReadOnlyShare = groupMeta && groupMeta.isReadOnlyShare === true;
+
                 // Echte Fremdkosten Breakdown (Checkboxen)
                 let breakdownHTML = '';
                 if (suppliers.length > 0) {
@@ -77,8 +78,8 @@ window.UI = {
                         const isPaid = d.paid === true;
                         breakdownHTML += `
                             <div class="breakdown-row ${isPaid ? 'supplier-paid' : ''}" 
-                                 onclick="window.toggleSupplierPaid('${id}', ${dIdx})" 
-                                 title="Klicken zum Umschalten (Bezahlt / Offen)">
+                                 onclick="${isReadOnlyShare ? '' : `window.toggleSupplierPaid('${id}', ${dIdx})`}" 
+                                 title="${isReadOnlyShare ? 'Schreibgeschützter Erlösanteil' : 'Klicken zum Umschalten (Bezahlt / Offen)'}">
                                 <span>↳ ${d.name} ${isPaid ? '✓' : '◯'}</span>
                                 <span>€ ${(parseFloat(d.amount)||0).toFixed(2)}</span>
                             </div>
@@ -98,8 +99,6 @@ window.UI = {
                         Object.entries(groupMeta.sisterSharesDetail).forEach(([comp, amt]) => {
                             sistersHTML += `<div class="group-info-row"><span>• Anteil ${comp}:</span><span>€ ${(parseFloat(amt)||0).toFixed(2)}</span></div>`;
                         });
-                    } else if (groupMeta.sisterShares) {
-                        sistersHTML = `<div class="group-info-row"><span>• Anteile Schwesterfirmen:</span><span>€ ${(parseFloat(groupMeta.sisterShares)||0).toFixed(2)}</span></div>`;
                     }
 
                     const pdfBtn = groupMeta.snapshot ? `
@@ -114,21 +113,52 @@ window.UI = {
                             <div class="group-info-row"><span>Gesamt Projektvolumen:</span><strong>€ ${kp}</strong></div>
                             <div class="group-info-row"><span>Group-Abgabe (MNGR):</span><span>€ ${mngr}</span></div>
                             ${sistersHTML}
-                            <div class="group-info-note">*(Direkt über Group abgewickelt)</div>
                             ${pdfBtn}
                         </div>
                     `;
                 }
+
+                // Read-Only Hinweis Banner für passive Erlösanteile der Schwesterfirma
+                const readOnlyBanner = isReadOnlyShare ? `
+                    <div class="read-only-banner">
+                        🔒 Erlösanteil aus Projekt "${groupMeta.originProject || 'Kalkulator'}" (Hauptauftrag von ${groupMeta.originCompany || 'Group'})
+                    </div>
+                ` : '';
 
                 let cardStatusClass = "status-zu-verrechnen";
                 if(status === "In Bearbeitung") { cardStatusClass = "status-in-bearbeitung"; }
                 else if(status === "An Group verrechnet") { cardStatusClass = "status-an-group-verrechnet"; }
                 else if(status === "Bezahlt") { cardStatusClass = "status-bezahlt"; }
 
+                // Aktions-Steuerung: Für schreibgeschützte Anteile werden Edit/Delete/Status deaktiviert
+                const actionControlsHTML = isReadOnlyShare ? `
+                    <span class="read-only-badge">🔒 Schreibgeschützt</span>
+                    <button class="changelog-btn" onclick="window.openChangelogModal('${id}')" title="Änderungshistorie anzeigen">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.25 2.52.77-1.28-3.52-2.09V8z"/></svg>
+                    </button>
+                ` : `
+                    <select class="status-select" onchange="changeOrderStatus('${id}', this.value)">
+                        <option value="Zu verrechnen" ${status === "Zu verrechnen" ? "selected" : ""}>Zu verrechnen</option>
+                        <option value="In Bearbeitung" ${status === "In Bearbeitung" ? "selected" : ""}>In Bearbeitung</option>
+                        <option value="An Group verrechnet" ${status === "An Group verrechnet" ? "selected" : ""}>An Group verrechnet</option>
+                        <option value="Bezahlt" ${status === "Bezahlt" ? "selected" : ""}>Bezahlt</option>
+                    </select>
+                    <button class="changelog-btn" onclick="window.openChangelogModal('${id}')" title="Änderungshistorie anzeigen">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.25 2.52.77-1.28-3.52-2.09V8z"/></svg>
+                    </button>
+                    <button class="edit-btn" onclick="window.openEditModal('${id}')" title="Auftrag bearbeiten">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                    </button>
+                    <button class="delete-btn" onclick="deleteOrder('${id}')" title="Auftrag löschen">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    </button>
+                `;
+
                 const innerHTML = `
                     <div class="billing-info-block">
                         <div class="billing-row-title">${fields.Auftrag || "Unbenannt"} ${flagBadgeHTML}</div>
                         <div class="billing-row-meta">Erstellt: ${new Date(record.createdTime).toLocaleDateString('de-DE')} • Firma: ${myCompany}</div>
+                        ${readOnlyBanner}
                         ${groupMetaHTML}
                     </div>
                     
@@ -144,21 +174,7 @@ window.UI = {
                     </div>
                     
                     <div class="action-group">
-                        <select class="status-select" onchange="changeOrderStatus('${id}', this.value)">
-                            <option value="Zu verrechnen" ${status === "Zu verrechnen" ? "selected" : ""}>Zu verrechnen</option>
-                            <option value="In Bearbeitung" ${status === "In Bearbeitung" ? "selected" : ""}>In Bearbeitung</option>
-                            <option value="An Group verrechnet" ${status === "An Group verrechnet" ? "selected" : ""}>An Group verrechnet</option>
-                            <option value="Bezahlt" ${status === "Bezahlt" ? "selected" : ""}>Bezahlt</option>
-                        </select>
-                        <button class="changelog-btn" onclick="window.openChangelogModal('${id}')" title="Änderungshistorie anzeigen">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.25 2.52.77-1.28-3.52-2.09V8z"/></svg>
-                        </button>
-                        <button class="edit-btn" onclick="window.openEditModal('${id}')" title="Auftrag bearbeiten">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                        </button>
-                        <button class="delete-btn" onclick="deleteOrder('${id}')" title="Auftrag löschen">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                        </button>
+                        ${actionControlsHTML}
                     </div>
                 `;
 

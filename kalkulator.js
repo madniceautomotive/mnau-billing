@@ -86,7 +86,7 @@ window.addKalkSupplierRow = function(entity, name = '', amount = '') {
     <input type="text" class="mnau-input kalk-supp-name" list="supplier-list" placeholder="Lieferant..." value="${name}" oninput="updateEntityFremdkosten('${entity}')">
     <input type="number" step="0.01" class="mnau-input kalk-supp-amount" placeholder="0.00" value="${amount}" oninput="updateEntityFremdkosten('${entity}')">
     <button type="button" class="btn-remove-supplier kalk-supp-remove" title="Entfernen" onclick="this.parentElement.remove(); updateEntityFremdkosten('${entity}');">
-      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 13.41 12z"/></svg>
+      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
     </button>
   `;
     container.appendChild(row);
@@ -277,7 +277,6 @@ window.calculate = function(){
         }
     });
 
-    // Aktualisiert Button Text dynamisch für die jeweilige Firma
     const btnSave = document.getElementById('btn-save-to-log');
     if (btnSave) {
         btnSave.innerHTML = `<span class="ti">➔</span> ${myCompany} Auftrag im Log erfassen`;
@@ -334,7 +333,7 @@ window.calculate = function(){
 };
 
 // ====================================================
-// AUFTRAG IM LOG ERFASSEN (DYNAMISCH FÜR USER FIRMA)
+// AUFTRAG IM LOG ERFASSEN (HAUPTAUFTRAG + SCHWESTERFIRMEN-ANTEILE)
 // ====================================================
 window.saveMNAUOrderToLog = async function() {
     const myCompany = window.currentUserCompany || "MNAU";
@@ -372,7 +371,7 @@ window.saveMNAUOrderToLog = async function() {
     });
     summe['MNGR'] += fkMNGR;
 
-    // 1. Umsatz der jeweiligen Firma des Users
+    // 1. Hauptauftrag für den erfassenden User (z.B. MNAU)
     const userUmsatz = Math.round((summe[myCompany] || 0) * 100) / 100;
 
     if (userUmsatz <= 0) {
@@ -380,7 +379,7 @@ window.saveMNAUOrderToLog = async function() {
         return;
     }
 
-    // 2. Echte Fremdkosten NUR von der Firma des Users
+    // Echte Fremdkosten NUR von der Hauptfirma
     const suppliers = [];
     const containerCompany = document.getElementById(`suppliers-list-${myCompany}`);
 
@@ -422,10 +421,10 @@ window.saveMNAUOrderToLog = async function() {
 
     const totalFremdkosten = suppliers.reduce((s, item) => s + item.amount, 0);
 
-    // 3. Einzelne Schwesterfirmen Summen für Info-Box
+    // Einzelne Schwesterfirmen Summen
     const mngrAbgabe = summe['MNGR'] || 0;
     const sisterSharesDetail = {};
-    ['MNAG','MNMH','MNWB','MNAT','MNAU','EXT'].forEach(comp => {
+    ['MNAG','MNMH','MNWB','MNAT','MNGR','EXT'].forEach(comp => {
         if (comp !== myCompany) {
             const amt = summe[comp] || 0;
             if (amt > 0) {
@@ -434,67 +433,106 @@ window.saveMNAUOrderToLog = async function() {
         }
     });
 
-    const groupMeta = {
+    const pdfSnapshot = {
+        projName: getVal('proj-name'),
+        projOffer: getVal('proj-offer'),
+        projInvoice: getVal('proj-invoice'),
+        projNotes: getVal('proj-notes'),
+        resultsTableHtml: document.getElementById('results-table-wrap').innerHTML
+    };
+
+    const groupMetaMain = {
         kundenpreis: Math.round(kundenpreis * 100) / 100,
         mngrAbgabe: Math.round(mngrAbgabe * 100) / 100,
         sisterSharesDetail: sisterSharesDetail,
-        snapshot: {
-            projName: getVal('proj-name'),
-            projOffer: getVal('proj-offer'),
-            projInvoice: getVal('proj-invoice'),
-            projNotes: getVal('proj-notes'),
-            resultsTableHtml: document.getElementById('results-table-wrap').innerHTML
-        }
+        snapshot: pdfSnapshot
     };
+
+    const recordsToCreate = [];
+
+    // 2. HAUPTAUFTRAG ANLEGEN
+    const initialChangelog = [{
+        user: window.currentUserEmail || "Unbekannt",
+        timestamp: new Date().toISOString(),
+        action: "Hauptauftrag aus Group Kalkulator erfasst",
+        comment: `Aus Group Kalkulator erfasst (Status: In Bearbeitung)`,
+        details: [
+            `Auftrag "${orderTitle}" angelegt:`,
+            `• ${myCompany} Umsatz: € ${userUmsatz.toFixed(2)}`,
+            `• ${myCompany} Echte Fremdkosten: € ${totalFremdkosten.toFixed(2)}`,
+            `• Gesamt-Projektvolumen: € ${kundenpreis.toFixed(2)}`
+        ]
+    }];
+
+    recordsToCreate.push({
+        fields: {
+            "Auftrag": orderTitle,
+            "Betrag_Automotive": userUmsatz,
+            "Fremdkosten": Math.round(totalFremdkosten * 100) / 100,
+            "Fremdkosten_Details": JSON.stringify({ suppliers: suppliers, groupMeta: groupMetaMain }),
+            "Status": "In Bearbeitung",
+            "Firma": myCompany,
+            "Flagged": false,
+            "Changelog": JSON.stringify(initialChangelog)
+        }
+    });
+
+    // 3. PASSIV-AUFTRÄGE FÜR INVOLVIERTE SCHWESTERFIRMEN ERZEUGEN
+    Object.entries(sisterSharesDetail).forEach(([comp, amt]) => {
+        if (amt > 0) {
+            const shareTitle = `${projName} (${comp})`;
+            const shareGroupMeta = {
+                isReadOnlyShare: true,
+                originCompany: myCompany,
+                originProject: projName,
+                kundenpreis: Math.round(kundenpreis * 100) / 100,
+                mngrAbgabe: Math.round(mngrAbgabe * 100) / 100,
+                sisterSharesDetail: sisterSharesDetail,
+                snapshot: pdfSnapshot
+            };
+
+            const shareChangelog = [{
+                user: window.currentUserEmail || "Unbekannt",
+                timestamp: new Date().toISOString(),
+                action: "Erlösanteil aus Group Kalkulator erfasst",
+                comment: `Automatisch von ${myCompany} für ${comp} angelegt`,
+                details: [
+                    `Erlösanteil für ${comp} aus Projekt "${projName}" (${myCompany}):`,
+                    `• Anteil ${comp}: € ${amt.toFixed(2)}`,
+                    `• Gesamt-Projektvolumen: € ${kundenpreis.toFixed(2)}`
+                ]
+            }];
+
+            recordsToCreate.push({
+                fields: {
+                    "Auftrag": shareTitle,
+                    "Betrag_Automotive": amt,
+                    "Fremdkosten": 0,
+                    "Fremdkosten_Details": JSON.stringify({ suppliers: [], groupMeta: shareGroupMeta }),
+                    "Status": "An Group verrechnet",
+                    "Firma": comp,
+                    "Flagged": false,
+                    "Changelog": JSON.stringify(shareChangelog)
+                }
+            });
+        }
+    });
 
     const btn = document.getElementById('btn-save-to-log');
     if (btn) {
         btn.disabled = true;
-        btn.textContent = "Speichere im Log...";
+        btn.textContent = "Speichere Aufträge...";
     }
 
     try {
-        const initialChangelog = [{
-            user: window.currentUserEmail || "Unbekannt",
-            timestamp: new Date().toISOString(),
-            action: "Auftrag aus Group Kalkulator erfasst",
-            comment: `Aus Group Kalkulator erfasst (Status: In Bearbeitung)`,
-            details: [
-                `Auftrag "${orderTitle}" angelegt:`,
-                `• ${myCompany} Umsatz (Verrechnung an Group): € ${userUmsatz.toFixed(2)}`,
-                `• ${myCompany} Echte Fremdkosten: € ${totalFremdkosten.toFixed(2)}`,
-                `• ${myCompany} Deckungsbeitrag: € ${(userUmsatz - totalFremdkosten).toFixed(2)}`,
-                `• Gesamt-Projektvolumen (Group): € ${kundenpreis.toFixed(2)}`,
-                `• Group-Abgabe (MNGR): € ${mngrAbgabe.toFixed(2)}`
-            ]
-        }];
-
-        const detailsPayload = JSON.stringify({
-            suppliers: suppliers,
-            groupMeta: groupMeta
-        });
-
-        const payload = {
-            records: [{
-                fields: {
-                    "Auftrag": orderTitle,
-                    "Betrag_Automotive": userUmsatz,
-                    "Fremdkosten": Math.round(totalFremdkosten * 100) / 100,
-                    "Fremdkosten_Details": detailsPayload,
-                    "Status": "In Bearbeitung",
-                    "Firma": myCompany, // DYNAMISCH AN GEÖFFNETE FIRMA GEBUNDEN
-                    "Flagged": false,
-                    "Changelog": JSON.stringify(initialChangelog)
-                }
-            }]
-        };
-
-        const createdData = await window.API.saveOrder(payload);
+        const createdData = await window.API.saveOrder({ records: recordsToCreate });
         if (createdData && createdData.records && createdData.records.length > 0) {
-            window.loadedRecords.unshift(createdData.records[0]);
+            createdData.records.forEach(r => window.loadedRecords.unshift(r));
             window.UI.updateSupplierDatalist();
             window.UI.renderOrders(window.loadedRecords);
-            alert(`Erfolg! ${myCompany}-Auftrag "${orderTitle}" über € ${userUmsatz.toFixed(2)} wurde mit Status "In Bearbeitung" im Log erfasst.`);
+
+            const createdCount = createdData.records.length;
+            alert(`Erfolg! ${createdCount} Auftrag/Aufträge für ${myCompany} und beteiligte Schwesterfirmen im Log erfasst.`);
 
             if (typeof window.switchTab === 'function') {
                 window.switchTab('billing');
