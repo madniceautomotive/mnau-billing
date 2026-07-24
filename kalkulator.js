@@ -1,5 +1,5 @@
 // ====================================================
-// kalkulator.js: VERSIONED GROUP KALKULATOR WITH CUSTOM MODALS
+// kalkulator.js: FULLY SYNCHRONIZED LOGIC (ADD & REMOVE)
 // ====================================================
 
 const ENTITIES = ['MNAG','MNMH','MNWB','MNAT','MNAU','MNGR'];
@@ -633,6 +633,7 @@ window.saveMNAUOrderToLog = async function() {
 
             const updatedSnapshots = [...existingSnapshots, newSnapshot];
             const updates = [];
+            const recordsToDelete = [];
             const handledCompanies = new Set();
 
             for (const rec of linkedRecords) {
@@ -641,6 +642,12 @@ window.saveMNAUOrderToLog = async function() {
                 const compSuppliers = getSuppliersForCompany(comp);
                 const compFremdkosten = compSuppliers.reduce((s, item) => s + item.amount, 0);
                 const compUmsatz = Math.round((summe[comp] || 0) * 100) / 100;
+
+                // WENN DIE FIRMA IM KALKULATOR ENTFERNT WURDE (UMSATZ <= 0 UND NICHT DIE HAUPTFIRMA)
+                if (compUmsatz <= 0 && comp !== myCompany) {
+                    recordsToDelete.push(rec.id);
+                    continue;
+                }
 
                 let existingChangelog = [];
                 if (rec.fields.Changelog) {
@@ -700,6 +707,14 @@ window.saveMNAUOrderToLog = async function() {
                 });
             }
 
+            // ENTFERNTE FIRMEN-DATENSÄTZE AUS DATENBANK UND LOKALEM SPEICHER LÖSCHEN
+            if (recordsToDelete.length > 0) {
+                for (const idToDelete of recordsToDelete) {
+                    await window.API.deleteOrder(idToDelete);
+                }
+                window.loadedRecords = window.loadedRecords.filter(r => !recordsToDelete.includes(r.id));
+            }
+
             const newCompanyRecordsToCreate = [];
             Object.entries(allSharesDetail).forEach(([comp, amt]) => {
                 if (!handledCompanies.has(comp) && amt > 0) {
@@ -729,6 +744,7 @@ window.saveMNAUOrderToLog = async function() {
                 await window.API.batchUpdateOrders(batch);
             }
 
+            // NEU HINZUGEFÜGTE FIRMEN-RECORDS SOFORT IN DEN LOKALEN SPEICHER AUFNEHMEN
             if (newCompanyRecordsToCreate.length > 0) {
                 const createdData = await window.API.saveOrder({ records: newCompanyRecordsToCreate });
                 if (createdData && createdData.records && createdData.records.length > 0) {
