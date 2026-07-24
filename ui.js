@@ -1,5 +1,5 @@
 // ====================================================
-// ui.js: DOM RENDERING WITH MULTI-BRAND BADGES
+// ui.js: DOM RENDERING WITH CLEAN CARD LAYOUT
 // ====================================================
 
 window.UI = {
@@ -14,7 +14,6 @@ window.UI = {
         UI.updateSummary(companyRecords);
         UI.updateSupplierBreakdown(companyRecords);
 
-        // Filterlogik für Eigene vs. Passive/Firmenfremde Aufträge
         const isExternal = (r) => {
             try {
                 if (!r.fields.Fremdkosten_Details) return false;
@@ -38,8 +37,8 @@ window.UI = {
             }
 
             const incomingIds = new Set(listRecords.map(r => r.id));
-
             const currentRows = Array.from(containerEl.querySelectorAll('.billing-row'));
+
             currentRows.forEach(row => {
                 const rowId = row.getAttribute('data-id');
                 if (!incomingIds.has(rowId)) {
@@ -56,12 +55,12 @@ window.UI = {
                 const fremdkostenVal = parseFloat(fields.Fremdkosten) || 0;
                 const deckungsbeitragVal = betragVal - fremdkostenVal;
 
-                const betrag = betragVal.toFixed(2);
-                const fremdkosten = fremdkostenVal.toFixed(2);
-                const deckungsbeitrag = deckungsbeitragVal.toFixed(2);
+                const betrag = betragVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
+                const fremdkosten = fremdkostenVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
+                const deckungsbeitrag = deckungsbeitragVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
 
                 const isFlagged = fields.Flagged === true;
-                const flagBadgeHTML = isFlagged ? `<span class="flag-badge">🚩 Geändert</span>` : '';
+                const flagBadgeHTML = isFlagged ? `<span class="flag-badge" style="font-size:0.7rem; background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; margin-left:6px; font-weight:normal;">🚩 Update</span>` : '';
 
                 let suppliers = [];
                 let groupMeta = null;
@@ -81,13 +80,13 @@ window.UI = {
                 const isReadOnlyShare = groupMeta && groupMeta.isReadOnlyShare === true;
                 const creatorCompany = (groupMeta && groupMeta.originCompany) ? groupMeta.originCompany.toUpperCase() : (fields.Firma || "MNAU").toUpperCase();
 
-                // Echte Fremdkosten Breakdown
-                let breakdownHTML = '';
+                // 1. DETAIL PANEL: Lieferanten
+                let suppliersHTML = '';
                 if (suppliers.length > 0) {
-                    breakdownHTML = `<div class="breakdown-container">`;
+                    suppliersHTML = `<div class="breakdown-list">`;
                     suppliers.forEach((d, dIdx) => {
                         const isPaid = d.paid === true;
-                        breakdownHTML += `
+                        suppliersHTML += `
                             <div class="breakdown-row ${isPaid ? 'supplier-paid' : ''}" 
                                  onclick="window.toggleSupplierPaid('${id}', ${dIdx})" 
                                  title="Klicken zum Umschalten (Bezahlt / Offen)">
@@ -96,15 +95,50 @@ window.UI = {
                             </div>
                         `;
                     });
-                    breakdownHTML += `</div>`;
+                    suppliersHTML += `</div>`;
+                } else {
+                    suppliersHTML = `<div style="font-size:0.75rem; color:#64748b;">Keine Lieferanten erfasst.</div>`;
                 }
 
-                // VERSIONIERTE KALKULATOR PDF BUTTONS
+                // 2. DETAIL PANEL: Erlösverteilung (Group Info)
+                let groupMetaHTML = '';
+                let kp = "0,00";
+                if (groupMeta) {
+                    kp = (parseFloat(groupMeta.kundenpreis)||0).toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
+                    const mngr = (parseFloat(groupMeta.mngrAbgabe)||0).toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+                    let sistersHTML = '';
+                    const sharesDict = groupMeta.allSharesDetail || groupMeta.sisterSharesDetail || {};
+
+                    if (sharesDict && Object.keys(sharesDict).length > 0) {
+                        Object.entries(sharesDict).forEach(([comp, amt]) => {
+                            const upperComp = comp.toUpperCase();
+                            if (upperComp !== myCompany) {
+                                sistersHTML += `
+                                    <div class="group-info-row">
+                                        <span>↳ Anteil <span class="comp-badge badge-${upperComp}">${upperComp}</span></span>
+                                        <strong>€ ${(parseFloat(amt)||0).toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2})}</strong>
+                                    </div>`;
+                            }
+                        });
+                    }
+
+                    groupMetaHTML = `
+                        <div class="breakdown-list">
+                            <div class="group-info-row"><span>Gesamt Projektvolumen</span><strong>€ ${kp}</strong></div>
+                            <div class="group-info-row" style="margin-bottom:6px;"><span>Group-Abgabe (<span class="comp-badge badge-MNGR">MNGR</span>)</span><span>€ ${mngr}</span></div>
+                            ${sistersHTML}
+                        </div>
+                    `;
+                } else {
+                    groupMetaHTML = `<div style="font-size:0.75rem; color:#64748b;">Keine Group-Daten verfügbar.</div>`;
+                }
+
+                // 3. FOOTER: PDF Versions Buttons
                 let pdfVersionsHTML = '';
                 if (groupMeta) {
                     const snapshots = groupMeta.snapshots || (groupMeta.snapshot ? [groupMeta.snapshot] : []);
                     if (snapshots.length > 0) {
-                        pdfVersionsHTML = `<div class="pdf-version-list-box"><span class="pdf-version-label">📄 Kalkulator PDFs:</span><div class="pdf-version-btns">`;
                         snapshots.forEach((snap, sIdx) => {
                             const isLatest = sIdx === snapshots.length - 1;
                             const vLabel = snap.version ? `v${snap.version}` : `v${sIdx + 1}`;
@@ -117,46 +151,12 @@ window.UI = {
                                 </button>
                             `;
                         });
-                        pdfVersionsHTML += `</div></div>`;
                     }
-                }
-
-                // Group Erlös-Info Box mit gefärbten Marken-Badges!
-                let groupMetaHTML = '';
-                if (groupMeta) {
-                    const kp = (parseFloat(groupMeta.kundenpreis)||0).toFixed(2);
-                    const mngr = (parseFloat(groupMeta.mngrAbgabe)||0).toFixed(2);
-
-                    let sistersHTML = '';
-                    const sharesDict = groupMeta.allSharesDetail || groupMeta.sisterSharesDetail || {};
-
-                    if (sharesDict && Object.keys(sharesDict).length > 0) {
-                        Object.entries(sharesDict).forEach(([comp, amt]) => {
-                            const upperComp = comp.toUpperCase();
-                            if (upperComp !== myCompany) {
-                                sistersHTML += `
-                                    <div class="group-info-row">
-                                        <span>• Anteil <span class="comp-badge badge-${upperComp}">${upperComp}</span>:</span>
-                                        <strong>€ ${(parseFloat(amt)||0).toFixed(2)}</strong>
-                                    </div>`;
-                            }
-                        });
-                    }
-
-                    groupMetaHTML = `
-                        <div class="group-info-box">
-                            <div class="group-info-header">🌐 Group Erlösverteilung</div>
-                            <div class="group-info-row"><span>Gesamt Projektvolumen:</span><strong>€ ${kp}</strong></div>
-                            <div class="group-info-row"><span>Group-Abgabe (<span class="comp-badge badge-MNGR">MNGR</span>):</span><span>€ ${mngr}</span></div>
-                            ${sistersHTML}
-                            ${pdfVersionsHTML}
-                        </div>
-                    `;
                 }
 
                 const readOnlyBanner = isReadOnlyShare ? `
                     <div class="read-only-banner">
-                        🔒 Erlösanteil aus Projekt "${groupMeta.originProject || 'Kalkulator'}" (Hauptauftrag von <span class="comp-badge badge-${creatorCompany}">${creatorCompany}</span>)
+                        🔒 Passiver Erlösanteil aus Projekt "${groupMeta.originProject || 'Kalkulator'}" (Erstellt von <span class="comp-badge badge-${creatorCompany}">${creatorCompany}</span>)
                     </div>
                 ` : '';
 
@@ -165,19 +165,14 @@ window.UI = {
                 else if(status === "An Group verrechnet") { cardStatusClass = "status-an-group-verrechnet"; }
                 else if(status === "Bezahlt") { cardStatusClass = "status-bezahlt"; }
 
-                const actionControlsHTML = isReadOnlyShare ? `
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span title="Schreibgeschützter Status" style="font-size:1.2rem; filter:grayscale(1);">🔒</span>
-                        <select class="status-select" disabled style="opacity:0.75; cursor:not-allowed; border-color:rgba(255,255,255,0.2);">
-                            <option value="Zu verrechnen" ${status === "Zu verrechnen" ? "selected" : ""}>Zu verrechnen</option>
-                            <option value="In Bearbeitung" ${status === "In Bearbeitung" ? "selected" : ""}>In Bearbeitung</option>
-                            <option value="An Group verrechnet" ${status === "An Group verrechnet" ? "selected" : ""}>An Group verrechnet</option>
-                            <option value="Bezahlt" ${status === "Bezahlt" ? "selected" : ""}>Bezahlt</option>
-                        </select>
-                    </div>
-                    <button class="changelog-btn" onclick="window.openChangelogModal('${id}')" title="Änderungshistorie anzeigen">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.25 2.52.77-1.28-3.52-2.09V8z"/></svg>
-                    </button>
+                const statusControlHTML = isReadOnlyShare ? `
+                    <span title="Schreibgeschützter Status" style="font-size:1.1rem; filter:grayscale(1);">🔒</span>
+                    <select class="status-select" disabled>
+                        <option value="Zu verrechnen" ${status === "Zu verrechnen" ? "selected" : ""}>Zu verrechnen</option>
+                        <option value="In Bearbeitung" ${status === "In Bearbeitung" ? "selected" : ""}>In Bearbeitung</option>
+                        <option value="An Group verrechnet" ${status === "An Group verrechnet" ? "selected" : ""}>An Group verrechnet</option>
+                        <option value="Bezahlt" ${status === "Bezahlt" ? "selected" : ""}>Bezahlt</option>
+                    </select>
                 ` : `
                     <select class="status-select" onchange="changeOrderStatus('${id}', this.value)">
                         <option value="Zu verrechnen" ${status === "Zu verrechnen" ? "selected" : ""}>Zu verrechnen</option>
@@ -185,42 +180,69 @@ window.UI = {
                         <option value="An Group verrechnet" ${status === "An Group verrechnet" ? "selected" : ""}>An Group verrechnet</option>
                         <option value="Bezahlt" ${status === "Bezahlt" ? "selected" : ""}>Bezahlt</option>
                     </select>
+                `;
+
+                const actionControlsHTML = isReadOnlyShare ? `
                     <button class="changelog-btn" onclick="window.openChangelogModal('${id}')" title="Änderungshistorie anzeigen">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.25 2.52.77-1.28-3.52-2.09V8z"/></svg>
                     </button>
-                    <button class="edit-btn" onclick="window.openInKalkulator('${id}')" title="Im Group Kalkulator bearbeiten">
-                        ✏️
+                ` : `
+                    <button class="changelog-btn" onclick="window.openChangelogModal('${id}')" title="Änderungshistorie anzeigen">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.25 2.52.77-1.28-3.52-2.09V8z"/></svg>
                     </button>
+                    <button class="edit-btn" onclick="window.openInKalkulator('${id}')" title="Im Group Kalkulator bearbeiten">✏️</button>
                     <button class="delete-btn" onclick="deleteOrder('${id}')" title="Auftrag löschen">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                     </button>
                 `;
 
+                // NEUER CLEAN HTML AUFBAU DER KARTE
                 const innerHTML = `
-                    <div class="billing-info-block">
-                        <div class="billing-row-title">${fields.Auftrag || "Unbenannt"} ${flagBadgeHTML}</div>
-                        <div class="billing-row-meta">
-                            <span>Erstellt: ${new Date(record.createdTime).toLocaleDateString('de-DE')}</span>
-                            <span>•</span>
-                            <span>Erstellt von: <span class="comp-badge badge-${creatorCompany}">${creatorCompany}</span></span>
+                    <div class="oc-header">
+                        <div class="oc-title-col">
+                            <div class="oc-title">${fields.Auftrag || "Unbenannt"} ${flagBadgeHTML}</div>
+                            <div class="oc-meta">Erstellt: ${new Date(record.createdTime).toLocaleDateString('de-DE')} • Ersteller: <span class="comp-badge badge-${creatorCompany}">${creatorCompany}</span></div>
                         </div>
-                        ${readOnlyBanner}
-                        ${groupMetaHTML}
+                        <div class="oc-status-col">
+                            ${statusControlHTML}
+                        </div>
                     </div>
                     
-                    <div class="billing-financials">
-                        <div class="amount-main" title="${myCompany} Umsatz (Abrechnung an Group)">
-                            <span class="amount-title-label">${myCompany} Umsatz:</span> € ${betrag}
+                    ${readOnlyBanner}
+                    
+                    <div class="oc-metrics-bar">
+                        <div class="oc-metric-box">
+                            <span class="oc-metric-lbl">Umsatz (${myCompany})</span>
+                            <span class="oc-metric-val" style="color:var(--active-company-color);">€ ${betrag}</span>
                         </div>
-                        <div class="amount-deckungsbeitrag" title="Netto-Ertrag nach echten Fremdkosten">
-                            <span class="amount-title-label">Deckungsbeitrag:</span> € ${deckungsbeitrag}
+                        <div class="oc-metric-box">
+                            <span class="oc-metric-lbl">Deckungsbeitrag</span>
+                            <span class="oc-metric-val" style="color:#00d2ff;">€ ${deckungsbeitrag}</span>
                         </div>
-                        ${fremdkostenVal > 0 ? `<div class="amount-fremdkosten">${myCompany} Fremdkosten: € ${fremdkosten}</div>` : ''}
-                        ${breakdownHTML}
+                        <div class="oc-metric-box">
+                            <span class="oc-metric-lbl">Fremdkosten</span>
+                            <span class="oc-metric-val" style="color:#e74c3c;">€ ${fremdkosten}</span>
+                        </div>
+                    </div>
+
+                    <div class="oc-details-grid">
+                        <div class="oc-detail-panel">
+                            <h5>Lieferanten & Spesen</h5>
+                            ${suppliersHTML}
+                        </div>
+                        <div class="oc-detail-panel">
+                            <h5>Erlösverteilung (Kundenpreis: € ${kp})</h5>
+                            ${groupMetaHTML}
+                        </div>
                     </div>
                     
-                    <div class="action-group">
-                        ${actionControlsHTML}
+                    <div class="oc-footer">
+                        <div class="oc-footer-pdfs">
+                            ${pdfVersionsHTML ? `<span style="font-size:0.7rem; color:#64748b; font-weight:700; margin-right:4px;">PDFs:</span> ${pdfVersionsHTML}` : `<span style="font-size:0.7rem; color:#64748b;">Kein PDF generiert.</span>`}
+                        </div>
+                        <div class="oc-footer-actions">
+                            ${actionControlsHTML}
+                        </div>
                     </div>
                 `;
 
