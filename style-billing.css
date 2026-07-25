@@ -1,5 +1,5 @@
 /* ==================================================== */
-/* style-billing.css: MULTI-BRAND & TOUCH-OPTIMIZED     */
+/* style-billing.css: MULTI-BRAND & HIGH-END DROPDOWNS  */
 /* ==================================================== */
 
 :root {
@@ -69,6 +69,37 @@ body, html {
 [data-company="MNAT"] { --active-company-color: #5079ac; }
 [data-company="MNAU"] { --active-company-color: #00663a; }
 [data-company="MNGR"] { --active-company-color: #64748b; }
+
+/* GLOBALE RIGIDE DROPDOWN & SELECT STYLES (VERHINDERT WEISSE OS DEFAULTS) */
+select, select.mnau-input, select.status-select {
+    background-color: var(--bg-input) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-color-strong) !important;
+    border-radius: 8px;
+    font-family: inherit;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 10px center !important;
+    background-size: 16px !important;
+    padding-right: 32px !important;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+select option, select optgroup {
+    background-color: var(--bg-card) !important;
+    color: var(--text-main) !important;
+    font-weight: 600;
+    padding: 8px 12px;
+}
+
+select:focus {
+    border-color: var(--active-company-color) !important;
+    outline: none;
+}
 
 /* APP LAYOUT CONTAINER */
 #database-view {
@@ -174,7 +205,7 @@ body, html {
     font-weight: 800;
 }
 
-/* SUB-TABS (LOG UNTER-CATEGORIEN) */
+/* SUB-TABS (LOG UNTER-KATEGORIEN) */
 .sub-tabs {
     display: flex;
     gap: 8px;
@@ -307,12 +338,6 @@ form label {
     display: block; margin-top: 18px; margin-bottom: 6px;
     font-size: 0.75rem; color: var(--text-muted); font-weight: 700;
     text-transform: uppercase; letter-spacing: 0.5px;
-}
-
-select option {
-    background-color: var(--bg-card) !important;
-    color: var(--text-main) !important;
-    font-weight: 600;
 }
 
 .header-controls-row {
@@ -520,7 +545,6 @@ select option {
 .billing-row.status-an-group-verrechnet { border-left-color: #eab308 !important; }
 .billing-row.status-bezahlt { border-left-color: #10b981 !important; opacity: 0.75; }
 
-/* Kompakte Kopfzeile */
 .oc-compact-bar {
     display: flex; align-items: center; justify-content: space-between;
     gap: 16px; cursor: pointer; user-select: none;
@@ -564,7 +588,6 @@ select option {
     border-color: var(--active-company-color);
 }
 
-/* EXPANDABLE GRID WRAPPER */
 .oc-expandable-wrapper {
     display: grid; grid-template-rows: 0fr;
     transition: grid-template-rows 0.35s cubic-bezier(0.16, 1, 0.3, 1);
@@ -612,7 +635,6 @@ select option {
     padding-bottom: 6px;
 }
 
-/* LIEFERANTEN ZEILEN (GEPRÄGT FÜR GROSSE TOUCH TARGETS) */
 .breakdown-list { display: flex; flex-direction: column; gap: 6px; }
 .breakdown-row {
     display: flex; justify-content: space-between; align-items: center;
@@ -718,7 +740,6 @@ select option {
         text-align: center;
     }
 
-    /* OBERFLÄCHLICHES AUFGERÄUMTES MOBILE KARTEN-GRID */
     .oc-compact-bar {
         display: grid;
         grid-template-columns: 1fr auto;
@@ -750,7 +771,6 @@ select option {
     .oc-status-col { grid-area: status; width: 100%; }
     .oc-status-col .status-select { width: 100%; max-width: none !important; height: 38px; }
 
-    /* GROSSE MOBILE TOUCH TARGETS FÜR LIEFERANTEN CHECKBOXEN & ZEILEN */
     .breakdown-row {
         min-height: 46px;
         padding: 12px 14px;
