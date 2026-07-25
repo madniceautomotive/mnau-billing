@@ -1,5 +1,5 @@
 // ==================================================== 
-// app.js: USER ACTIONS, FILTER ENGINE & SEARCH TAB TRIGGER
+// app.js: USER ACTIONS, FILTER ENGINE & SEARCH TAB HIDING
 // ====================================================
 
 const SUN_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
@@ -259,10 +259,10 @@ window.showPDFModal = function(blobUrl, filename) {
 };
 
 // ====================================================
-// LOG SUB-TAB SWITCHER (INKLUSIVE NEUEM SEARCH TAB)
+// LOG SUB-TAB SWITCHER
 // ====================================================
 window.switchLogSubTab = function(subTabName) {
-    const tabs = ['own', 'external', 'archive', 'search'];
+    const tabs = ['own', 'external', 'archive'];
     tabs.forEach(t => {
         const panel = document.getElementById(`log-panel-${t}`);
         const btn = document.getElementById(`subtab-btn-${t}`);
@@ -275,9 +275,14 @@ window.switchLogSubTab = function(subTabName) {
     if (activePanel) activePanel.classList.remove('hidden');
     if (activeBtn) activeBtn.classList.add('active');
 
-    if (subTabName !== 'search') {
-        localStorage.setItem('mngr_log_subtab', subTabName);
-    }
+    localStorage.setItem('mngr_log_subtab', subTabName);
+};
+
+window.clearSearchAndFilters = function() {
+    if (window.DOM.searchInput) window.DOM.searchInput.value = '';
+    const statusFilterElement = document.getElementById('status-filter');
+    if (statusFilterElement) statusFilterElement.value = 'Alle';
+    window.applyFilters();
 };
 
 window.toggleMobileFilters = function() {
@@ -391,7 +396,7 @@ window.switchCompany = function(newCompany) {
 };
 
 // ====================================================
-// DYNAMISCHES FILTERN UND AUTOMATISCHES SUCHTAB-SWITCHING
+// FILTER-ENGINE: AUSBLENDEN DER SUB-TABS BEI AKTIVER SUCHE
 // ====================================================
 window.applyFilters = function() {
     if (!window.loadedRecords || !window.UI) return;
@@ -405,7 +410,24 @@ window.applyFilters = function() {
     }
 
     const isSearching = query.length > 0 || statusFilter !== "Alle";
-    const searchBtn = document.getElementById('subtab-btn-search');
+    const subTabsContainer = document.getElementById('sub-tabs-container');
+    const searchPanel = document.getElementById('log-panel-search');
+
+    if (isSearching) {
+        // TABS BEI SUCHE KOMPLETT AUSBLENDEN
+        if (subTabsContainer) subTabsContainer.classList.add('hidden');
+        ['own', 'external', 'archive'].forEach(t => {
+            const p = document.getElementById(`log-panel-${t}`);
+            if (p) p.classList.add('hidden');
+        });
+        if (searchPanel) searchPanel.classList.remove('hidden');
+    } else {
+        // ZURÜCK ZUR TABS ANSICHT
+        if (subTabsContainer) subTabsContainer.classList.remove('hidden');
+        if (searchPanel) searchPanel.classList.add('hidden');
+        const savedSubTab = localStorage.getItem('mngr_log_subtab') || 'own';
+        window.switchLogSubTab(savedSubTab);
+    }
 
     const filtered = window.loadedRecords.filter(record => {
         const orderName = (record.fields.Auftrag || "").toLowerCase();
@@ -417,15 +439,6 @@ window.applyFilters = function() {
 
         return matchesSearch && matchesStatus;
     });
-
-    if (isSearching) {
-        if (searchBtn) searchBtn.classList.remove('hidden');
-        window.switchLogSubTab('search');
-    } else {
-        if (searchBtn) searchBtn.classList.add('hidden');
-        const savedSubTab = localStorage.getItem('mngr_log_subtab') || 'own';
-        window.switchLogSubTab(savedSubTab);
-    }
 
     window.UI.renderOrders(filtered, isSearching);
 };
@@ -453,11 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (window.DOM.searchClearBtn) {
-        window.DOM.searchClearBtn.addEventListener('click', () => {
-            window.DOM.searchInput.value = '';
-            window.applyFilters();
-            window.DOM.searchInput.focus();
-        });
+        window.DOM.searchClearBtn.addEventListener('click', window.clearSearchAndFilters);
     }
 });
 

@@ -1,5 +1,5 @@
 /* ==================================================== */
-/* style-billing.css: SEARCH TAB HIGHLIGHT STYLES       */
+/* style-billing.css: SEARCH RESULTS BANNER & LAYOUT    */
 /* ==================================================== */
 
 :root {
@@ -66,7 +66,7 @@ body, html {
 [data-company="MNAU"] { --active-company-color: #00663a; }
 [data-company="MNGR"] { --active-company-color: #64748b; }
 
-/* RIGIDE DROPDOWN CONTROL */
+/* DROPDOWN CONTROL FIX */
 select, select.mnau-input, select.status-select, #database-view select {
     background-color: var(--bg-input) !important;
     color: var(--text-main) !important;
@@ -215,18 +215,17 @@ select:focus {
     border-color: var(--active-company-color);
 }
 
-/* HERVORHEBUNG FÜR AKTIVE SUCHE SUB-TAB */
-.sub-tab-btn.search-tab-highlight.active {
-    color: #0284c7 !important;
-    border-bottom-color: #0284c7 !important;
-}
-.sub-tab-btn.search-tab-highlight.active .subtab-badge {
-    background: #0284c7 !important;
-    border-color: #0284c7 !important;
-    color: #ffffff !important;
-}
-
 .sub-tab-panel { min-height: 120px; }
+
+/* SUCH-ERGEBNISSE BANNER HEADER */
+.search-results-banner {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px; padding: 12px 18px;
+    background: var(--bg-card); border: 1px solid var(--border-color-strong);
+    border-left: 4px solid #0284c7; border-radius: 10px;
+    font-size: 0.88rem; color: var(--text-main);
+}
+.search-results-banner u { color: #0284c7; font-weight: 800; }
 
 /* THEME TOGGLE & ICONS */
 .theme-toggle-btn, .sort-icon-btn {
@@ -459,7 +458,7 @@ form label {
 .oc-detail-panel { background: var(--bg-panel) !important; border: 1px dashed var(--border-color-strong) !important; border-radius: 8px; padding: 12px; }
 .oc-detail-panel h5 { margin: 0 0 8px 0; font-size: 0.7rem; color: var(--text-sub) !important; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
 
-/* SAUBERE LIEFERANTEN LISTEN */
+/* SAUBERE LIEFERANTEN LISTEN & CHECKBOXEN */
 .breakdown-list { display: flex; flex-direction: column; gap: 6px; }
 .breakdown-row {
     display: flex; justify-content: space-between; align-items: center;

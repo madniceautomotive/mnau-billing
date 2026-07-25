@@ -59,7 +59,7 @@
                 <button id="btn-theme-toggle" class="theme-toggle-btn" onclick="toggleTheme()" title="Design wechseln (Dark / Light)"></button>
 
                 <button id="btn-manage-suppliers" class="sort-icon-btn" title="Lieferanten-Datenbank verwalten">
-                    <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                    <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
                 </button>
 
                 <button id="btn-mobile-filter" class="sort-icon-btn mobile-only-btn" title="Suche & Filter" onclick="window.toggleMobileFilters()">
@@ -97,7 +97,8 @@
             <div id="loading" class="spinner hidden"></div>
             <div id="dashboard-summary" class="dashboard-summary"></div>
 
-            <div class="sub-tabs">
+            <!-- SUB-TABS CONTAINER (WIRD BEI SUCHE VERSTECKT) -->
+            <div id="sub-tabs-container" class="sub-tabs">
                 <button id="subtab-btn-own" class="sub-tab-btn active" onclick="switchLogSubTab('own')">
                     Eigene Aufträge <span id="badge-count-own" class="subtab-badge">0</span>
                 </button>
@@ -107,12 +108,9 @@
                 <button id="subtab-btn-archive" class="sub-tab-btn" onclick="switchLogSubTab('archive')">
                     Archiv (Bezahlt) <span id="badge-count-archive" class="subtab-badge">0</span>
                 </button>
-                <!-- DYNAMISCHER SUB-TAB FÜR GESAMTE SUCHERGEBNISSE -->
-                <button id="subtab-btn-search" class="sub-tab-btn search-tab-highlight hidden" onclick="switchLogSubTab('search')">
-                    🔍 Suchergebnisse <span id="badge-count-search" class="subtab-badge">0</span>
-                </button>
             </div>
 
+            <!-- NORMALE SUB-TAB PANELS -->
             <div id="log-panel-own" class="sub-tab-panel">
                 <div id="order-list"></div>
             </div>
@@ -125,11 +123,16 @@
                 <div id="archive-list"></div>
             </div>
 
-            <!-- GEBÜNDELTE ERGEBNISSE BEI AKTIVER SUCHE -->
+            <!-- NEU: DEKLARIERTES SUCH-ERGEBNIS PANEL (NUR BEI SUCHE AKTIV) -->
             <div id="log-panel-search" class="sub-tab-panel hidden">
+                <div class="search-results-banner">
+                    <span>🔍 <strong>Suchergebnisse</strong> (<u id="search-count-text">0</u> Treffer)</span>
+                    <button type="button" class="btn-secondary btn-small" onclick="window.clearSearchAndFilters()" style="padding: 6px 12px; font-size: 0.75rem;">Suche zurücksetzen</button>
+                </div>
                 <div id="search-order-list"></div>
             </div>
 
+            <!-- FIX DARUNTER: OFFENE LIEFERANTEN POSTEN -->
             <div class="section-divider red-divider" style="margin-top: 36px;">OFFENE_LIEFERANTEN_POSTEN</div>
             <div id="supplier-summary-details" class="supplier-summary-details"></div>
         </div>
