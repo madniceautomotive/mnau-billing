@@ -1,5 +1,5 @@
 // ====================================================
-// kalkulator.js: PDF VIEWER MODAL INTEGRATION
+// kalkulator.js: TRANSACTIONAL SAVING & NATIVE PDF VIEWER
 // ====================================================
 
 const ENTITIES = ['MNAG','MNMH','MNWB','MNAT','MNAU','MNGR'];
@@ -868,7 +868,7 @@ window.saveMNAUOrderToLog = async function() {
 };
 
 // ====================================================
-// PDF VIEWER - ERSTELLT BLOB URL STATT DOWNLOAD
+// PDF VIEWER - ERSTELLT BLOB URL MIT VERSTECKTER SIDEBAR
 // ====================================================
 window.downloadKalkulatorPDFFromLog = async function(recordId, snapshotIndex = null) {
     const record = (window.loadedRecords || []).find(r => r.id === recordId);
@@ -998,13 +998,46 @@ window.downloadKalkulatorPDFFromLog = async function(recordId, snapshotIndex = n
                 const safeName = (snap.projName || record.fields.Auftrag || 'Group-Kalkulator').replace(/[^\wäöüÄÖÜ\- ]+/g,'').trim().replace(/\s+/g,'_');
                 const filename = `Group-Kalkulator_${safeName}_${versionTag}.pdf`;
 
-                // PDF ALS BLOB ERZEUGEN UND IM MODAL ANZEIGEN
-                const blobUrl = pdf.output('bloburl');
+                // PDF ALS BLOB ERZEUGEN UND IM MODAL ANZEIGEN (OHNE BROWSER SIDEBAR)
+                const blobUrl = pdf.output('bloburl') + '#toolbar=0&navpanes=0&view=FitH';
                 window.showPDFModal(blobUrl, filename);
                 cleanup();
 
             }).catch(async err => { cleanup(); window.Logger.error("PDF-Renderfehler:", err); await window.customAlert('PDF-Fehler: ' + err.message, "Systemfehler"); });
     }, 300);
+};
+
+window.resetAll = function(){
+    ENTITIES.forEach(e=>{
+        const baseEl = document.getElementById('base-' + e); if(baseEl) baseEl.value = '';
+        const spEl = document.getElementById('sp-' + e); if(spEl) spEl.value = '';
+
+        const container = document.getElementById(`suppliers-list-${e}`);
+        if (container) { container.innerHTML = ''; window.addKalkSupplierRow(e); }
+        const hp=document.getElementById('hp-'+e); if(hp) hp.value=150;
+        const nt=document.getElementById('note-'+e); if(nt) nt.value='';
+        COSTS.forEach(c=>{const el=document.getElementById('cost-'+e+'-'+c.key);if(el){el.value=c.def;el.disabled=false;delete el.dataset.prev;}});
+    });
+    [['seller',3],['setter',4],['closer1',4],['closer2',4]].forEach(([id,v])=>{const el=document.getElementById('role-'+id+'-pct'); if(el) el.value=v;});
+    ['proj-name','proj-offer','proj-invoice','proj-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    const fm=document.getElementById('fkmngr'); if(fm) fm.value='';
+
+    const projNameInput = document.getElementById('proj-name');
+    if (projNameInput) { projNameInput.disabled = false; }
+
+    window.activeEditingGroupId = null;
+    window.activeEditingRecordId = null;
+    const banner = document.getElementById('kalk-edit-banner');
+    if (banner) banner.classList.add('hidden');
+
+    const btnSave = document.getElementById('btn-save-to-log');
+    if (btnSave) {
+        const myCompany = window.currentUserCompany || "MNAU";
+        btnSave.innerHTML = `<span class="ti">➔</span> ${myCompany} Auftrag im Log erfassen`;
+    }
+
+    window.syncCostsToVolume();
+    window.calculate();
 };
 
 window.exportPDF = async function(){
@@ -1112,46 +1145,13 @@ window.exportPDF = async function(){
 
                 const filename = `Group-Kalkulator_${name}.pdf`;
 
-                // PDF ALS BLOB ERZEUGEN UND IM MODAL ANZEIGEN
-                const blobUrl = pdf.output('bloburl');
+                // PDF ALS BLOB ERZEUGEN UND IM MODAL ANZEIGEN (OHNE BROWSER SIDEBAR)
+                const blobUrl = pdf.output('bloburl') + '#toolbar=0&navpanes=0&view=FitH';
                 window.showPDFModal(blobUrl, filename);
                 cleanup();
 
             }).catch(async err => { cleanup(); window.Logger.error("PDF-Export Fehler:", err); await window.customAlert('PDF-Fehler: ' + err.message, "Systemfehler"); });
     }, 300);
-};
-
-window.resetAll = function(){
-    ENTITIES.forEach(e=>{
-        const baseEl = document.getElementById('base-' + e); if(baseEl) baseEl.value = '';
-        const spEl = document.getElementById('sp-' + e); if(spEl) spEl.value = '';
-
-        const container = document.getElementById(`suppliers-list-${e}`);
-        if (container) { container.innerHTML = ''; window.addKalkSupplierRow(e); }
-        const hp=document.getElementById('hp-'+e); if(hp) hp.value=150;
-        const nt=document.getElementById('note-'+e); if(nt) nt.value='';
-        COSTS.forEach(c=>{const el=document.getElementById('cost-'+e+'-'+c.key);if(el){el.value=c.def;el.disabled=false;delete el.dataset.prev;}});
-    });
-    [['seller',3],['setter',4],['closer1',4],['closer2',4]].forEach(([id,v])=>{const el=document.getElementById('role-'+id+'-pct'); if(el) el.value=v;});
-    ['proj-name','proj-offer','proj-invoice','proj-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-    const fm=document.getElementById('fkmngr'); if(fm) fm.value='';
-
-    const projNameInput = document.getElementById('proj-name');
-    if (projNameInput) { projNameInput.disabled = false; }
-
-    window.activeEditingGroupId = null;
-    window.activeEditingRecordId = null;
-    const banner = document.getElementById('kalk-edit-banner');
-    if (banner) banner.classList.add('hidden');
-
-    const btnSave = document.getElementById('btn-save-to-log');
-    if (btnSave) {
-        const myCompany = window.currentUserCompany || "MNAU";
-        btnSave.innerHTML = `<span class="ti">➔</span> ${myCompany} Auftrag im Log erfassen`;
-    }
-
-    window.syncCostsToVolume();
-    window.calculate();
 };
 
 window.addEventListener('beforeprint',()=>{

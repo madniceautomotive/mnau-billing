@@ -1,5 +1,5 @@
 // ====================================================
-// ui.js: DOM RENDERING (LIVE BADGES & STABLE EXPAND STATE)
+// ui.js: DOM RENDERING (SAUBERES CHECKBOX GRID)
 // ====================================================
 
 window.toggleCardExpand = function(recordId, event) {
@@ -36,7 +36,6 @@ window.UI = {
         const activeExternalRecords = companyRecords.filter(r => (r.fields.Status || "Zu verrechnen") !== "Bezahlt" && isExternal(r));
         const archivedRecords = companyRecords.filter(r => r.fields.Status === "Bezahlt");
 
-        // AKTUALLISIERE DIE ANZAHL-BADGES AUF DEN SUB-TABS
         const badgeOwn = document.getElementById('badge-count-own');
         const badgeExt = document.getElementById('badge-count-external');
         const badgeArc = document.getElementById('badge-count-archive');
@@ -106,7 +105,6 @@ window.UI = {
                 const projNotes = groupMeta ? groupMeta.projNotes : '';
                 const entityNote = groupMeta ? groupMeta.entityNote : '';
 
-                // 1. DETAIL PANEL: Lieferanten
                 let suppliersHTML = '';
                 if (suppliers.length > 0) {
                     suppliersHTML = `<div class="breakdown-list">`;
@@ -126,7 +124,6 @@ window.UI = {
                     suppliersHTML = `<div style="font-size:0.75rem; color:var(--text-muted);">Keine externen Lieferanten.</div>`;
                 }
 
-                // 2. DETAIL PANEL: Erlösverteilung & Group-Anteil Breakdown
                 let groupMetaHTML = '';
                 let kp = "0,00";
                 if (groupMeta) {
@@ -173,7 +170,6 @@ window.UI = {
                     groupMetaHTML = `<div style="font-size:0.75rem; color:var(--text-muted);">Keine Group-Daten verfügbar.</div>`;
                 }
 
-                // 3. DETAIL PANEL GRID: Projektdetails & Spesen/Notizen
                 let projectDetailsHTML = '';
                 if (projOffer || projInvoice || projNotes) {
                     projectDetailsHTML = `
@@ -206,7 +202,6 @@ window.UI = {
                     topGridHTML = `<div class="oc-details-grid" style="margin-bottom: 14px;">${projectDetailsHTML}${spesenNotesHTML}</div>`;
                 }
 
-                // 4. FOOTER: PDF Versions Buttons
                 let pdfVersionsHTML = '';
                 if (groupMeta) {
                     const snapshots = groupMeta.snapshots || (groupMeta.snapshot ? [groupMeta.snapshot] : []);
@@ -218,8 +213,8 @@ window.UI = {
                             pdfVersionsHTML += `
                                 <button type="button" class="btn-secondary btn-small pdf-v-btn ${isLatest ? 'active-v' : ''}" 
                                         onclick="event.stopPropagation(); window.downloadKalkulatorPDFFromLog('${id}', ${sIdx})" 
-                                        title="Version ${vLabel} als PDF herunterladen">
-                                    ⬇ ${tagText}
+                                        title="Version ${vLabel} als PDF anzeigen">
+                                    🖺 ${tagText}
                                 </button>
                             `;
                         });
@@ -339,7 +334,7 @@ window.UI = {
                             
                             <div class="oc-footer">
                                 <div class="oc-footer-pdfs">
-                                    ${pdfVersionsHTML ? `<span style="font-size:0.7rem; color:var(--text-muted); font-weight:700; margin-right:4px;">Group-Kalkulator PDFs:</span> ${pdfVersionsHTML}` : `<span style="font-size:0.7rem; color:var(--text-muted);">Kein PDF generiert.</span>`}
+                                    ${pdfVersionsHTML ? `<span style="font-size:0.7rem; color:var(--text-muted); font-weight:700; margin-right:4px;">PDF Kalkulationen:</span> ${pdfVersionsHTML}` : `<span style="font-size:0.7rem; color:var(--text-muted);">Kein PDF generiert.</span>`}
                                 </div>
                                 <div class="oc-footer-actions" onclick="event.stopPropagation()">
                                     ${actionControlsHTML}
@@ -369,9 +364,9 @@ window.UI = {
             });
         };
 
-        renderContainer(document.getElementById('order-list'), activeOwnRecords, "Keine aktiven eigenen Aufträge im Log.");
-        renderContainer(document.getElementById('external-order-list'), activeExternalRecords, "Keine passiven Partner-Aufträge vorhanden.");
-        renderContainer(document.getElementById('archive-list'), archivedRecords, "Archiv-Log leer.");
+        renderContainer(window.DOM.orderList, activeOwnRecords, "Keine aktiven eigenen Aufträge im Log.");
+        renderContainer(window.DOM.externalOrderList, activeExternalRecords, "Keine passiven Partner-Aufträge vorhanden.");
+        renderContainer(window.DOM.archiveList, archivedRecords, "Archiv-Log leer.");
     },
 
     updateSummary(records) {
@@ -486,11 +481,11 @@ window.UI = {
             data.items.forEach(item => {
                 html += `
                     <div class="supplier-stat-item">
-                        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; margin:0; text-transform:none; user-select:none; min-width:0; flex:1;">
-                            <input type="checkbox" onchange="window.toggleSupplierPaid('${item.orderId}', ${item.index})" style="accent-color:var(--active-company-color); cursor:pointer; flex-shrink:0;">
-                            <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">↳ ${item.order}</span>
+                        <label class="supplier-checkbox-label">
+                            <input type="checkbox" onchange="window.toggleSupplierPaid('${item.orderId}', ${item.index})">
+                            <span title="${item.order}">↳ ${item.order}</span>
                         </label>
-                        <span style="color:#ef4444; font-weight:600; flex-shrink:0;">€ ${item.amount.toFixed(2)}</span>
+                        <span class="supplier-amount">€ ${item.amount.toFixed(2)}</span>
                     </div>
                 `;
             });

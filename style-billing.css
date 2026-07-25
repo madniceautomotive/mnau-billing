@@ -1,5 +1,5 @@
 /* ==================================================== */
-/* style-billing.css: MULTI-BRAND & HIGH-END DROPDOWNS  */
+/* style-billing.css: MULTI-BRAND & RESPONSIVE LAYOUT   */
 /* ==================================================== */
 
 :root {
@@ -70,7 +70,7 @@ body, html {
 [data-company="MNAU"] { --active-company-color: #00663a; }
 [data-company="MNGR"] { --active-company-color: #64748b; }
 
-/* GLOBALE RIGIDE DROPDOWN & SELECT STYLES (VERHINDERT WEISSE OS DEFAULTS) */
+/* ZWINGENDES GLOBAL SELECT STYLING - BEHEBT WEISSE DROPDOWNS */
 select, select.mnau-input, select.status-select {
     background-color: var(--bg-input) !important;
     color: var(--text-main) !important;
@@ -365,49 +365,6 @@ form label {
 .summary-label { font-size: 0.65rem; color: var(--text-muted) !important; text-transform: uppercase; font-weight: 700; }
 .summary-value { font-size: 1.2rem; font-weight: 800; color: var(--text-main) !important; }
 
-/* STICKY BEARBEITUNGS-BANNER IM KALKULATOR */
-.kalk-edit-banner {
-    position: -webkit-sticky;
-    position: sticky;
-    top: -20px;
-    margin: -20px -20px 24px -20px;
-    z-index: 999;
-    background: #eab308 !important;
-    color: #0f172a !important;
-    border-bottom: 2px solid #ca8a04 !important;
-    border-radius: 0 0 12px 12px;
-    padding: 14px 24px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-}
-.kalk-edit-banner.hidden {
-    display: none !important;
-}
-.kalk-edit-text {
-    color: #0f172a !important;
-    font-size: 0.88rem;
-    font-weight: 700;
-}
-.kalk-edit-banner button {
-    background: rgba(15, 23, 42, 0.1) !important;
-    border: 1px solid #0f172a !important;
-    color: #0f172a !important;
-    padding: 8px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 800;
-    font-size: 0.8rem;
-    transition: all 0.2s;
-    flex-shrink: 0;
-}
-.kalk-edit-banner button:hover {
-    background: #0f172a !important;
-    color: #ffffff !important;
-}
-
 /* LOG TERMINAL STYLING */
 .log-terminal {
     background: #090d16 !important;
@@ -635,6 +592,7 @@ form label {
     padding-bottom: 6px;
 }
 
+/* SAUBERE LIEFERANTEN LISTEN & CHECKBOXEN */
 .breakdown-list { display: flex; flex-direction: column; gap: 6px; }
 .breakdown-row {
     display: flex; justify-content: space-between; align-items: center;
@@ -684,6 +642,62 @@ form label {
 .changelog-btn:hover { background: rgba(2, 132, 199, 0.1) !important; color: #0284c7 !important; border-color: #0284c7 !important; }
 .edit-btn:hover { background: rgba(234, 179, 8, 0.15) !important; color: #ca8a04 !important; border-color: #ca8a04 !important; }
 .delete-btn:hover { background: rgba(239, 68, 68, 0.1) !important; color: #ef4444 !important; border-color: #ef4444 !important; }
+
+/* SECTION DIVIDERS */
+.section-divider {
+    display: flex; align-items: center; margin: 24px 0 14px 0;
+    font-size: 0.72rem; font-weight: 800; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--active-company-color) !important;
+}
+.section-divider::before { content: '// '; margin-right: 6px; }
+.section-divider::after { content: ''; flex: 1; height: 1px; margin-left: 14px; background: linear-gradient(to right, var(--border-color-strong), transparent) !important; }
+.section-divider.red-divider { color: #e74c3c !important; }
+.section-divider.red-divider::after { background: linear-gradient(to right, rgba(231, 76, 60, 0.4), transparent) !important; }
+
+/* OFFENE LIEFERANTEN POSTEN PANEL */
+.no-debts-panel {
+    grid-column: 1 / -1;
+    background: var(--bg-panel) !important;
+    border: 1px dashed var(--border-color-strong) !important;
+    border-radius: 12px; padding: 20px;
+    display: flex; align-items: center; gap: 14px; justify-content: center;
+}
+.no-debts-text h3 { margin: 0 0 2px 0; font-size: 0.85rem; color: var(--active-company-color) !important; font-weight: 800; }
+.no-debts-text p { margin: 0; font-size: 0.75rem; color: var(--text-muted) !important; }
+
+.supplier-summary-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.supplier-stat-card {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-color) !important;
+    border-left: 4px solid #e74c3c !important;
+    border-radius: 8px; padding: 12px;
+    box-shadow: var(--shadow-card);
+}
+.supplier-stat-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--border-color); padding-bottom: 6px; margin-bottom: 8px; }
+.supplier-stat-name { font-weight: 800; font-size: 0.8rem; color: var(--text-main) !important; text-transform: uppercase; }
+.supplier-stat-total { color: #e74c3c; font-weight: 800; font-size: 0.95rem; }
+
+/* CHECKBOX LAYOUT FIX FÜR SUPPLIERS */
+.supplier-checkbox-label {
+    display: flex; align-items: center; gap: 10px; margin: 0;
+    cursor: pointer; text-transform: none; user-select: none;
+    min-width: 0; flex: 1; padding: 4px 0;
+}
+.supplier-checkbox-label input[type="checkbox"] {
+    width: 18px; height: 18px; margin: 0; cursor: pointer; flex-shrink: 0;
+    accent-color: var(--active-company-color);
+}
+.supplier-checkbox-label span {
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-size: 0.8rem; color: var(--text-dim);
+}
+.supplier-amount {
+    color: #ef4444; font-weight: 700; flex-shrink: 0; font-size: 0.85rem;
+}
+.supplier-stat-item {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 4px;
+}
 
 /* MOBILE RESPONSIVENESS & TOUCH TARGET FIXES (< 850px / 680px) */
 
@@ -777,13 +791,13 @@ form label {
         font-size: 0.85rem;
     }
     .supplier-stat-item {
-        padding: 8px 0;
+        padding: 6px 0;
         min-height: 44px;
     }
-    .supplier-stat-item input[type="checkbox"] {
+    .supplier-checkbox-label input[type="checkbox"] {
         width: 22px !important;
         height: 22px !important;
-        margin-right: 8px;
+        margin-right: 4px;
     }
 
     .oc-metrics-bar { grid-template-columns: repeat(3, 1fr); padding: 8px; gap: 6px; }

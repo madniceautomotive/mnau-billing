@@ -1,5 +1,5 @@
 /* ==================================================== */
-/* style-kalkulator.css: KALKULATOR & SELECT STYLING    */
+/* style-kalkulator.css: KALKULATOR & GRID STYLING      */
 /* ==================================================== */
 
 #view-calculator {
@@ -13,20 +13,6 @@
 #view-calculator .kalkulator-container {
     width: 100%;
     max-width: 100%;
-}
-
-/* ERZWINGT NATIVES UNIFORMES STYLING FÜR APPLICATIVE DROPDOWNS */
-#view-calculator .field select.mnau-input {
-    -webkit-appearance: none !important;
-    -moz-appearance: none !important;
-    appearance: none !important;
-    background-color: var(--bg-input) !important;
-    color: var(--text-main) !important;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e") !important;
-    background-repeat: no-repeat !important;
-    background-position: right 10px center !important;
-    background-size: 16px !important;
-    padding-right: 32px !important;
 }
 
 #view-calculator .logo-header {
@@ -129,7 +115,6 @@
 #view-calculator .field-row .field { margin-bottom: 0; }
 #view-calculator .field label { font-size: 0.68rem; color: var(--text-muted) !important; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
 #view-calculator .field input.mnau-input,
-#view-calculator .field select.mnau-input,
 #view-calculator .field textarea.mnau-input {
     margin-top: 0; padding: 8px 10px; font-size: 0.8rem;
     background: var(--bg-input) !important;
@@ -175,7 +160,7 @@
 #view-calculator .actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
 #view-calculator .actions button { padding: 10px 16px; font-weight: 700; font-size: 0.8rem; border-radius: 6px; }
 
-/* ERGEBNIS-TABELLE */
+/* ERGEBNIS-TABELLE METICULOUSLY ALIGNED */
 #view-calculator .results-wrap {
     width: 100%; max-width: 100%;
     overflow-x: auto; -webkit-overflow-scrolling: touch;
@@ -259,18 +244,21 @@
 #view-calculator table.kalk-results-table .val-zero { color: var(--text-muted) !important; }
 #view-calculator table.kalk-results-table .val-neutral { color: var(--text-sub) !important; }
 
+/* VOLLSTÄNDIG SOLIDEN/DECKENDEN HINTERGRÜNDE OHNE TRANSPARENZ */
 #view-calculator tr.rg-base td { background: var(--bg-card) !important; }
 #view-calculator tr.rg-sales td { background: #2d1e15 !important; }
 #view-calculator tr.rg-cost td { background: #102636 !important; }
 #view-calculator tr.rg-fulfill td { background: #0e3522 !important; font-weight: 700; }
 #view-calculator tr.rg-pass td { background: var(--bg-card) !important; }
 
+/* LIGHT THEME SOLID OVERRIDES FOR MAXIMUM CONTRAST */
 [data-theme="light"] #view-calculator tr.rg-base td { background: #ffffff !important; }
 [data-theme="light"] #view-calculator tr.rg-sales td { background: #ffedd5 !important; }
 [data-theme="light"] #view-calculator tr.rg-cost td { background: #e0f2fe !important; }
 [data-theme="light"] #view-calculator tr.rg-fulfill td { background: #dcfce7 !important; font-weight: 700; }
 [data-theme="light"] #view-calculator tr.rg-pass td { background: #ffffff !important; }
 
+/* Summen-Zeile Highlight */
 #view-calculator tr.rg-sum { background: var(--bg-panel) !important; }
 #view-calculator tr.rg-sum td {
     font-weight: 800; font-size: 0.9rem;
@@ -283,6 +271,7 @@
 #view-calculator tr.rg-stunden td { background: #2a2712 !important; }
 [data-theme="light"] #view-calculator tr.rg-stunden td { background: #fef9c3 !important; }
 
+/* Metriken Highlights */
 #view-calculator .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 1.2rem; }
 #view-calculator .metric { background: var(--bg-card) !important; border: 1px solid var(--border-color) !important; border-radius: 10px; padding: 12px; box-shadow: var(--shadow-card); }
 #view-calculator .metric.highlight-main { border-color: var(--active-company-color) !important; background: var(--bg-panel) !important; }

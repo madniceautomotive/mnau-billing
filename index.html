@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MNGR HUB</title>
 
-    <!-- Inline Favicon gegen 404 Fehler -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
 
     <link rel="stylesheet" href="style-core.css">
@@ -14,13 +13,11 @@
 </head>
 <body>
 
-<!-- INITIALER LADE-BILDSCHIRM -->
 <div id="app-init-loader" class="app-init-loader">
     <div class="loader-spinner"></div>
     <div class="loader-text">MNGR Hub wird geladen...</div>
 </div>
 
-<!-- DER SICHERHEITS-TRESOR (Login-Overlay) -->
 <div id="auth-overlay" class="auth-overlay hidden">
     <div class="modal-card">
         <h2>MNAU Login</h2>
@@ -43,39 +40,32 @@
     </div>
 </div>
 
-<!-- DIE EIGENTLICHE APP -->
 <div id="database-view">
     <header class="database-header">
         <div class="header-main-row">
-            <!-- DYNAMISCHES FIRMEN-LOGO IM HEADER -->
             <div class="header-logo-container">
                 <img id="header-company-logo" src="logos/mnau.svg" alt="Logo" class="header-company-logo" onerror="this.style.display='none'; document.getElementById('header-logo-text').style.display='inline-block';">
                 <h1 id="header-logo-text" style="display:none;"><span id="header-company-name">MNAU</span> <span>HUB</span></h1>
             </div>
 
-            <!-- TAB NAVIGATION -->
             <div class="mnau-tabs">
                 <button id="tab-btn-billing" class="mnau-tab-btn active" onclick="switchTab('billing')">Auftrags-Log</button>
                 <button id="tab-btn-calculator" class="mnau-tab-btn" onclick="switchTab('calculator')">Group Kalkulator</button>
             </div>
 
             <div style="display: flex; gap: 10px; align-items: center;">
-                <!-- FIRMEN UMSCHALTER DROPDOWN -->
                 <select id="company-select" class="status-select" onchange="switchCompany(this.value)" style="border-color: #00ff73; color: #00ff73; font-weight: 800; min-width: 110px;" title="Aktive Firma wechseln"></select>
 
-                <!-- THEME TOGGLE BUTTON -->
                 <button id="btn-theme-toggle" class="theme-toggle-btn" onclick="toggleTheme()" title="Design wechseln (Dark / Light)"></button>
 
                 <button id="btn-manage-suppliers" class="sort-icon-btn" title="Lieferanten-Datenbank verwalten">
                     <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
                 </button>
 
-                <!-- MOBILE FILTER BUTTON -->
                 <button id="btn-mobile-filter" class="sort-icon-btn mobile-only-btn" title="Suche & Filter" onclick="window.toggleMobileFilters()">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 4c0-.55.45-1 1-1h16c.55 0 1 .45 1 1v2.5c0 .26-.11.52-.29.71L15 13v6l-6 2v-8L3.29 7.21A1 1 0 0 1 3 6.5V4z"/></svg>
                 </button>
 
-                <!-- DEBUG LOGS BUTTON FÜR BETA-TESTER -->
                 <button id="btn-view-logs" class="sort-icon-btn" title="System-Logs &amp; Fehlermeldungen anzeigen" onclick="window.openLogsModal()">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 19V7H4v12h16m0-14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h16M13 17v-2h-2v2h2m0-4v-4h-2v4h2z"/></svg>
                 </button>
@@ -91,7 +81,6 @@
                 <input type="text" id="search-input" class="search-input" placeholder="Nach Auftrag, Betrag oder Lieferant suchen...">
                 <button id="search-clear-btn" class="search-clear-btn"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
             </div>
-            <!-- GLOBALER STATUS FILTER -->
             <select id="status-filter" class="status-select" style="max-width: 220px;">
                 <option value="Alle">Alle Stati anzeigen</option>
                 <option value="Zu verrechnen">Zu verrechnen</option>
@@ -108,7 +97,6 @@
             <div id="loading" class="spinner hidden"></div>
             <div id="dashboard-summary" class="dashboard-summary"></div>
 
-            <!-- ELEGANTE SUB-TABS STATT ACCORDIONS -->
             <div class="sub-tabs">
                 <button id="subtab-btn-own" class="sub-tab-btn active" onclick="switchLogSubTab('own')">
                     Eigene Aufträge <span id="badge-count-own" class="subtab-badge">0</span>
@@ -121,7 +109,6 @@
                 </button>
             </div>
 
-            <!-- SUB-TAB CONTENT PANELS -->
             <div id="log-panel-own" class="sub-tab-panel">
                 <div id="order-list"></div>
             </div>
@@ -134,7 +121,6 @@
                 <div id="archive-list"></div>
             </div>
 
-            <!-- FIX DARUNTER: OFFENE LIEFERANTEN POSTEN -->
             <div class="section-divider red-divider" style="margin-top: 36px;">OFFENE_LIEFERANTEN_POSTEN</div>
             <div id="supplier-summary-details" class="supplier-summary-details"></div>
         </div>
@@ -142,7 +128,6 @@
         <!-- TAB 2: GROUP KALKULATOR -->
         <div id="view-calculator" class="tab-content hidden">
             <div class="kalkulator-container">
-                <!-- STICKY HINWEIS-BANNER BEI DER BEARBEITUNG EINES BESTEHENDEN AUFTRAGS -->
                 <div id="kalk-edit-banner" class="kalk-edit-banner hidden">
                     <div class="kalk-edit-text">
                         <span><strong>PROJEKT-BEARBEITUNG:</strong> Sie erstellen eine neue Version für <u id="kalk-edit-title"></u></span>
@@ -231,7 +216,6 @@
                     <div class="hint">Fulfillment wird automatisch berechnet = 100 % − (Backoffice + PM + Overhead + Sales). Wird der Wert rot/negativ, übersteigen die anderen %-Posten 100 %.</div>
                 </div>
 
-                <!-- ERGEBNISSEN UND STEUERUNGS-BUTTONS UNTEN -->
                 <div class="kalk-section print-keep" id="results-section" style="display:block">
                     <div class="section-title"><span class="ti">▸</span> Ergebnis <span class="layer-tag" id="result-mode-tag"></span></div>
                     <div class="metric-grid" id="metrics"></div>
@@ -244,9 +228,6 @@
                             <span class="ti">➔</span> Auftrag im Log erfassen
                         </button>
                     </div>
-
-                    <div class="hint" id="recipient-note" style="margin-top:10px"></div>
-                    <div class="notes-out" id="notes-out" style="display:none"></div>
                 </div>
             </div>
         </div>
@@ -308,11 +289,11 @@
     </div>
 </div>
 
-<!-- NEU: DEDIZIERTES PDF-VIEWER MODAL -->
+<!-- DEDIZIERTES PDF-VIEWER MODAL (MAXIMIERTE GRÖSSE) -->
 <div id="modal-pdf-overlay" class="modal-overlay hidden">
-    <div class="modal-card" style="max-width: 900px; height: 88vh; display: flex; flex-direction: column; padding: 0; overflow: hidden; border-radius: 16px;">
-        <div style="padding: 16px 24px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); z-index: 2;">
-            <h2 id="pdf-modal-title" style="margin: 0; font-size: 1.1rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%; letter-spacing: -0.2px;">PDF Vorschau</h2>
+    <div class="modal-card" style="max-width: 98vw; width: 1400px; height: 96vh; display: flex; flex-direction: column; padding: 0; overflow: hidden; border-radius: 16px;">
+        <div style="padding: 12px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); z-index: 2;">
+            <h2 id="pdf-modal-title" style="margin: 0; font-size: 1.1rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%; letter-spacing: -0.2px;">PDF Vorschau</h2>
             <div style="display: flex; gap: 8px;">
                 <button type="button" id="btn-download-pdf" class="btn-primary btn-small" style="padding: 8px 14px;">⬇ Download</button>
                 <button type="button" class="btn-secondary btn-small" style="padding: 8px 14px;" onclick="window.hideModal('modal-pdf-overlay')">Schließen</button>
