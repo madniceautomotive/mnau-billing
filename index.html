@@ -70,6 +70,11 @@
                     <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
                 </button>
 
+                <!-- NEU: MOBILE FILTER BUTTON (NUR AUF HANDY SICHTBAR) -->
+                <button id="btn-mobile-filter" class="sort-icon-btn mobile-only-btn" title="Suche & Filter" onclick="window.toggleMobileFilters()">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 4c0-.55.45-1 1-1h16c.55 0 1 .45 1 1v2.5c0 .26-.11.52-.29.71L15 13v6l-6 2v-8L3.29 7.21A1 1 0 0 1 3 6.5V4z"/></svg>
+                </button>
+
                 <!-- DEBUG LOGS BUTTON FÜR BETA-TESTER -->
                 <button id="btn-view-logs" class="sort-icon-btn" title="System-Logs &amp; Fehlermeldungen anzeigen" onclick="window.openLogsModal()">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 19V7H4v12h16m0-14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h16M13 17v-2h-2v2h2m0-4v-4h-2v4h2z"/></svg>
@@ -80,8 +85,10 @@
                 </button>
             </div>
         </div>
-        <div class="header-controls-row" id="billing-search-row" style="display:flex; gap:12px; align-items:center;">
-            <div class="search-group" style="flex:1;">
+
+        <!-- DIESER BEREICH WIRD AUF MOBILE VERSTECKT UND FÄHRT AUS -->
+        <div class="header-controls-row" id="billing-search-row">
+            <div class="search-group" style="flex:1; display: flex;">
                 <input type="text" id="search-input" class="search-input" placeholder="Nach Auftrag, Betrag oder Lieferant suchen...">
                 <button id="search-clear-btn" class="search-clear-btn"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
             </div>

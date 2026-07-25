@@ -1,5 +1,5 @@
 /* ==================================================== */
-/* style-billing.css: MULTI-BRAND & SUB-TAB NAVIGATION  */
+/* style-billing.css: MULTI-BRAND & RESPONSIVE LAYOUT   */
 /* ==================================================== */
 
 :root {
@@ -56,6 +56,9 @@ body, html {
 }
 
 .hidden {
+    display: none !important;
+}
+.mobile-only-btn {
     display: none !important;
 }
 
@@ -179,7 +182,13 @@ body, html {
     margin-bottom: 20px;
     margin-top: 10px;
     overflow-x: auto;
+    overflow-y: hidden; /* Behebt das vertikale Wackeln auf Mobile */
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    align-items: flex-end;
+}
+.sub-tabs::-webkit-scrollbar {
+    display: none;
 }
 .sub-tab-btn {
     background: transparent;
@@ -300,11 +309,16 @@ form label {
     text-transform: uppercase; letter-spacing: 0.5px;
 }
 
-/* FIX: ZWINGT ALLE DROPDOWN OPTIONEN IN DEN RICHTIGEN THEME-HINTERGRUND (GEGEN WEISSE OS DEFAULT MENÜS) */
 select option {
     background-color: var(--bg-card) !important;
     color: var(--text-main) !important;
     font-weight: 600;
+}
+
+/* Suchfeld / Filter Wrapper Desktop */
+.header-controls-row {
+    display: flex; gap: 12px; align-items: center;
+    transition: all 0.3s ease;
 }
 
 /* DASHBOARD SUMMARY KARTEN */
@@ -327,7 +341,50 @@ select option {
 .summary-label { font-size: 0.65rem; color: var(--text-muted) !important; text-transform: uppercase; font-weight: 700; }
 .summary-value { font-size: 1.2rem; font-weight: 800; color: var(--text-main) !important; }
 
-/* LOG TERMINAL STYLING FÜR DIAGNOSE MODAL */
+/* STICKY BEARBEITUNGS-BANNER IM KALKULATOR */
+.kalk-edit-banner {
+    position: -webkit-sticky;
+    position: sticky;
+    top: -20px;
+    margin: -20px -20px 24px -20px;
+    z-index: 999;
+    background: #eab308 !important;
+    color: #0f172a !important;
+    border-bottom: 2px solid #ca8a04 !important;
+    border-radius: 0 0 12px 12px;
+    padding: 14px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+}
+.kalk-edit-banner.hidden {
+    display: none !important;
+}
+.kalk-edit-text {
+    color: #0f172a !important;
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+.kalk-edit-banner button {
+    background: rgba(15, 23, 42, 0.1) !important;
+    border: 1px solid #0f172a !important;
+    color: #0f172a !important;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 800;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+.kalk-edit-banner button:hover {
+    background: #0f172a !important;
+    color: #ffffff !important;
+}
+
+/* LOG TERMINAL STYLING */
 .log-terminal {
     background: #090d16 !important;
     border: 1px solid var(--border-color-strong) !important;
@@ -574,8 +631,33 @@ select option {
 .supplier-stat-total { color: #e74c3c; font-weight: 800; font-size: 0.95rem; }
 .supplier-stat-item { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-dim) !important; margin-bottom: 6px; }
 
-/* MOBILE (< 850px) */
+/* MOBILE RESPONSIVENESS & CARD REDESIGN (< 850px / 680px) */
+
 @media (max-width: 850px) {
+    .mobile-only-btn { display: inline-flex !important; }
+
+    /* Suchleiste auf Mobile ausblenden und als Block designen */
+    .header-controls-row {
+        display: none !important;
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        margin-top: 12px;
+        gap: 10px;
+    }
+    .header-controls-row.show-on-mobile {
+        display: flex !important;
+        animation: slideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .search-group { width: 100%; display: flex; }
+    .search-input { width: 100%; flex: 1; }
+    #status-filter { width: 100%; max-width: none !important; }
+
     .header-main-row {
         display: flex;
         flex-direction: column;
@@ -587,8 +669,8 @@ select option {
     .mnau-tab-btn { flex: 1; text-align: center; padding: 8px; font-size: 0.78rem; }
     .header-main-row > div:last-child { width: 100%; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; }
     #company-select { flex: 1; min-width: 90px; }
-    .header-controls-row#billing-search-row { flex-direction: column; align-items: stretch; gap: 8px; margin-top: 8px; }
-    #status-filter { max-width: 100% !important; width: 100%; }
+
+    .sub-tabs { padding-bottom: 2px; }
 }
 
 @media (max-width: 680px) {
@@ -596,18 +678,46 @@ select option {
     .database-header { padding: 10px; }
     .billing-row { padding: 12px; }
 
+    .kalk-edit-banner {
+        top: -10px;
+        margin: -10px -10px 16px -10px;
+        padding: 12px 14px;
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+
+    /* NEUES AUFGERÄUMTES MOBILE KARTEN-GRID */
     .oc-compact-bar {
         display: grid;
-        grid-template-columns: 1fr auto auto;
+        grid-template-columns: 1fr auto;
         grid-template-areas:
-            "title title toggle"
-            "financials status toggle";
-        gap: 8px 10px; align-items: center;
+            "title toggle"
+            "financials financials"
+            "status status";
+        gap: 12px 8px;
+        align-items: start;
     }
     .oc-title-col { grid-area: title; }
-    .oc-compact-financials { grid-area: financials; align-items: flex-start; min-width: 0; }
-    .oc-status-col { grid-area: status; }
-    .oc-toggle-icon { grid-area: toggle; align-self: center; }
+    .oc-toggle-icon { grid-area: toggle; margin-top: 0; width: 34px; height: 34px; }
+
+    .oc-compact-financials {
+        grid-area: financials;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--bg-panel);
+        padding: 10px 14px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .oc-compact-amt { font-size: 1.15rem; }
+    .oc-compact-db { font-size: 0.85rem; }
+
+    .oc-status-col { grid-area: status; width: 100%; }
+    .oc-status-col .status-select { width: 100%; max-width: none !important; }
 
     .oc-metrics-bar { grid-template-columns: repeat(3, 1fr); padding: 8px; gap: 6px; }
     .oc-metric-lbl { font-size: 0.58rem; }
