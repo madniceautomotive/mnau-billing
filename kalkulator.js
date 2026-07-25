@@ -1,5 +1,5 @@
 // ====================================================
-// kalkulator.js: PDF VIEWER WITH ZOOM TOOLBAR
+// kalkulator.js: UNLIMITED VERSIONS & NO-CAP SNAPSHOTS
 // ====================================================
 
 const ENTITIES = ['MNAG','MNMH','MNWB','MNAT','MNAU','MNGR'];
@@ -556,7 +556,9 @@ async function executeBatchOrFallbackUpdates(updates) {
     }
 }
 
-// AUFTRAG SPEICHERN
+// ====================================================
+// AUFTRAG IM LOG ERFASSEN / AKTUALISIEREN (LÜCKENLOSE HISTORIE - ALLE VERSIONEN)
+// ====================================================
 window.saveMNAUOrderToLog = async function() {
     const myCompany = (window.currentUserCompany || "MNAU").trim().toUpperCase();
     const projNameRaw = getVal('proj-name');
@@ -641,10 +643,7 @@ window.saveMNAUOrderToLog = async function() {
                 } catch(e) {}
             }
 
-            if (existingSnapshots.length > 3) {
-                existingSnapshots = existingSnapshots.slice(-3);
-            }
-
+            // ALLE VERSIONEN BLEIBEN ERHALTEN (KEIN SLICE MORE!)
             const newVersionNum = existingSnapshots.length > 0 ? existingSnapshots[existingSnapshots.length - 1].version + 1 : 2;
 
             if (btn) { btn.disabled = true; btn.textContent = "Speichere Version v" + newVersionNum + "..."; }
@@ -661,9 +660,6 @@ window.saveMNAUOrderToLog = async function() {
             };
 
             const updatedSnapshots = [...existingSnapshots, newSnapshot];
-            if (updatedSnapshots.length > 3) {
-                updatedSnapshots.shift();
-            }
 
             const updates = [];
             const recordsToDelete = [];
@@ -698,7 +694,7 @@ window.saveMNAUOrderToLog = async function() {
                     ]
                 };
 
-                const updatedChangelog = [logEntry, ...existingChangelog].slice(0, 10);
+                const updatedChangelog = [logEntry, ...existingChangelog];
 
                 const isMain = (comp === myCompany);
                 const groupMeta = {
@@ -865,9 +861,7 @@ window.saveMNAUOrderToLog = async function() {
     }
 };
 
-// ====================================================
-// PDF VIEWER - JETZT MIT ZOOM / LUPEN-TOOLBAR (toolbar=1)
-// ====================================================
+// PDF VIEWER - TOOLBAR MET LUPEN UND OHNE THUMBNAIL-SIDEBAR
 window.downloadKalkulatorPDFFromLog = async function(recordId, snapshotIndex = null) {
     const record = (window.loadedRecords || []).find(r => r.id === recordId);
     if (!record || !record.fields.Fremdkosten_Details) {
@@ -996,7 +990,6 @@ window.downloadKalkulatorPDFFromLog = async function(recordId, snapshotIndex = n
                 const safeName = (snap.projName || record.fields.Auftrag || 'Group-Kalkulator').replace(/[^\wäöüÄÖÜ\- ]+/g,'').trim().replace(/\s+/g,'_');
                 const filename = `Group-Kalkulator_${safeName}_${versionTag}.pdf`;
 
-                // PARAMETER FIX: TOOLBAR=1 (INCL. ZOOM & LUPEN), NAVPANES=0 (KEINE SIDEBAR THUMBNAILS)
                 const blobUrl = pdf.output('bloburl') + '#toolbar=1&navpanes=0&view=FitH';
                 window.showPDFModal(blobUrl, filename);
                 cleanup();
