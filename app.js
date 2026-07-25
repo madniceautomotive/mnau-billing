@@ -1,11 +1,11 @@
 // ==================================================== 
-// app.js: USER ACTIONS, CONTROLLER HUB & LOGGER SYSTEM
+// app.js: USER ACTIONS, CONTROLLER HUB & PDF VIEWER
 // ====================================================
 
 const SUN_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
 const MOON_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
 
-// DYNAMISCHES SAFE DOM OBJECT (VERHINDERT CRASHES)
+// DYNAMISCHES SAFE DOM OBJECT
 window.DOM = {
     get loading() { return document.getElementById('loading'); },
     get orderList() { return document.getElementById('order-list'); },
@@ -18,7 +18,6 @@ window.DOM = {
     get modalSuppliers() { return document.getElementById('modal-suppliers-overlay'); }
 };
 
-// HIGH-END VEKTOR-ICONS FÜR STATE-OF-THE-ART MODAL DIALOGS
 const DIALOG_ICONS = {
     info: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
     success: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
@@ -209,6 +208,29 @@ window.customConfirm = function(message, title = "Bestätigung erforderlich") {
 };
 
 // ====================================================
+// PDF VIEWER MODAL CONTROLLER
+// ====================================================
+window.showPDFModal = function(blobUrl, filename) {
+    const titleEl = document.getElementById('pdf-modal-title');
+    const iframe = document.getElementById('pdf-viewer-iframe');
+    const btnDownload = document.getElementById('btn-download-pdf');
+
+    if (titleEl) titleEl.textContent = filename;
+    if (iframe) iframe.src = blobUrl;
+
+    if (btnDownload) {
+        btnDownload.onclick = () => {
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = filename;
+            a.click();
+        };
+    }
+
+    window.showModal('modal-pdf-overlay');
+};
+
+// ====================================================
 // LOG SUB-TAB SWITCHER (EIGENE / PASSIVE / ARCHIV)
 // ====================================================
 window.switchLogSubTab = function(subTabName) {
@@ -228,7 +250,6 @@ window.switchLogSubTab = function(subTabName) {
     localStorage.setItem('mngr_log_subtab', subTabName);
 };
 
-// TOGGLE MOBILE SEARCH/FILTERS
 window.toggleMobileFilters = function() {
     const row = document.getElementById('billing-search-row');
     if (row) {

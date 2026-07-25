@@ -70,7 +70,7 @@
                     <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
                 </button>
 
-                <!-- NEU: MOBILE FILTER BUTTON (NUR AUF HANDY SICHTBAR) -->
+                <!-- MOBILE FILTER BUTTON -->
                 <button id="btn-mobile-filter" class="sort-icon-btn mobile-only-btn" title="Suche & Filter" onclick="window.toggleMobileFilters()">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 4c0-.55.45-1 1-1h16c.55 0 1 .45 1 1v2.5c0 .26-.11.52-.29.71L15 13v6l-6 2v-8L3.29 7.21A1 1 0 0 1 3 6.5V4z"/></svg>
                 </button>
@@ -86,7 +86,6 @@
             </div>
         </div>
 
-        <!-- DIESER BEREICH WIRD AUF MOBILE VERSTECKT UND FÄHRT AUS -->
         <div class="header-controls-row" id="billing-search-row">
             <div class="search-group" style="flex:1; display: flex;">
                 <input type="text" id="search-input" class="search-input" placeholder="Nach Auftrag, Betrag oder Lieferant suchen...">
@@ -240,7 +239,7 @@
 
                     <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;">
                         <button class="btn-secondary" onclick="resetAll()"><span class="ti">↻</span> Reset</button>
-                        <button class="btn-secondary" onclick="exportPDF()"><span class="ti">⬇</span> PDF herunterladen</button>
+                        <button class="btn-secondary" onclick="exportPDF()"><span class="ti">🖺</span> PDF generieren</button>
                         <button class="btn-primary" id="btn-save-to-log" onclick="saveMNAUOrderToLog()" style="background: #00663a; padding: 12px 22px; font-size: 0.9rem; font-weight: bold; border-radius: 8px;">
                             <span class="ti">➔</span> Auftrag im Log erfassen
                         </button>
@@ -305,6 +304,22 @@
         <div class="modal-actions dialog-actions">
             <button type="button" id="custom-dialog-cancel" class="btn-secondary hidden">Abbrechen</button>
             <button type="button" id="custom-dialog-ok" class="btn-primary">OK</button>
+        </div>
+    </div>
+</div>
+
+<!-- NEU: DEDIZIERTES PDF-VIEWER MODAL -->
+<div id="modal-pdf-overlay" class="modal-overlay hidden">
+    <div class="modal-card" style="max-width: 900px; height: 88vh; display: flex; flex-direction: column; padding: 0; overflow: hidden; border-radius: 16px;">
+        <div style="padding: 16px 24px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); z-index: 2;">
+            <h2 id="pdf-modal-title" style="margin: 0; font-size: 1.1rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%; letter-spacing: -0.2px;">PDF Vorschau</h2>
+            <div style="display: flex; gap: 8px;">
+                <button type="button" id="btn-download-pdf" class="btn-primary btn-small" style="padding: 8px 14px;">⬇ Download</button>
+                <button type="button" class="btn-secondary btn-small" style="padding: 8px 14px;" onclick="window.hideModal('modal-pdf-overlay')">Schließen</button>
+            </div>
+        </div>
+        <div style="flex: 1; background: #525659; width: 100%; height: 100%;">
+            <iframe id="pdf-viewer-iframe" style="width: 100%; height: 100%; border: none;"></iframe>
         </div>
     </div>
 </div>

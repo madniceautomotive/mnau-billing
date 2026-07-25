@@ -1,5 +1,5 @@
 // ====================================================
-// kalkulator.js: TRANSACTIONAL SAVING, HISTORY TRIM & UNLIMITED VERSIONS
+// kalkulator.js: PDF VIEWER MODAL INTEGRATION
 // ====================================================
 
 const ENTITIES = ['MNAG','MNMH','MNWB','MNAT','MNAU','MNGR'];
@@ -557,7 +557,7 @@ async function executeBatchOrFallbackUpdates(updates) {
 }
 
 // ====================================================
-// AUFTRAG IM LOG ERFASSEN / AKTUALISIEREN (SCHLANK & TRANSAKTIONAL)
+// AUFTRAG IM LOG ERFASSEN / AKTUALISIEREN
 // ====================================================
 window.saveMNAUOrderToLog = async function() {
     const myCompany = (window.currentUserCompany || "MNAU").trim().toUpperCase();
@@ -643,7 +643,6 @@ window.saveMNAUOrderToLog = async function() {
                 } catch(e) {}
             }
 
-            // WICHTIG: Begrenzung auf maximal 3 Snapshots, damit Airtable-Limits (422) nie erreicht werden!
             if (existingSnapshots.length > 3) {
                 existingSnapshots = existingSnapshots.slice(-3);
             }
@@ -664,7 +663,6 @@ window.saveMNAUOrderToLog = async function() {
             };
 
             const updatedSnapshots = [...existingSnapshots, newSnapshot];
-            // SICHERHEIT: Nochmal auf max 3 Versionen kappen (ältester fällt raus)
             if (updatedSnapshots.length > 3) {
                 updatedSnapshots.shift();
             }
@@ -702,7 +700,7 @@ window.saveMNAUOrderToLog = async function() {
                     ]
                 };
 
-                const updatedChangelog = [logEntry, ...existingChangelog].slice(0, 10); // Auch Changelog auf max 10 deckeln
+                const updatedChangelog = [logEntry, ...existingChangelog].slice(0, 10);
 
                 const isMain = (comp === myCompany);
                 const groupMeta = {
@@ -771,10 +769,8 @@ window.saveMNAUOrderToLog = async function() {
                 }
             });
 
-            // ERST DIE API ERFOLGREICH BESTÄTIGEN LASSEN (TRANSAKTIONAL)
             await executeBatchOrFallbackUpdates(updates.map(u => ({ id: u.id, fields: u.fields })));
 
-            // ERST NACH ERFOLG IN-MEMORY SPEICHER ANPASSEN:
             updates.forEach(u => {
                 u.targetRecordRef.fields.Auftrag = u.orderTitle;
                 u.targetRecordRef.fields.Betrag_Automotive = u.compUmsatz;
@@ -871,6 +867,9 @@ window.saveMNAUOrderToLog = async function() {
     }
 };
 
+// ====================================================
+// PDF VIEWER - ERSTELLT BLOB URL STATT DOWNLOAD
+// ====================================================
 window.downloadKalkulatorPDFFromLog = async function(recordId, snapshotIndex = null) {
     const record = (window.loadedRecords || []).find(r => r.id === recordId);
     if (!record || !record.fields.Fremdkosten_Details) {
@@ -908,7 +907,6 @@ window.downloadKalkulatorPDFFromLog = async function(recordId, snapshotIndex = n
         return;
     }
 
-    // DYNAMISCHE NEUBERECHNUNG DER HISTORISCHEN ERGEBNISTABELLE AUS DEN INPUTS
     const historicCalc = computeKalkulationFromInputs(snap.kalkInputs || {});
 
     const d = new Date(snap.timestamp || record.createdTime || Date.now()), p = n => String(n).padStart(2,'0');
@@ -996,44 +994,17 @@ window.downloadKalkulatorPDFFromLog = async function(recordId, snapshotIndex = n
                 if (ih > availH) { ih = availH; iw = ih * r; }
                 const x = (pw - iw) / 2, y = m;
                 pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', x, y, iw, ih);
+
                 const safeName = (snap.projName || record.fields.Auftrag || 'Group-Kalkulator').replace(/[^\wäöüÄÖÜ\- ]+/g,'').trim().replace(/\s+/g,'_');
-                pdf.save(`Group-Kalkulator_${safeName}_${versionTag}.pdf`);
+                const filename = `Group-Kalkulator_${safeName}_${versionTag}.pdf`;
+
+                // PDF ALS BLOB ERZEUGEN UND IM MODAL ANZEIGEN
+                const blobUrl = pdf.output('bloburl');
+                window.showPDFModal(blobUrl, filename);
                 cleanup();
+
             }).catch(async err => { cleanup(); window.Logger.error("PDF-Renderfehler:", err); await window.customAlert('PDF-Fehler: ' + err.message, "Systemfehler"); });
     }, 300);
-};
-
-window.resetAll = function(){
-    ENTITIES.forEach(e=>{
-        const baseEl = document.getElementById('base-' + e); if(baseEl) baseEl.value = '';
-        const spEl = document.getElementById('sp-' + e); if(spEl) spEl.value = '';
-
-        const container = document.getElementById(`suppliers-list-${e}`);
-        if (container) { container.innerHTML = ''; window.addKalkSupplierRow(e); }
-        const hp=document.getElementById('hp-'+e); if(hp) hp.value=150;
-        const nt=document.getElementById('note-'+e); if(nt) nt.value='';
-        COSTS.forEach(c=>{const el=document.getElementById('cost-'+e+'-'+c.key);if(el){el.value=c.def;el.disabled=false;delete el.dataset.prev;}});
-    });
-    [['seller',3],['setter',4],['closer1',4],['closer2',4]].forEach(([id,v])=>{const el=document.getElementById('role-'+id+'-pct'); if(el) el.value=v;});
-    ['proj-name','proj-offer','proj-invoice','proj-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-    const fm=document.getElementById('fkmngr'); if(fm) fm.value='';
-
-    const projNameInput = document.getElementById('proj-name');
-    if (projNameInput) { projNameInput.disabled = false; }
-
-    window.activeEditingGroupId = null;
-    window.activeEditingRecordId = null;
-    const banner = document.getElementById('kalk-edit-banner');
-    if (banner) banner.classList.add('hidden');
-
-    const btnSave = document.getElementById('btn-save-to-log');
-    if (btnSave) {
-        const myCompany = window.currentUserCompany || "MNAU";
-        btnSave.innerHTML = `<span class="ti">➔</span> ${myCompany} Auftrag im Log erfassen`;
-    }
-
-    window.syncCostsToVolume();
-    window.calculate();
 };
 
 window.exportPDF = async function(){
@@ -1138,10 +1109,49 @@ window.exportPDF = async function(){
                 if (ih > availH) { ih = availH; iw = ih * r; }
                 const x = (pw - iw) / 2, y = m;
                 pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', x, y, iw, ih);
-                pdf.save(`Group-Kalkulator_${name}.pdf`);
+
+                const filename = `Group-Kalkulator_${name}.pdf`;
+
+                // PDF ALS BLOB ERZEUGEN UND IM MODAL ANZEIGEN
+                const blobUrl = pdf.output('bloburl');
+                window.showPDFModal(blobUrl, filename);
                 cleanup();
+
             }).catch(async err => { cleanup(); window.Logger.error("PDF-Export Fehler:", err); await window.customAlert('PDF-Fehler: ' + err.message, "Systemfehler"); });
     }, 300);
+};
+
+window.resetAll = function(){
+    ENTITIES.forEach(e=>{
+        const baseEl = document.getElementById('base-' + e); if(baseEl) baseEl.value = '';
+        const spEl = document.getElementById('sp-' + e); if(spEl) spEl.value = '';
+
+        const container = document.getElementById(`suppliers-list-${e}`);
+        if (container) { container.innerHTML = ''; window.addKalkSupplierRow(e); }
+        const hp=document.getElementById('hp-'+e); if(hp) hp.value=150;
+        const nt=document.getElementById('note-'+e); if(nt) nt.value='';
+        COSTS.forEach(c=>{const el=document.getElementById('cost-'+e+'-'+c.key);if(el){el.value=c.def;el.disabled=false;delete el.dataset.prev;}});
+    });
+    [['seller',3],['setter',4],['closer1',4],['closer2',4]].forEach(([id,v])=>{const el=document.getElementById('role-'+id+'-pct'); if(el) el.value=v;});
+    ['proj-name','proj-offer','proj-invoice','proj-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    const fm=document.getElementById('fkmngr'); if(fm) fm.value='';
+
+    const projNameInput = document.getElementById('proj-name');
+    if (projNameInput) { projNameInput.disabled = false; }
+
+    window.activeEditingGroupId = null;
+    window.activeEditingRecordId = null;
+    const banner = document.getElementById('kalk-edit-banner');
+    if (banner) banner.classList.add('hidden');
+
+    const btnSave = document.getElementById('btn-save-to-log');
+    if (btnSave) {
+        const myCompany = window.currentUserCompany || "MNAU";
+        btnSave.innerHTML = `<span class="ti">➔</span> ${myCompany} Auftrag im Log erfassen`;
+    }
+
+    window.syncCostsToVolume();
+    window.calculate();
 };
 
 window.addEventListener('beforeprint',()=>{
