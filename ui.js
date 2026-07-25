@@ -1,5 +1,5 @@
 // ====================================================
-// ui.js: DOM RENDERING (DEUTLICHE ORIGIN-FLAGS IN SUCHE)
+// ui.js: DOM RENDERING (DYNAMISCHE PARTNER-FARBEN IN SUCHE)
 // ====================================================
 
 const SVG_PDF_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
@@ -103,12 +103,12 @@ window.UI = {
                 const isReadOnlyShare = groupMeta && groupMeta.isReadOnlyShare === true;
                 const creatorCompany = (groupMeta && groupMeta.originCompany) ? groupMeta.originCompany.toUpperCase() : (fields.Firma || "MNAU").toUpperCase();
 
-                // DEUTLICHE EXPLIZITE BADGE FÜR DIE ORIGIN / HERKUNFT AUF JEDER KARTE
+                // DEUTLICHE EXPLIZITE BADGE FÜR DIE ORIGIN / HERKUNFT (JETZT MIT PARTNER FARBE)
                 let typeBadgeHTML = '';
                 if (status === "Bezahlt") {
                     typeBadgeHTML = `<span class="comp-badge" style="background:#64748b;">ARCHIV</span>`;
                 } else if (isReadOnlyShare) {
-                    typeBadgeHTML = `<span class="comp-badge" style="background:#0284c7;">PARTNER: ${creatorCompany}</span>`;
+                    typeBadgeHTML = `<span class="comp-badge badge-${creatorCompany}">PARTNER: ${creatorCompany}</span>`;
                 } else {
                     typeBadgeHTML = `<span class="comp-badge badge-${myCompany}">${myCompany} • EIGEN</span>`;
                 }
@@ -380,7 +380,6 @@ window.UI = {
             });
         };
 
-        // BEI AKTIVER SUCHE / FILTERN WERDEN ALLE TREFFER ZUSAMMENGEFASST IM SEARCH PANEL GERENDERT
         if (isSearching) {
             renderContainer(window.DOM.searchOrderList, companyRecords, "Keine Aufträge entsprechen Ihren Filter- / Suchkriterien.");
         } else {
