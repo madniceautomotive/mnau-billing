@@ -486,8 +486,8 @@ window.UI = {
             data.items.forEach(item => {
                 html += `
                     <div class="supplier-stat-item">
-                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0; text-transform:none; user-select:none; min-width:0; flex:1;">
-                            <input type="checkbox" onchange="window.toggleSupplierPaid('${item.orderId}', ${item.index})" style="accent-color:var(--active-company-color); cursor:pointer; width:14px; height:14px; flex-shrink:0;">
+                        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; margin:0; text-transform:none; user-select:none; min-width:0; flex:1;">
+                            <input type="checkbox" onchange="window.toggleSupplierPaid('${item.orderId}', ${item.index})" style="accent-color:var(--active-company-color); cursor:pointer; flex-shrink:0;">
                             <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">↳ ${item.order}</span>
                         </label>
                         <span style="color:#ef4444; font-weight:600; flex-shrink:0;">€ ${item.amount.toFixed(2)}</span>
