@@ -1,5 +1,5 @@
 // ==================================================== 
-// app.js: USER ACTIONS, CONTROLLER HUB & PDF VIEWER
+// app.js: USER ACTIONS, CONTROLLER HUB & DEEP ERROR LOGGER
 // ====================================================
 
 const SUN_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
@@ -26,7 +26,7 @@ const DIALOG_ICONS = {
 };
 
 // ====================================================
-// ZENTRALES AUTOMATISCHES SYSTEM-LOGGER ENGINE
+// ZENTRALES AUTOMATISCHES SYSTEM-LOGGER ENGINE (EXAKTE DETAILS)
 // ====================================================
 window.Logger = {
     logs: [],
@@ -37,21 +37,44 @@ window.Logger = {
         } catch(e) {}
 
         window.addEventListener('error', (e) => {
-            this.add('ERROR', `JavaScript Exception: ${e.message}`, `${e.filename}:${e.lineno}:${e.colno}`);
+            this.add('ERROR', `JavaScript Exception: ${e.message}`, `${e.filename}:${e.lineno}:${e.colno}\n${e.error ? e.error.stack : ''}`);
         });
         window.addEventListener('unhandledrejection', (e) => {
-            this.add('ERROR', `Unhandled Promise Rejection`, e.reason ? (e.reason.stack || e.reason) : e);
+            this.add('ERROR', `Unhandled Promise Rejection`, e.reason ? (e.reason.stack || e.reason.message || JSON.stringify(e.reason)) : e);
         });
         this.info("MNAU/MNGR Hub initialisiert.");
     },
+
+    // HELPER: EXTRAHIERT DETAILS AUCH AUS NATIVEN JAVASCRIPT ERRORS
+    formatDetails(details) {
+        if (!details) return '';
+        if (details instanceof Error) {
+            return `${details.name || 'Error'}: ${details.message}\nStack: ${details.stack || 'Kein Stack'}`;
+        }
+        if (typeof details === 'object') {
+            try {
+                const plain = {};
+                Object.getOwnPropertyNames(details).forEach(key => {
+                    plain[key] = details[key];
+                });
+                const str = JSON.stringify(plain, null, 2);
+                return str === '{}' ? String(details) : str;
+            } catch(e) {
+                return String(details);
+            }
+        }
+        return String(details).trim();
+    },
+
     add(type, message, details = '') {
+        const formattedDetails = this.formatDetails(details);
         const entry = {
             timestamp: new Date().toISOString(),
             company: window.currentUserCompany || 'N/A',
             user: window.currentUserEmail || 'System',
             type: type,
             message: String(message),
-            details: typeof details === 'object' ? JSON.stringify(details, null, 2) : String(details)
+            details: formattedDetails
         };
         this.logs.unshift(entry);
         if (this.logs.length > 200) this.logs.pop();
@@ -83,7 +106,7 @@ window.renderLogsModal = function() {
         <div class="log-entry log-${l.type}">
             <div class="log-time">[${new Date(l.timestamp).toLocaleTimeString('de-DE')}] [${l.type}] [${l.company}] (${l.user})</div>
             <strong>${l.message}</strong>
-            ${l.details ? `<div style="margin-top:4px; white-space:pre-wrap; opacity:0.9;">${l.details}</div>` : ''}
+            ${(l.details && l.details !== '{}') ? `<div style="margin-top:4px; white-space:pre-wrap; opacity:0.9;">${l.details}</div>` : ''}
         </div>
     `).join('');
 };
@@ -94,7 +117,12 @@ window.openLogsModal = function() {
 };
 
 window.copyLogsToClipboard = async function() {
-    const logText = window.Logger.logs.map(l => `[${l.timestamp}] [${l.type}] [${l.company}] ${l.message} | ${l.details}`).join('\n');
+    const logText = window.Logger.logs.map(l => {
+        let line = `[${l.timestamp}] [${l.type}] [${l.company}] [${l.user}]\nMessage: ${l.message}`;
+        if (l.details && l.details !== '{}') line += `\nDetails: ${l.details}`;
+        return line + `\n----------------------------------------`;
+    }).join('\n\n');
+
     try {
         await navigator.clipboard.writeText(logText);
         window.customAlert("System-Logs wurden erfolgreich in die Zwischenablage kopiert!", "Erfolg");
@@ -104,7 +132,12 @@ window.copyLogsToClipboard = async function() {
 };
 
 window.downloadLogsFile = function() {
-    const logText = window.Logger.logs.map(l => `[${l.timestamp}] [${l.type}] [${l.company}] [${l.user}]\nMessage: ${l.message}\nDetails: ${l.details}\n----------------------------------------`).join('\n\n');
+    const logText = window.Logger.logs.map(l => {
+        let line = `[${l.timestamp}] [${l.type}] [${l.company}] [${l.user}]\nMessage: ${l.message}`;
+        if (l.details && l.details !== '{}') line += `\nDetails: ${l.details}`;
+        return line + `\n----------------------------------------`;
+    }).join('\n\n');
+
     const blob = new Blob([logText], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -207,9 +240,6 @@ window.customConfirm = function(message, title = "Bestätigung erforderlich") {
     });
 };
 
-// ====================================================
-// PDF VIEWER MODAL CONTROLLER
-// ====================================================
 window.showPDFModal = function(blobUrl, filename) {
     const titleEl = document.getElementById('pdf-modal-title');
     const iframe = document.getElementById('pdf-viewer-iframe');
@@ -231,7 +261,7 @@ window.showPDFModal = function(blobUrl, filename) {
 };
 
 // ====================================================
-// LOG SUB-TAB SWITCHER (EIGENE / PASSIVE / ARCHIV)
+// LOG SUB-TAB SWITCHER
 // ====================================================
 window.switchLogSubTab = function(subTabName) {
     const tabs = ['own', 'external', 'archive'];

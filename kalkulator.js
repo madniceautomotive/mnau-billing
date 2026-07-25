@@ -1,5 +1,5 @@
 // ====================================================
-// kalkulator.js: UNLIMITED VERSIONS & NO-CAP SNAPSHOTS
+// kalkulator.js: FULL LOGGING & UNLIMITED VERSIONS
 // ====================================================
 
 const ENTITIES = ['MNAG','MNMH','MNWB','MNAT','MNAU','MNGR'];
@@ -556,9 +556,7 @@ async function executeBatchOrFallbackUpdates(updates) {
     }
 }
 
-// ====================================================
-// AUFTRAG IM LOG ERFASSEN / AKTUALISIEREN (LÜCKENLOSE HISTORIE - ALLE VERSIONEN)
-// ====================================================
+// AUFTRAG SPEICHERN
 window.saveMNAUOrderToLog = async function() {
     const myCompany = (window.currentUserCompany || "MNAU").trim().toUpperCase();
     const projNameRaw = getVal('proj-name');
@@ -643,7 +641,6 @@ window.saveMNAUOrderToLog = async function() {
                 } catch(e) {}
             }
 
-            // ALLE VERSIONEN BLEIBEN ERHALTEN (KEIN SLICE MORE!)
             const newVersionNum = existingSnapshots.length > 0 ? existingSnapshots[existingSnapshots.length - 1].version + 1 : 2;
 
             if (btn) { btn.disabled = true; btn.textContent = "Speichere Version v" + newVersionNum + "..."; }
@@ -854,6 +851,7 @@ window.saveMNAUOrderToLog = async function() {
         }
 
     } catch (err) {
+        // DRILL-DOWN ERROR LOGGING
         window.Logger.error("Fehler beim Erfassen des Auftrags im Log:", err);
         await window.customAlert("Fehler beim Erfassen des Auftrags im Log: " + (err.message || err), "Systemfehler");
     } finally {
@@ -861,7 +859,7 @@ window.saveMNAUOrderToLog = async function() {
     }
 };
 
-// PDF VIEWER - TOOLBAR MET LUPEN UND OHNE THUMBNAIL-SIDEBAR
+// PDF VIEWER - TOOLBAR MIT LUPEN & OHNE SIDEBAR THUMBNAILS
 window.downloadKalkulatorPDFFromLog = async function(recordId, snapshotIndex = null) {
     const record = (window.loadedRecords || []).find(r => r.id === recordId);
     if (!record || !record.fields.Fremdkosten_Details) {
@@ -990,6 +988,7 @@ window.downloadKalkulatorPDFFromLog = async function(recordId, snapshotIndex = n
                 const safeName = (snap.projName || record.fields.Auftrag || 'Group-Kalkulator').replace(/[^\wäöüÄÖÜ\- ]+/g,'').trim().replace(/\s+/g,'_');
                 const filename = `Group-Kalkulator_${safeName}_${versionTag}.pdf`;
 
+                // TOOLBAR=1 (ZOOM LEISTE AKTIV), NAVPANES=0 (KEINE SIDEBAR THUMBNAILS)
                 const blobUrl = pdf.output('bloburl') + '#toolbar=1&navpanes=0&view=FitH';
                 window.showPDFModal(blobUrl, filename);
                 cleanup();
