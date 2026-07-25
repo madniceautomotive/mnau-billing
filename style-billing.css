@@ -1,5 +1,5 @@
 /* ==================================================== */
-/* style-billing.css: MULTI-BRAND & RIGID SELECT FIXES  */
+/* style-billing.css: SEARCH TAB HIGHLIGHT STYLES       */
 /* ==================================================== */
 
 :root {
@@ -66,7 +66,7 @@ body, html {
 [data-company="MNAU"] { --active-company-color: #00663a; }
 [data-company="MNGR"] { --active-company-color: #64748b; }
 
-/* ABSOLUT WASSERDICHTE SELECT-BOXEN REGELEUNG */
+/* RIGIDE DROPDOWN CONTROL */
 select, select.mnau-input, select.status-select, #database-view select {
     background-color: var(--bg-input) !important;
     color: var(--text-main) !important;
@@ -213,6 +213,17 @@ select:focus {
 .sub-tab-btn.active .subtab-badge {
     background: var(--active-company-color); color: #ffffff !important;
     border-color: var(--active-company-color);
+}
+
+/* HERVORHEBUNG FÜR AKTIVE SUCHE SUB-TAB */
+.sub-tab-btn.search-tab-highlight.active {
+    color: #0284c7 !important;
+    border-bottom-color: #0284c7 !important;
+}
+.sub-tab-btn.search-tab-highlight.active .subtab-badge {
+    background: #0284c7 !important;
+    border-color: #0284c7 !important;
+    color: #ffffff !important;
 }
 
 .sub-tab-panel { min-height: 120px; }
@@ -390,7 +401,7 @@ form label {
 .supplier-manager-name { font-size: 0.9rem; font-weight: 700; color: var(--text-main) !important; }
 
 /* LEERE STATUS BEHÄLTER */
-#order-list p, #external-order-list p, #archive-list p {
+#order-list p, #external-order-list p, #archive-list p, #search-order-list p {
     color: var(--text-muted) !important; border: 1px dashed var(--border-color-strong) !important;
     background: var(--bg-panel) !important; border-radius: 8px;
 }
@@ -448,7 +459,7 @@ form label {
 .oc-detail-panel { background: var(--bg-panel) !important; border: 1px dashed var(--border-color-strong) !important; border-radius: 8px; padding: 12px; }
 .oc-detail-panel h5 { margin: 0 0 8px 0; font-size: 0.7rem; color: var(--text-sub) !important; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
 
-/* SAUBERE LIEFERANTEN LISTEN & CHECKBOXEN */
+/* SAUBERE LIEFERANTEN LISTEN */
 .breakdown-list { display: flex; flex-direction: column; gap: 6px; }
 .breakdown-row {
     display: flex; justify-content: space-between; align-items: center;
@@ -519,7 +530,7 @@ form label {
 .supplier-amount { color: #ef4444; font-weight: 700; flex-shrink: 0; font-size: 0.85rem; }
 .supplier-stat-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
 
-/* MOBILE RESPONSIVENESS & TOUCH TARGET FIXES (< 850px / 680px) */
+/* MOBILE RESPONSIVENESS (< 850px / 680px) */
 @media (max-width: 850px) {
     .mobile-only-btn { display: inline-flex !important; }
 

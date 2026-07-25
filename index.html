@@ -107,6 +107,10 @@
                 <button id="subtab-btn-archive" class="sub-tab-btn" onclick="switchLogSubTab('archive')">
                     Archiv (Bezahlt) <span id="badge-count-archive" class="subtab-badge">0</span>
                 </button>
+                <!-- DYNAMISCHER SUB-TAB FÜR GESAMTE SUCHERGEBNISSE -->
+                <button id="subtab-btn-search" class="sub-tab-btn search-tab-highlight hidden" onclick="switchLogSubTab('search')">
+                    🔍 Suchergebnisse <span id="badge-count-search" class="subtab-badge">0</span>
+                </button>
             </div>
 
             <div id="log-panel-own" class="sub-tab-panel">
@@ -119,6 +123,11 @@
 
             <div id="log-panel-archive" class="sub-tab-panel hidden">
                 <div id="archive-list"></div>
+            </div>
+
+            <!-- GEBÜNDELTE ERGEBNISSE BEI AKTIVER SUCHE -->
+            <div id="log-panel-search" class="sub-tab-panel hidden">
+                <div id="search-order-list"></div>
             </div>
 
             <div class="section-divider red-divider" style="margin-top: 36px;">OFFENE_LIEFERANTEN_POSTEN</div>
@@ -216,7 +225,6 @@
                     <div class="hint">Fulfillment wird automatisch berechnet = 100 % − (Backoffice + PM + Overhead + Sales). Wird der Wert rot/negativ, übersteigen die anderen %-Posten 100 %.</div>
                 </div>
 
-                <!-- ERGEBNISSEN UND STEUERUNGS-BUTTONS UNTEN -->
                 <div class="kalk-section print-keep" id="results-section" style="display:block">
                     <div class="section-title"><span class="ti">▸</span> Ergebnis <span class="layer-tag" id="result-mode-tag"></span></div>
                     <div class="metric-grid" id="metrics"></div>
@@ -224,7 +232,6 @@
 
                     <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;">
                         <button class="btn-secondary" onclick="resetAll()"><span class="ti">↻</span> Reset</button>
-                        <!-- SEHR SAUBERER BUTTON MIT VEKTOR-SVG ICON -->
                         <button class="btn-secondary" onclick="exportPDF()">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                             PDF generieren

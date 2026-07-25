@@ -1,5 +1,5 @@
 // ==================================================== 
-// app.js: USER ACTIONS, CONTROLLER HUB & DEEP ERROR LOGGER
+// app.js: USER ACTIONS, FILTER ENGINE & SEARCH TAB TRIGGER
 // ====================================================
 
 const SUN_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
@@ -11,6 +11,7 @@ window.DOM = {
     get orderList() { return document.getElementById('order-list'); },
     get externalOrderList() { return document.getElementById('external-order-list'); },
     get archiveList() { return document.getElementById('archive-list'); },
+    get searchOrderList() { return document.getElementById('search-order-list'); },
     get searchInput() { return document.getElementById('search-input'); },
     get searchClearBtn() { return document.getElementById('search-clear-btn'); },
     get btnManageSuppliers() { return document.getElementById('btn-manage-suppliers'); },
@@ -26,7 +27,7 @@ const DIALOG_ICONS = {
 };
 
 // ====================================================
-// ZENTRALES AUTOMATISCHES SYSTEM-LOGGER ENGINE (EXAKTE DETAILS)
+// ZENTRALES AUTOMATISCHES SYSTEM-LOGGER ENGINE
 // ====================================================
 window.Logger = {
     logs: [],
@@ -45,7 +46,6 @@ window.Logger = {
         this.info("MNAU/MNGR Hub initialisiert.");
     },
 
-    // HELPER: EXTRAHIERT DETAILS AUCH AUS NATIVEN JAVASCRIPT ERRORS
     formatDetails(details) {
         if (!details) return '';
         if (details instanceof Error) {
@@ -147,9 +147,7 @@ window.downloadLogsFile = function() {
     URL.revokeObjectURL(url);
 };
 
-// ====================================================
-// STATE-OF-THE-ART MODAL CONTROLLER
-// ====================================================
+// MODAL CONTROLLER
 window.showModal = function(id) {
     const el = document.getElementById(id);
     if (!el) return;
@@ -261,10 +259,10 @@ window.showPDFModal = function(blobUrl, filename) {
 };
 
 // ====================================================
-// LOG SUB-TAB SWITCHER
+// LOG SUB-TAB SWITCHER (INKLUSIVE NEUEM SEARCH TAB)
 // ====================================================
 window.switchLogSubTab = function(subTabName) {
-    const tabs = ['own', 'external', 'archive'];
+    const tabs = ['own', 'external', 'archive', 'search'];
     tabs.forEach(t => {
         const panel = document.getElementById(`log-panel-${t}`);
         const btn = document.getElementById(`subtab-btn-${t}`);
@@ -277,7 +275,9 @@ window.switchLogSubTab = function(subTabName) {
     if (activePanel) activePanel.classList.remove('hidden');
     if (activeBtn) activeBtn.classList.add('active');
 
-    localStorage.setItem('mngr_log_subtab', subTabName);
+    if (subTabName !== 'search') {
+        localStorage.setItem('mngr_log_subtab', subTabName);
+    }
 };
 
 window.toggleMobileFilters = function() {
@@ -390,6 +390,9 @@ window.switchCompany = function(newCompany) {
     }
 };
 
+// ====================================================
+// DYNAMISCHES FILTERN UND AUTOMATISCHES SUCHTAB-SWITCHING
+// ====================================================
 window.applyFilters = function() {
     if (!window.loadedRecords || !window.UI) return;
 
@@ -400,6 +403,9 @@ window.applyFilters = function() {
     if (window.DOM.searchClearBtn) {
         window.DOM.searchClearBtn.style.display = query.length > 0 ? 'flex' : 'none';
     }
+
+    const isSearching = query.length > 0 || statusFilter !== "Alle";
+    const searchBtn = document.getElementById('subtab-btn-search');
 
     const filtered = window.loadedRecords.filter(record => {
         const orderName = (record.fields.Auftrag || "").toLowerCase();
@@ -412,7 +418,16 @@ window.applyFilters = function() {
         return matchesSearch && matchesStatus;
     });
 
-    window.UI.renderOrders(filtered);
+    if (isSearching) {
+        if (searchBtn) searchBtn.classList.remove('hidden');
+        window.switchLogSubTab('search');
+    } else {
+        if (searchBtn) searchBtn.classList.add('hidden');
+        const savedSubTab = localStorage.getItem('mngr_log_subtab') || 'own';
+        window.switchLogSubTab(savedSubTab);
+    }
+
+    window.UI.renderOrders(filtered, isSearching);
 };
 
 document.addEventListener('DOMContentLoaded', () => {

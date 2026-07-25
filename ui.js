@@ -1,5 +1,5 @@
 // ====================================================
-// ui.js: DOM RENDERING (SVG PDF ICONS & STABLE EXPAND)
+// ui.js: DOM RENDERING (DEUTLICHE ORIGIN-FLAGS IN SUCHE)
 // ====================================================
 
 const SVG_PDF_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
@@ -15,7 +15,7 @@ window.toggleCardExpand = function(recordId, event) {
 };
 
 window.UI = {
-    renderOrders(records) {
+    renderOrders(records, isSearching = false) {
         const myCompany = (window.currentUserCompany || "MNAU").toUpperCase();
 
         const companyRecords = records.filter(r => {
@@ -38,12 +38,16 @@ window.UI = {
         const activeExternalRecords = companyRecords.filter(r => (r.fields.Status || "Zu verrechnen") !== "Bezahlt" && isExternal(r));
         const archivedRecords = companyRecords.filter(r => r.fields.Status === "Bezahlt");
 
+        // BADGE COUNTS UNTEN IM SUB-TAB UPDATE
         const badgeOwn = document.getElementById('badge-count-own');
         const badgeExt = document.getElementById('badge-count-external');
         const badgeArc = document.getElementById('badge-count-archive');
+        const badgeSearch = document.getElementById('badge-count-search');
+
         if (badgeOwn) badgeOwn.textContent = activeOwnRecords.length;
         if (badgeExt) badgeExt.textContent = activeExternalRecords.length;
         if (badgeArc) badgeArc.textContent = archivedRecords.length;
+        if (badgeSearch) badgeSearch.textContent = companyRecords.length;
 
         const renderContainer = (containerEl, listRecords, emptyMessage) => {
             if (!containerEl) return;
@@ -98,6 +102,16 @@ window.UI = {
 
                 const isReadOnlyShare = groupMeta && groupMeta.isReadOnlyShare === true;
                 const creatorCompany = (groupMeta && groupMeta.originCompany) ? groupMeta.originCompany.toUpperCase() : (fields.Firma || "MNAU").toUpperCase();
+
+                // DEUTLICHE EXPLIZITE BADGE FÜR DIE ORIGIN / HERKUNFT AUF JEDER KARTE
+                let typeBadgeHTML = '';
+                if (status === "Bezahlt") {
+                    typeBadgeHTML = `<span class="comp-badge" style="background:#64748b;">ARCHIV</span>`;
+                } else if (isReadOnlyShare) {
+                    typeBadgeHTML = `<span class="comp-badge" style="background:#0284c7;">PARTNER: ${creatorCompany}</span>`;
+                } else {
+                    typeBadgeHTML = `<span class="comp-badge badge-${myCompany}">${myCompany} • EIGEN</span>`;
+                }
 
                 const spesenVal = groupMeta ? (parseFloat(groupMeta.spesen) || 0) : 0;
                 const spesenText = spesenVal > 0 ? ` <span style="font-size:0.72rem; color:var(--text-muted); font-weight:normal;">(davon Spesen: € ${spesenVal.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2})})</span>` : '';
@@ -286,7 +300,7 @@ window.UI = {
                             <div class="oc-meta">
                                 <span>${new Date(record.createdTime).toLocaleDateString('de-DE')}</span>
                                 <span>•</span>
-                                <span class="comp-badge badge-${creatorCompany}">${creatorCompany}</span>
+                                ${typeBadgeHTML}
                             </div>
                         </div>
 
@@ -366,9 +380,14 @@ window.UI = {
             });
         };
 
-        renderContainer(window.DOM.orderList, activeOwnRecords, "Keine aktiven eigenen Aufträge im Log.");
-        renderContainer(window.DOM.externalOrderList, activeExternalRecords, "Keine passiven Partner-Aufträge vorhanden.");
-        renderContainer(window.DOM.archiveList, archivedRecords, "Archiv-Log leer.");
+        // BEI AKTIVER SUCHE / FILTERN WERDEN ALLE TREFFER ZUSAMMENGEFASST IM SEARCH PANEL GERENDERT
+        if (isSearching) {
+            renderContainer(window.DOM.searchOrderList, companyRecords, "Keine Aufträge entsprechen Ihren Filter- / Suchkriterien.");
+        } else {
+            renderContainer(window.DOM.orderList, activeOwnRecords, "Keine aktiven eigenen Aufträge im Log.");
+            renderContainer(window.DOM.externalOrderList, activeExternalRecords, "Keine passiven Partner-Aufträge vorhanden.");
+            renderContainer(window.DOM.archiveList, archivedRecords, "Archiv-Log leer.");
+        }
     },
 
     updateSummary(records) {
