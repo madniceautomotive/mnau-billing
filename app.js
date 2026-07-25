@@ -1,9 +1,22 @@
 // ==================================================== 
-// app.js: USER ACTIONS, CONTROLLER HUB & SLEEK MODALS
+// app.js: USER ACTIONS, CONTROLLER HUB & LOGGER SYSTEM
 // ====================================================
 
 const SUN_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
 const MOON_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
+
+// DYNAMISCHES SAFE DOM OBJECT (VERHINDERT CRASHES)
+window.DOM = {
+    get loading() { return document.getElementById('loading'); },
+    get orderList() { return document.getElementById('order-list'); },
+    get externalOrderList() { return document.getElementById('external-order-list'); },
+    get archiveList() { return document.getElementById('archive-list'); },
+    get searchInput() { return document.getElementById('search-input'); },
+    get searchClearBtn() { return document.getElementById('search-clear-btn'); },
+    get btnManageSuppliers() { return document.getElementById('btn-manage-suppliers'); },
+    get btnCloseSuppliers() { return document.getElementById('btn-close-suppliers'); },
+    get modalSuppliers() { return document.getElementById('modal-suppliers-overlay'); }
+};
 
 // HIGH-END VEKTOR-ICONS FÜR STATE-OF-THE-ART MODAL DIALOGS
 const DIALOG_ICONS = {
@@ -103,13 +116,13 @@ window.downloadLogsFile = function() {
 };
 
 // ====================================================
-// STATE-OF-THE-ART MODAL CONTROLLER (GLASSMORPHISM & ANIMATED)
+// STATE-OF-THE-ART MODAL CONTROLLER
 // ====================================================
 window.showModal = function(id) {
     const el = document.getElementById(id);
     if (!el) return;
     el.classList.remove('hidden');
-    void el.offsetWidth; // Force CSS reflow
+    void el.offsetWidth;
     el.classList.add('modal-visible');
 };
 
@@ -276,7 +289,7 @@ window.switchTab = function(tabName) {
     if (tabName === 'billing') {
         document.getElementById('view-billing').classList.remove('hidden');
         document.getElementById('tab-btn-billing').classList.add('active');
-        if (searchRow) searchRow.style.display = ''; // Aktiviert CSS Flex/None Fallback
+        if (searchRow) searchRow.style.display = '';
         if (manageSuppliersBtn) manageSuppliersBtn.style.display = '';
     } else if (tabName === 'calculator') {
         document.getElementById('view-calculator').classList.remove('hidden');
@@ -388,9 +401,9 @@ async function fetchOrders() {
         return;
     }
 
-    if (window.loadedRecords.length === 0) {
-        window.DOM.loading.classList.remove('hidden');
-        window.DOM.orderList.innerHTML = '';
+    if (!window.loadedRecords || window.loadedRecords.length === 0) {
+        if (window.DOM.loading) window.DOM.loading.classList.remove('hidden');
+        if (window.DOM.orderList) window.DOM.orderList.innerHTML = '';
     }
 
     try {
@@ -411,7 +424,7 @@ async function fetchOrders() {
     } catch (error) {
         window.Logger.error("Kritischer Terminal-Fehler beim Laden:", error);
     } finally {
-        window.DOM.loading.classList.add('hidden');
+        if (window.DOM.loading) window.DOM.loading.classList.add('hidden');
     }
 }
 

@@ -543,12 +543,14 @@ window.UI = {
     },
 
     showSetupRequired() {
-        window.DOM.loading.classList.add('hidden');
-        window.DOM.orderList.innerHTML = `
-            <div style="padding: 60px 20px; text-align: center;">
-                <h3 style="margin-bottom: 12px; text-transform: uppercase;">Konfiguration fehlt</h3>
-                <button class="btn-primary" style="margin: 0 auto;" onclick="triggerSetup()">➔ Setup starten</button>
-            </div>
-        `;
+        if (window.DOM.loading) window.DOM.loading.classList.add('hidden');
+        if (window.DOM.orderList) {
+            window.DOM.orderList.innerHTML = `
+                <div style="padding: 60px 20px; text-align: center;">
+                    <h3 style="margin-bottom: 12px; text-transform: uppercase;">Konfiguration fehlt</h3>
+                    <button class="btn-primary" style="margin: 0 auto;" onclick="triggerSetup()">➔ Setup starten</button>
+                </div>
+            `;
+        }
     }
 };
