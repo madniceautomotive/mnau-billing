@@ -1,18 +1,26 @@
 /* ==================================================== */
-/* style-kalkulator.css: MULTI-BRAND & THEME SYSTEM     */
+/* style-kalkulator.css: KALKULATOR & SELECT STYLING    */
 /* ==================================================== */
+
 #view-calculator {
     width: 100%;
     max-width: 100vw;
     color: var(--text-main) !important;
     box-sizing: border-box;
-    /* overflow-x: hidden wurde hier entfernt, damit das Sticky Banner funktioniert! */
 }
 
 #view-calculator * { box-sizing: border-box; }
 #view-calculator .kalkulator-container {
     width: 100%;
     max-width: 100%;
+}
+
+/* FIX FÜR SCHICKE DROPDOWNS IM KALKULATOR (ENTFERNT KÖLBIGEN OS-STYLE) */
+#view-calculator .field select.mnau-input {
+    -webkit-appearance: none; -moz-appearance: none; appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat; background-position: right 10px center; background-size: 16px;
+    padding-right: 32px !important;
 }
 
 #view-calculator .logo-header {
